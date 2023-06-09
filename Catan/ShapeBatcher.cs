@@ -237,9 +237,9 @@ internal class ShapeBatcher
         const float sine = 0.8660254037844386467637231707529361834714026269051903140279034897f;
 
         // Only need 3 points as hexagon is dihedral (6 reflection symmetries) so can use negatives for other points
-        Vector3 p1 = new Vector3(cosine, sine, 0f) * scale;
-        Vector3 p2 = new Vector3(scale, 0f, 0f);
-        Vector3 p3 = new Vector3(p1.X, -p1.Y, 0f);
+        Vector3 p1 = new Vector3(-sine, cosine, 0f) * scale;
+        Vector3 p2 = new Vector3(0f, scale, 0f);
+        Vector3 p3 = new Vector3(-p1.X, p1.Y, 0f);
 
         Vector3 centerV3 = new Vector3(centre.X, centre.Y, 0f);
 
