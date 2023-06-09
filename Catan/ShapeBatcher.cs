@@ -213,4 +213,57 @@ internal class ShapeBatcher
         DrawLine(lineEnd, arrowHead1, thickness, colour);
         DrawLine(lineEnd, arrowHead2, thickness, colour);
     }
+
+    /// <summary>
+    /// Draw filled hexagon from triangle primitives
+    /// </summary>
+    /// <param name="centre">hexagon centre position</param>
+    /// <param name="scale">Side Length</param>
+    /// <param name="colour">Fill colour</param>
+    public void DrawHex(Vector2 centre, float scale, Color colour)
+    {
+        EnsureStarted();
+
+        const int hexVertexCount = 7;
+        const int hexIndexCount = 18;
+
+        EnsureSpace(hexVertexCount, hexIndexCount);
+        
+        // Pre-computed sin & cosine values
+        // Angle is 60 or PI/3 radians for hexagon
+        // cos(60) = .5f && cos(x) = cos(-x)
+        const float cosine = .5f;
+        // sin(60) = sqrt(3)/2 && sin(-x) = -sin(x)
+        const float sine = 0.8660254037844386467637231707529361834714026269051903140279034897f;
+
+        // Only need 3 points as hexagon is dihedral (6 reflection symmetries) so can use negatives for other points
+        Vector3 p1 = new Vector3(cosine, sine, 0f) * scale;
+        Vector3 p2 = new Vector3(scale, 0f, 0f);
+        Vector3 p3 = new Vector3(p1.X, -p1.Y, 0f);
+
+        Vector3 centerV3 = new Vector3(centre.X, centre.Y, 0f);
+
+        for (int i = 1; i < 6; i++)
+        {
+            m_Indices[m_IndexCount++] = m_VertexCount;
+            m_Indices[m_IndexCount++] = m_VertexCount + i;
+            m_Indices[m_IndexCount++] = m_VertexCount + i + 1;
+        }
+
+        // Create last triangle avoiding modulo
+        m_Indices[m_IndexCount++] = m_VertexCount;
+        m_Indices[m_IndexCount++] = m_VertexCount + 6;
+        m_Indices[m_IndexCount++] = m_VertexCount + 1;
+
+        m_Vertices[m_VertexCount++] = new VertexPositionColor(centerV3, colour);
+        
+        m_Vertices[m_VertexCount++] = new VertexPositionColor(centerV3 + p1, colour);
+        m_Vertices[m_VertexCount++] = new VertexPositionColor(centerV3 + p2, colour);
+        m_Vertices[m_VertexCount++] = new VertexPositionColor(centerV3 + p3, colour);
+        m_Vertices[m_VertexCount++] = new VertexPositionColor(centerV3 - p1, colour);
+        m_Vertices[m_VertexCount++] = new VertexPositionColor(centerV3 - p2, colour);
+        m_Vertices[m_VertexCount++] = new VertexPositionColor(centerV3 - p3, colour);
+
+        m_ShapeCount++;
+    }
 }
