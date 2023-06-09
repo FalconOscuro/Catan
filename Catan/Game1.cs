@@ -2,30 +2,37 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 
+using ImGuiNET;
+using MonoGame.ImGui;
+
 namespace Catan;
 
 public class Game1 : Game
 {
-    private GraphicsDeviceManager _graphics;
-    private SpriteBatch _spriteBatch;
+    private GraphicsDeviceManager m_Graphics;
+    private SpriteBatch m_SpriteBatch;
+
+    private ShapeBatcher m_ShapeBatcher;
+    private ImGuiRenderer m_GuiRenderer;
 
     public Game1()
     {
-        _graphics = new GraphicsDeviceManager(this);
+        m_Graphics = new GraphicsDeviceManager(this);
         Content.RootDirectory = "Content";
         IsMouseVisible = true;
     }
 
     protected override void Initialize()
     {
-        // TODO: Add your initialization logic here
+        m_GuiRenderer = new ImGuiRenderer(this).Initialize().RebuildFontAtlas();
+        m_ShapeBatcher = new ShapeBatcher(this);
 
         base.Initialize();
     }
 
     protected override void LoadContent()
     {
-        _spriteBatch = new SpriteBatch(GraphicsDevice);
+        m_SpriteBatch = new SpriteBatch(GraphicsDevice);
 
         // TODO: use this.Content to load your game content here
     }
@@ -44,8 +51,16 @@ public class Game1 : Game
     {
         GraphicsDevice.Clear(Color.CornflowerBlue);
 
-        // TODO: Add your drawing code here
+        m_ShapeBatcher.Begin();
+
+        m_ShapeBatcher.End();
 
         base.Draw(gameTime);
+
+        m_GuiRenderer.BeginLayout(gameTime);
+        ImGui.Begin("Debug Interface");
+
+        ImGui.End();
+        m_GuiRenderer.EndLayout();
     }
 }
