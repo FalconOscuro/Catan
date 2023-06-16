@@ -34,6 +34,8 @@ internal class ShapeBatcher
     public static readonly float MIN_LINE_THICKNESS = 2f;
     public static readonly float MAX_LINE_THICKNESS = 10f;
 
+    public static readonly float SIN_60 = 0.8660254037844386467637231707529361834714026269051903140279034897f;
+
     public ShapeBatcher(Game1 game)
     {
         m_Game = game ?? throw new ArgumentNullException(nameof(game));
@@ -234,10 +236,9 @@ internal class ShapeBatcher
         // cos(60) = .5f && cos(x) = cos(-x)
         const float cosine = .5f;
         // sin(60) = sqrt(3)/2 && sin(-x) = -sin(x)
-        const float sine = 0.8660254037844386467637231707529361834714026269051903140279034897f;
 
         // Only need 3 points as hexagon is dihedral (6 reflection symmetries) so can use negatives for other points
-        Vector3 p1 = new Vector3(-sine, cosine, 0f) * scale;
+        Vector3 p1 = new Vector3(-SIN_60, cosine, 0f) * scale;
         Vector3 p2 = new Vector3(0f, scale, 0f);
         Vector3 p3 = new Vector3(-p1.X, p1.Y, 0f);
 
