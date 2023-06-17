@@ -29,7 +29,6 @@ public class Game1 : Game
         m_Graphics = new GraphicsDeviceManager(this);
         Content.RootDirectory = "Content";
         IsMouseVisible = true;
-        IsFixedTimeStep = false;
 
         m_FrameTimes = new int[HIST_LEN];
         m_FrameIndex = 0;
