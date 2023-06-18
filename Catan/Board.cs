@@ -5,6 +5,7 @@ using Microsoft.Xna.Framework.Graphics;
 
 namespace Catan;
 
+// TODO: Create player class, Organize structure
 class Board
 {
     //  Maximum board size as a percentage of an axis
@@ -25,18 +26,37 @@ class Board
 
         for (int i = 0; i < 19; i++)
             m_Tiles[i] = new Tile();
-        
-        for (int i = 0; i < 57; i++)
+
+        for (int i = 0; i < 54; i++)
             m_Nodes[i] = new Node();
+        
+        for (int i = 0; i < 72; i++)
+            m_Edges[i] = new Edge();
 
         Vector2 centrePos = new Vector2(screenWidth, screenHeight) / 2f;
         PositionObjects(centrePos);
+        MapObjects();
+
+        PositionEdges();
 
         GenerateBoard();
     }
 
-    // Places tiles at starting positions
+    /// <summary>
+    /// Position all board elements
+    /// </summary>
+    /// <param name="centrePos">Board centre position</param>
     private void PositionObjects(Vector2 centrePos)
+    {
+        PositionTiles(centrePos);
+        
+        PositionNodes();
+    }
+
+    /// <summary>
+    /// Position all tiles
+    /// </summary>
+    private void PositionTiles(Vector2 centrePos)
     {
         Vector2 hexDistTL = new Vector2(-ShapeBatcher.SIN_60, 1.5f) * m_Scale;
         Vector2 hexDistTL2 = hexDistTL * 2;
@@ -66,10 +86,16 @@ class Board
 
         for(int i = 0; i < 19; i++)
             m_Tiles[i].Position += centrePos;
-        
+    }
+
+    /// <summary>
+    /// Position all Nodes, relative to tiles
+    /// </summary>
+    private void PositionNodes()
+    {
         Vector2 up = new Vector2(0, m_Scale);
-        Vector2 pointDistTL = hexDistTL - up;
-        Vector2 pointDistTR = hexDistTR - up;
+        Vector2 pointDistTL = new Vector2(-ShapeBatcher.SIN_60, .5f) * m_Scale;
+        Vector2 pointDistTR = new Vector2(-pointDistTL.X, pointDistTL.Y);
 
         for (int i = 0; i < 3; i++)
         {
@@ -118,12 +144,170 @@ class Board
         m_Nodes[53].Position = m_Nodes[52].Position + pointDistTR;
     }
 
-    public void GenerateBoard(bool shuffleBoard = false)
+    private void PositionEdges()
+    {
+        for (int i = 0; i < 72; i++)
+            m_Edges[i].CalculatePosition();
+    }
+
+    private void MapObjects()
+    {
+        MapNodes();
+        MapEdges();
+    }
+
+    private void MapNodes()
+    {
+        // Row 1
+        for (int i = 0; i < 3; i++)
+        {
+            MapAboveTile(i, i * 2);
+            MapBelowTile(i, (i * 2) + 8);
+        }
+
+        // Row 2
+        for (int i = 3; i < 7; i++)
+        {
+            MapAboveTile(i, (i * 2) + 1);
+            MapBelowTile(i, (i * 2) + 11);
+        }
+
+        // Row 3
+        for (int i = 7; i < 12; i++)
+        {
+            MapAboveTile(i, (i * 2) + 2);
+            MapBelowTile(i, (i * 2) + 13);
+        }
+
+        // Row 4
+        for (int i = 12; i < 16; i++)
+        {
+            MapAboveTile(i, (i * 2) + 4);
+            MapBelowTile(i, (i * 2) + 14);
+        }
+
+        // Row 5
+        for (int i = 16; i < 19; i++)
+        {
+            MapAboveTile(i, (i * 2) + 7);
+            MapBelowTile(i, (i * 2) + 15);
+        }
+    }
+
+    private void MapAboveTile(int tileIndex, int nodeIndex)
+    {
+        m_Nodes[nodeIndex].Tiles[1] = m_Tiles[tileIndex];
+        m_Tiles[tileIndex].Nodes[0] = m_Nodes[nodeIndex++];
+
+        m_Nodes[nodeIndex].Tiles[2] = m_Tiles[tileIndex];
+        m_Tiles[tileIndex].Nodes[1] = m_Nodes[nodeIndex++];
+
+        m_Nodes[nodeIndex].Tiles[2] = m_Tiles[tileIndex];
+        m_Tiles[tileIndex].Nodes[2] = m_Nodes[nodeIndex++];
+    }
+
+    private void MapBelowTile(int tileIndex, int nodeIndex)
+    {
+        m_Nodes[nodeIndex].Tiles[1] = m_Tiles[tileIndex];
+        m_Tiles[tileIndex].Nodes[3] = m_Nodes[nodeIndex++];
+
+        m_Nodes[nodeIndex].Tiles[0] = m_Tiles[tileIndex];
+        m_Tiles[tileIndex].Nodes[4] = m_Nodes[nodeIndex++];
+
+        m_Nodes[nodeIndex].Tiles[0] = m_Tiles[tileIndex];
+        m_Tiles[tileIndex].Nodes[5] = m_Nodes[nodeIndex++];
+    }
+
+    private void MapEdges()
+    {
+        // Row 1
+        for (int i = 0; i < 6; i++)
+        {
+            m_Edges[i].Nodes[0] = m_Nodes[i];
+            m_Edges[i].Nodes[1] = m_Nodes[i + 1];
+        }
+
+        // Row 2
+        for (int i = 6; i < 10; i++)
+        {
+            m_Edges[i].Nodes[0] = m_Nodes[(i - 6) * 2];
+            m_Edges[i].Nodes[1] = m_Nodes[((i - 2) * 2)];
+        }
+
+        // Row 3
+        for (int i = 10; i < 18; i++)
+        {
+            m_Edges[i].Nodes[0] = m_Nodes[i - 3];
+            m_Edges[i].Nodes[1] = m_Nodes[i - 2];
+        }
+
+        // Row 4
+        for (int i = 18; i < 23; i++)
+        {
+            m_Edges[i].Nodes[0] = m_Nodes[((i - 15) * 2) + 1];
+            m_Edges[i].Nodes[1] = m_Nodes[((i - 10) * 2) + 1];
+        }
+
+        // Row 5
+        for (int i = 23; i < 33; i++)
+        {
+            m_Edges[i].Nodes[0] = m_Nodes[i - 7];
+            m_Edges[i].Nodes[1] = m_Nodes[i - 6];
+        }
+
+        // Row 6
+        for (int i = 33; i < 39; i++)
+        {
+            m_Edges[i].Nodes[0] = m_Nodes[(i - 25) * 2];
+            m_Edges[i].Nodes[1] = m_Nodes[((i - 20) * 2) + 1];
+        }
+
+        // Row 7
+        for (int i = 39; i < 49; i++)
+        {
+            m_Edges[i].Nodes[0] = m_Nodes[i - 12];
+            m_Edges[i].Nodes[1] = m_Nodes[i - 11];
+        }
+
+        // Row 8
+        for (int i = 49; i < 54; i++)
+        {
+            m_Edges[i].Nodes[0] = m_Nodes[(i - 35) * 2];
+            m_Edges[i].Nodes[1] = m_Nodes[(i - 30) * 2];
+        }
+
+        // Row 9
+        for (int i = 54; i < 62; i++)
+        {
+            m_Edges[i].Nodes[0] = m_Nodes[i - 16];
+            m_Edges[i].Nodes[1] = m_Nodes[i - 15];
+        }
+
+        // Row 10
+        for (int i = 62; i < 66; i++)
+        {
+            m_Edges[i].Nodes[0] = m_Nodes[((i - 43) * 2) + 1];
+            m_Edges[i].Nodes[1] = m_Nodes[((i - 39) * 2) + 1];
+        }
+
+        // Row 11
+        for (int i = 66; i < 72; i++)
+        {
+            m_Edges[i].Nodes[0] = m_Nodes[i - 19];
+            m_Edges[i].Nodes[1] = m_Nodes[i - 18];
+        }
+    }
+
+    /// <summary>
+    /// Arrange resources and tokens
+    /// </summary>
+    /// <param name="useDefault">Use default layout or randomize</param>
+    public void GenerateBoard(bool useDefault = true)
     {
         Resource[] resourceSpread = Tile.DEFAULT_RESOURCE_SPREAD;
         int[] numSpread = Tile.DEFAULT_NUMBER_SPREAD;
 
-        if (shuffleBoard)
+        if (!useDefault)
         {
             Random rand = new Random();
             rand.ShuffleArray(resourceSpread, 2);
@@ -145,22 +329,31 @@ class Board
         }
     }
 
+    public void RollDice()
+    {
+        Random rand = new Random();
+
+        m_LastRoll = rand.Next(6) + 2 + rand.Next(6);
+    }
+
     public void ShapeDraw(ShapeBatcher shapeBatcher)
     {
         for (int i = 0; i < 19; i++)
             m_Tiles[i].ShapeDraw(shapeBatcher, m_Scale);
         
-        for (int i = 0; i < 57; i++)
+        for (int i = 0; i < 72; i++)
+            m_Edges[i].Draw(shapeBatcher);
+
+        for (int i = 0; i < 54; i++)
             m_Nodes[i].Draw(shapeBatcher);
     }
 
     public void SpriteDraw(SpriteBatch spriteBatch, float windowHeight)
     {
         for (int i = 0; i < 19; i++)
-            m_Tiles[i].SpriteDraw(spriteBatch, m_Font, windowHeight);
+            m_Tiles[i].SpriteDraw(spriteBatch, m_Font, windowHeight, m_LastRoll);
     }
 
-    // TODO: Change to class, integrate draw both hex and num
     private class Tile
     {
         public Tile()
@@ -170,24 +363,20 @@ class Board
             Value = 0;
         }
 
-        public Tile(Vector2 position, Resource type)
-        {
-            Position = position;
-            Type = type;
-        }
-
         public Vector2 Position;
 
         public Resource Type;
 
         public int Value;
 
+        public Node[] Nodes = new Node[6];
+
         public void ShapeDraw(ShapeBatcher shapeBatcher, float scale)
         {
             shapeBatcher.DrawHex(Position, scale * .9f, GetResourceColour(Type));
         }
 
-        public void SpriteDraw(SpriteBatch spriteBatch, SpriteFont font, float windowHeight, int active = 6)
+        public void SpriteDraw(SpriteBatch spriteBatch, SpriteFont font, float windowHeight, int active)
         {
             spriteBatch.DrawString(font, Value.ToString(), Position.FlipY(windowHeight), Value == active ? Color.Red : Color.Black);
         }
@@ -250,8 +439,8 @@ class Board
     {
         public Node()
         {
-            OwnerID = 0;
             Position = Vector2.Zero;
+            OwnerID = 0;
         }
 
         public Vector2 Position;
@@ -272,21 +461,46 @@ class Board
 
     private class Edge
     {
+        public Edge()
+        {
+            Start = Vector2.Zero;
+            End = Vector2.Zero;
+            OwnerID = 0;
+        }
+
+        public void CalculatePosition()
+        {
+            Vector2 centre = (Nodes[0].Position + Nodes[1].Position) / 2;
+
+            Start = ((Nodes[0].Position - centre) * .8f) + centre;
+            End = ((Nodes[1].Position - centre) * .8f) + centre;
+        }
+
         // Connections ordered N->S & E->W
-        public Vector2 Position;
+        public Vector2 Start;
+        public Vector2 End;
 
         public int OwnerID;
 
         public Node[] Nodes = new Node[2];
+
+        public void Draw(ShapeBatcher shapeBatcher)
+        {
+            shapeBatcher.DrawLine(Start, End, 1f, Color.Pink);
+        }
     }
 
     private Tile[] m_Tiles = new Tile[19];
 
-    private Node[] m_Nodes = new Node[57];
+    private Node[] m_Nodes = new Node[54];
+
+    private Edge[] m_Edges = new Edge[72];
 
     private float m_Scale;
 
     private float m_EdgeDist;
 
     private SpriteFont m_Font;
+
+    private int m_LastRoll;
 }
