@@ -30,4 +30,9 @@ static class Utility
         vector.Y = screenHeight * (1f - (vector.Y / screenHeight));
         return vector;
     }
+
+    public static Vector2 FlipY(this Point point, float screenHeight)
+    {
+        return new Vector2(point.X, screenHeight * (1f - (point.Y / screenHeight)));
+    }
 }

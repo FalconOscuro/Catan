@@ -11,6 +11,8 @@ namespace Catan;
 
 public class Game1 : Game
 {
+    public static Vector2 WindowDimensions { get; private set; }
+
     private GraphicsDeviceManager m_Graphics;
     private SpriteBatch m_SpriteBatch;
 
@@ -20,9 +22,9 @@ public class Game1 : Game
     private Board m_Board;
 
     private static readonly int HIST_LEN = 600;
-    private int[] m_FrameTimes;
+    private float[] m_FrameTimes;
     private int m_FrameIndex;
-    private int m_TimeTotal;
+    private float m_TimeTotal;
 
     public Game1()
     {
@@ -30,7 +32,7 @@ public class Game1 : Game
         Content.RootDirectory = "Content";
         IsMouseVisible = true;
 
-        m_FrameTimes = new int[HIST_LEN];
+        m_FrameTimes = new float[HIST_LEN];
         m_FrameIndex = 0;
         m_TimeTotal = 0;
     }
@@ -39,6 +41,8 @@ public class Game1 : Game
     {
         m_GuiRenderer = new ImGuiRenderer(this).Initialize().RebuildFontAtlas();
         m_ShapeBatcher = new ShapeBatcher(this);
+
+        WindowDimensions = new Vector2(GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height);
 
         base.Initialize();
     }
@@ -54,10 +58,11 @@ public class Game1 : Game
 
     protected override void Update(GameTime gameTime)
     {
+        WindowDimensions = new Vector2(GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height);
+        m_Board.Update();
+
         if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
             Exit();
-
-        // TODO: Add your update logic here
 
         base.Update(gameTime);
     }
@@ -81,11 +86,13 @@ public class Game1 : Game
 
         if (ImGui.CollapsingHeader("Performance"))
         {
-            int frameTime = gameTime.ElapsedGameTime.Milliseconds;
+            float frameTime = gameTime.ElapsedGameTime.Milliseconds;
             float frameRate = 1000f / frameTime;
 
             m_TimeTotal += frameTime - m_FrameTimes[m_FrameIndex];
             m_FrameTimes[m_FrameIndex++] = frameTime;
+
+            ImGui.PlotLines("Frame Times", ref m_FrameTimes[0], HIST_LEN);
 
             if (m_FrameIndex >= HIST_LEN)
                 m_FrameIndex = 0;
@@ -115,13 +122,10 @@ public class Game1 : Game
             if (ImGui.Button("Shuffle Tiles"))
                 m_Board.GenerateBoard(false);
         }
+        ImGui.End();
 
-        if (ImGui.CollapsingHeader("Gameplay"))
-        {
-            if (ImGui.Button("Roll Dice"))
-                m_Board.RollDice();
-        }
-
+        ImGui.Begin("Gameplay");
+        m_Board.UIDraw();
         ImGui.End();
         m_GuiRenderer.EndLayout();
     }

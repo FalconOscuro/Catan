@@ -1,7 +1,12 @@
 using System;
+using System.Collections.Generic;
 
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+
+using ImGuiNET;
+
 
 namespace Catan;
 
@@ -32,6 +37,13 @@ class Board
         
         for (int i = 0; i < 72; i++)
             m_Edges[i] = new Edge();
+        
+        m_Players[0] = new Player(this, Color.Red);
+        m_Players[1] = new Player(this, Color.White);
+        m_Players[2] = new Player(this, Color.Orange);
+        m_Players[3] = new Player(this, Color.Blue);
+
+        m_Players[0].StartTurn();
 
         Vector2 centrePos = new Vector2(screenWidth, screenHeight) / 2f;
         PositionObjects(centrePos);
@@ -304,6 +316,11 @@ class Board
     /// <param name="useDefault">Use default layout or randomize</param>
     public void GenerateBoard(bool useDefault = true)
     {
+        m_DensityMap = new List<List<Tile>>();
+        m_DensityMap.Capacity = 10;
+        for (int i = 0; i < 10; i++)
+            m_DensityMap.Add(new List<Tile>());
+
         Resource[] resourceSpread = Tile.DEFAULT_RESOURCE_SPREAD;
         int[] numSpread = Tile.DEFAULT_NUMBER_SPREAD;
 
@@ -325,6 +342,7 @@ class Board
                 continue;
             }
 
+            m_DensityMap[RollToArrayPos(numSpread[n])].Add(m_Tiles[i]);
             m_Tiles[i].Value = numSpread[n++];
         }
     }
@@ -334,6 +352,37 @@ class Board
         Random rand = new Random();
 
         m_LastRoll = rand.Next(6) + 2 + rand.Next(6);
+
+        foreach (Tile tile in m_DensityMap[RollToArrayPos(m_LastRoll)])
+            tile.Distribute();
+    }
+
+    private static int RollToArrayPos(int roll)
+    {
+        return roll - (roll > 7 ? 3 : 2);
+    }
+
+    public void Update()
+    {
+        if (m_Players[m_CurrentPlayer].HasTurnEnded())
+        {
+            if (++m_CurrentPlayer > 3)
+                m_CurrentPlayer = 0;
+            
+            m_Players[m_CurrentPlayer].StartTurn();
+        }
+
+        bool pressed = Mouse.GetState().LeftButton.HasFlag(ButtonState.Pressed);
+        Vector2 mousePos = Mouse.GetState().Position.FlipY(Game1.WindowDimensions.Y);
+        foreach (Node node in m_Nodes)
+            if(node.TestCollision(mousePos))
+            {
+                if (pressed)
+                    m_Players[m_CurrentPlayer].SelectNode(node);
+                break;
+            }
+            
+
     }
 
     public void ShapeDraw(ShapeBatcher shapeBatcher)
@@ -354,7 +403,15 @@ class Board
             m_Tiles[i].SpriteDraw(spriteBatch, m_Font, windowHeight, m_LastRoll);
     }
 
-    private class Tile
+    public void UIDraw()
+    {
+        ImGui.Text(String.Format("Player {0}", m_CurrentPlayer));
+        ImGui.Separator();
+
+        m_Players[m_CurrentPlayer].DrawUI();
+    }
+
+    public class Tile
     {
         public Tile()
         {
@@ -370,6 +427,13 @@ class Board
         public int Value;
 
         public Node[] Nodes = new Node[6];
+
+        public void Distribute()
+        {
+            for (int i = 0; i < 6; i++)
+                if (Nodes[i].Owner != null)
+                    Nodes[i].Owner.GiveResource(Type);
+        }
 
         public void ShapeDraw(ShapeBatcher shapeBatcher, float scale)
         {
@@ -425,47 +489,53 @@ class Board
         }
     }
 
-    public enum Resource
-    {
-        Empty,
-        Lumber,
-        Brick,
-        Grain,
-        Wool,
-        Ore
-    }
-
-    private class Node
+    public class Node
     {
         public Node()
         {
             Position = Vector2.Zero;
-            OwnerID = 0;
+            Owner = null;
+            IsCity = false;
+            m_Hovered = false;
+            Selected = false;
         }
 
         public Vector2 Position;
 
-        public int OwnerID;
+        public Player Owner;
 
-        public bool IsCity = false;
+        public bool IsCity;
+
+        public bool Selected;
 
         public Edge[] Edges = new Edge[3];
 
         public Tile[] Tiles = new Tile[3];
 
+        private bool m_Hovered;
+
+        private static readonly float RADIUS = 5f;
+
+        public bool TestCollision(Vector2 point)
+        {
+            m_Hovered = Vector2.DistanceSquared(Position, point) < RADIUS * RADIUS;
+            return m_Hovered;
+        }
+
         public void Draw(ShapeBatcher shapeBatcher)
         {
-            shapeBatcher.DrawCircle(Position, 5f, 10, 1f, Color.Black);
+            shapeBatcher.DrawCircle(Position, RADIUS + (m_Hovered || Selected ? 1f : 0f), 10, 1f, Owner != null ? Owner.Colour : Color.Black);
+            m_Hovered = false;
         }
     }
 
-    private class Edge
+    public class Edge
     {
         public Edge()
         {
             Start = Vector2.Zero;
             End = Vector2.Zero;
-            OwnerID = 0;
+            Owner = null;
         }
 
         public void CalculatePosition()
@@ -480,13 +550,13 @@ class Board
         public Vector2 Start;
         public Vector2 End;
 
-        public int OwnerID;
+        public Player Owner;
 
         public Node[] Nodes = new Node[2];
 
         public void Draw(ShapeBatcher shapeBatcher)
         {
-            shapeBatcher.DrawLine(Start, End, 1f, Color.Pink);
+            shapeBatcher.DrawLine(Start, End, 1f, Owner != null ? Owner.Colour : Color.Black);
         }
     }
 
@@ -496,6 +566,11 @@ class Board
 
     private Edge[] m_Edges = new Edge[72];
 
+    private List<List<Tile>> m_DensityMap;
+
+    private Player[] m_Players = new Player[4];
+    private int m_CurrentPlayer = 0;
+
     private float m_Scale;
 
     private float m_EdgeDist;
@@ -503,4 +578,14 @@ class Board
     private SpriteFont m_Font;
 
     private int m_LastRoll;
+}
+
+public enum Resource
+{
+    Empty = -1,
+    Lumber,
+    Brick,
+    Grain,
+    Wool,
+    Ore
 }
