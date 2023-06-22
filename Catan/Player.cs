@@ -13,6 +13,7 @@ class Player
         m_GameBoard = board;
         m_TurnState = TurnState.End;
         m_SelectedNode = null;
+        m_SelectedEdge = null;
         Colour = colour;
     }
 
@@ -29,6 +30,11 @@ class Player
         m_TurnState = TurnState.Start;
     }
 
+    public void SetState(TurnState state)
+    {
+        m_TurnState = state;
+    }
+
     private void Roll()
     {
         m_GameBoard.RollDice();
@@ -40,6 +46,7 @@ class Player
         m_TurnState = TurnState.End;
 
         DeselectNode();
+        DeselectEdge();
     }
 
     public bool HasTurnEnded()
@@ -49,6 +56,9 @@ class Player
 
     public void SelectNode(Board.Node node)
     {
+        if (m_TurnState == TurnState.End)
+            return;
+
         DeselectNode();
 
         m_SelectedNode = node;
@@ -63,8 +73,33 @@ class Player
         m_SelectedNode = null;
     }
 
+    public void SelectEdge(Board.Edge edge)
+    {
+        if (m_TurnState == TurnState.End)
+            return;
+        
+        DeselectEdge();
+
+        m_SelectedEdge = edge;
+        m_SelectedEdge.Selected = true;
+    }
+
+    private void DeselectEdge()
+    {
+        if (m_SelectedEdge != null)
+            m_SelectedEdge.Selected = false;
+        
+        m_SelectedEdge = null;
+    }
+
     public void DrawUI()
     {
+        if (m_TurnState == TurnState.PreGame1 || m_TurnState == TurnState.Pregame2)
+        {
+            PreGameUI();
+            return;
+        }
+
         if (ImGui.BeginTable("Resources", 5))
         {
             ImGui.TableNextRow();
@@ -105,13 +140,33 @@ class Player
         }
     }
 
-    public void TurnStartUI()
+    private void PreGameUI()
+    {
+        if (!ImGui.Button("Build") || m_SelectedNode == null || m_SelectedEdge == null)
+            return;
+            
+        else if (!m_SelectedNode.IsAvailable() || !m_SelectedEdge.IsAvailable()
+            || (m_SelectedEdge.Nodes[0] != m_SelectedNode && m_SelectedEdge.Nodes[1] != m_SelectedNode))
+            return;
+
+        m_SelectedNode.Owner = this;
+        m_SelectedEdge.Owner = this;
+
+        if (m_TurnState == TurnState.Pregame2)
+            for (int i = 0; i < 3; i++)
+                if (m_SelectedNode.Tiles[i] != null)
+                    GiveResource(m_SelectedNode.Tiles[i].Type);
+
+        EndTurn();
+    }
+
+    private void TurnStartUI()
     {
         if (ImGui.Button("Roll"))
             Roll();
     }
 
-    public void TurnMainUI()
+    private void TurnMainUI()
     {
         if (ImGui.BeginTabBar("TurnOptions"))
         {
@@ -167,8 +222,9 @@ class Player
             m_TurnState = TurnState.Main;
     }
 
-    private enum TurnState {
-        PreGame,
+    public enum TurnState {
+        PreGame1,
+        Pregame2,
         Start,
         Main,
         BuildSettlement,
@@ -185,4 +241,5 @@ class Player
     private Board m_GameBoard;
 
     private Board.Node m_SelectedNode;
+    private Board.Edge m_SelectedEdge;
 }

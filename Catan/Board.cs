@@ -43,7 +43,8 @@ class Board
         m_Players[2] = new Player(this, Color.Orange);
         m_Players[3] = new Player(this, Color.Blue);
 
-        m_Players[0].StartTurn();
+        m_Players[0].SetState(Player.TurnState.PreGame1);
+        m_State = GameState.Pregame1;
 
         Vector2 centrePos = new Vector2(screenWidth, screenHeight) / 2f;
         PositionObjects(centrePos);
@@ -308,6 +309,15 @@ class Board
             m_Edges[i].Nodes[0] = m_Nodes[i - 19];
             m_Edges[i].Nodes[1] = m_Nodes[i - 18];
         }
+
+        foreach (Edge edge in m_Edges)
+            for (int i = 0; i < 2; i++)
+            {
+                int n = -1;
+                while (edge.Nodes[i].Edges[++n] != null);
+
+                edge.Nodes[i].Edges[n] = edge;
+            }
     }
 
     /// <summary>
@@ -364,13 +374,7 @@ class Board
 
     public void Update()
     {
-        if (m_Players[m_CurrentPlayer].HasTurnEnded())
-        {
-            if (++m_CurrentPlayer > 3)
-                m_CurrentPlayer = 0;
-            
-            m_Players[m_CurrentPlayer].StartTurn();
-        }
+        AdvanceTurn();
 
         bool pressed = Mouse.GetState().LeftButton.HasFlag(ButtonState.Pressed);
         Vector2 mousePos = Mouse.GetState().Position.FlipY(Game1.WindowDimensions.Y);
@@ -379,10 +383,48 @@ class Board
             {
                 if (pressed)
                     m_Players[m_CurrentPlayer].SelectNode(node);
-                break;
+                return;
             }
             
+        foreach (Edge edge in m_Edges)
+            if (edge.TestCollision(mousePos))
+            {
+                if (pressed)
+                    m_Players[m_CurrentPlayer].SelectEdge(edge);
+                return;
+            }
+    }
 
+    private void AdvanceTurn()
+    {
+        if (!m_Players[m_CurrentPlayer].HasTurnEnded())
+            return;
+        
+        switch (m_State)
+        {
+        case GameState.Main:
+            if (++m_CurrentPlayer > 3)
+                m_CurrentPlayer = 0;
+            break;
+
+        case GameState.Pregame1:
+            if (++m_CurrentPlayer > 3)
+            {
+                m_CurrentPlayer = 3;
+                m_State = GameState.Pregame2;
+            }
+            break;
+        
+        case GameState.Pregame2:
+            if(--m_CurrentPlayer < 0)
+            {
+                m_CurrentPlayer = 0;
+                m_State = GameState.Main;
+            }
+            break;
+        }
+
+        m_Players[m_CurrentPlayer].SetState((Player.TurnState)m_State);
     }
 
     public void ShapeDraw(ShapeBatcher shapeBatcher)
@@ -508,13 +550,35 @@ class Board
 
         public bool Selected;
 
-        public Edge[] Edges = new Edge[3];
+        public Edge[] Edges = new Edge[] {null, null, null};
 
         public Tile[] Tiles = new Tile[3];
 
         private bool m_Hovered;
 
         private static readonly float RADIUS = 5f;
+
+        public bool IsAvailable()
+        {
+            if (Owner != null)
+                return false;
+
+            foreach (Edge edge in Edges)
+            {
+                if (edge == null)
+                    continue;
+                
+                int n = 0;
+                // Avoid checking self
+                if (edge.Nodes[n] == this)
+                    n++;
+                
+                if (edge.Nodes[n].Owner != null)
+                    return false;
+            }
+
+            return true;
+        }
 
         public bool TestCollision(Vector2 point)
         {
@@ -544,6 +608,8 @@ class Board
 
             Start = ((Nodes[0].Position - centre) * .8f) + centre;
             End = ((Nodes[1].Position - centre) * .8f) + centre;
+            m_Hovered = false;
+            Selected = false;
         }
 
         // Connections ordered N->S & E->W
@@ -554,10 +620,38 @@ class Board
 
         public Node[] Nodes = new Node[2];
 
+        public bool Selected;
+
+        private bool m_Hovered;
+
+        public bool IsAvailable()
+        {
+            return Owner == null;
+        }
+
+        public bool TestCollision(Vector2 point)
+        {
+            Vector2 v1 = End - Start;
+            Vector2 v2 = point - Start;
+            Vector2 v3 = Vector2.Normalize(v1);
+
+            float d  = Vector2.Dot(v3, v2);
+
+            if (d < 0 || d > v1.Length())
+                return false;
+            
+            m_Hovered = ((v3 * d) - v2).Length() <= LINE_WIDTH;
+
+            return m_Hovered;
+        }
+
         public void Draw(ShapeBatcher shapeBatcher)
         {
-            shapeBatcher.DrawLine(Start, End, 1f, Owner != null ? Owner.Colour : Color.Black);
+            shapeBatcher.DrawLine(Start, End, LINE_WIDTH + ((m_Hovered || Selected) ? LINE_WIDTH * 2 : 0f), Owner != null ? Owner.Colour : Color.Black);
+            m_Hovered = false;
         }
+
+        private static readonly float LINE_WIDTH = 1f;
     }
 
     private Tile[] m_Tiles = new Tile[19];
@@ -578,6 +672,15 @@ class Board
     private SpriteFont m_Font;
 
     private int m_LastRoll;
+
+    private enum GameState
+    {
+        Pregame1 = (int)Player.TurnState.PreGame1,
+        Pregame2 = (int)Player.TurnState.Pregame2,
+        Main = (int)Player.TurnState.Start,
+    }
+
+    private GameState m_State;
 }
 
 public enum Resource
