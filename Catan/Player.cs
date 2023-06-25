@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-
 using Microsoft.Xna.Framework;
 
 using ImGuiNET;
@@ -15,14 +13,13 @@ class Player
         m_SelectedNode = null;
         m_SelectedEdge = null;
         Colour = colour;
+
+        m_VictoryPoints = 2;
     }
 
-    public void GiveResource(Resource resource, int num = 1)
+    public void GiveResource(Resources.Type resource, int num = 1)
     {
-        if (resource == Resource.Empty)
-            return;
-        
-        m_Resources[((int)resource)] += num;
+        m_Resources.AddType(resource, num);
     }
 
     public void StartTurn()
@@ -49,12 +46,22 @@ class Player
         DeselectEdge();
     }
 
+    public bool HasWon()
+    {
+        return m_VictoryPoints >= 10;
+    }
+
     public bool HasTurnEnded()
     {
         return m_TurnState == TurnState.End;
     }
 
-    public void SelectNode(Board.Node node)
+    public int GetHandSize()
+    {
+        return m_Resources.GetTotal();
+    }
+
+    public void SelectNode(Node node)
     {
         if (m_TurnState == TurnState.End)
             return;
@@ -73,7 +80,7 @@ class Player
         m_SelectedNode = null;
     }
 
-    public void SelectEdge(Board.Edge edge)
+    public void SelectEdge(Edge edge)
     {
         if (m_TurnState == TurnState.End)
             return;
@@ -92,7 +99,18 @@ class Player
         m_SelectedEdge = null;
     }
 
-    public void DrawUI()
+    public void DebugDrawUI()
+    {
+        ImGui.Text(string.Format("State: {0}", m_TurnState.ToString()));
+        ImGui.Text(string.Format("VP: {0}", m_VictoryPoints));
+        ImGui.Text(string.Format("Resource Cards: {0}", GetHandSize()));
+
+        ImGui.Separator();
+
+        m_Resources.UIDraw(true);
+    }
+
+    public void GameDrawUI()
     {
         if (m_TurnState == TurnState.PreGame1 || m_TurnState == TurnState.Pregame2)
         {
@@ -100,23 +118,7 @@ class Player
             return;
         }
 
-        if (ImGui.BeginTable("Resources", 5))
-        {
-            ImGui.TableNextRow();
-            for (int i = 0; i < 5; i++)
-            {
-                ImGui.TableSetColumnIndex(i);
-                ImGui.Text(((Resource)i).ToString());
-            }
-
-            ImGui.TableNextRow();
-            for (int i = 0; i < 5; i++)
-            {
-                ImGui.TableSetColumnIndex(i);
-                ImGui.Text(m_Resources[i].ToString());
-            }
-            ImGui.EndTable();
-        }
+        m_Resources.UIDraw();
 
         ImGui.Separator();
 
@@ -130,12 +132,7 @@ class Player
                 TurnMainUI();
                 break;
             
-            case TurnState.BuildSettlement:
-                BuildSettlementUI();
-                break;
-            
-            case TurnState.BuildRoad:
-                BuildRoadUI();
+            case TurnState.Discard:
                 break;
         }
     }
@@ -173,12 +170,18 @@ class Player
             if (ImGui.BeginTabItem("Build"))
             {
                 if (ImGui.Button("Settlement"))
-                    m_TurnState = TurnState.BuildSettlement;
+                    TryBuildSettlement();
 
                 ImGui.SameLine();
 
                 if (ImGui.Button("Road"))
-                    m_TurnState = TurnState.BuildRoad;
+                    TryBuildRoad();
+
+                ImGui.SameLine();
+
+                if (ImGui.Button("City"))
+                    TryBuildCity();
+                ImGui.EndTabItem();
             }
 
             if (ImGui.BeginTabItem("Trade"))
@@ -195,31 +198,47 @@ class Player
             EndTurn();
     }
 
-    private void BuildSettlementUI()
+    private void DiscardUI()
     {
-        if (ImGui.Button("Confirm"))
-        {
-            if (m_SelectedNode != null)
+        int discardTarget = GetHandSize() / 2;
+
+
+    }
+
+    private void TryBuildSettlement()
+    {
+        if (m_SelectedNode == null)
+            return;
+        
+        if (m_SelectedNode.IsAvailable(this))
+            if (m_Resources.TryTake(SETTLEMENT_COST))
+            {
                 m_SelectedNode.Owner = this;
-
-            m_TurnState = TurnState.Main;
-        }
-
-        ImGui.SameLine();
-
-        if (ImGui.Button("Cancel"))
-            m_TurnState = TurnState.Main;
+                m_VictoryPoints++;
+            }
     }
     
-    private void BuildRoadUI()
+    private void TryBuildRoad()
     {
-        if (ImGui.Button("Confirm"))
-            m_TurnState = TurnState.Main;
+        if (m_SelectedEdge == null)
+            return;
+        
+        if (m_SelectedEdge.IsAvailable(this))
+            if (m_Resources.TryTake(ROAD_COST))
+                m_SelectedEdge.Owner = this;
+    }
 
-        ImGui.SameLine();
-
-        if (ImGui.Button("Cancel"))
-            m_TurnState = TurnState.Main;
+    private void TryBuildCity()
+    {
+        if (m_SelectedNode == null)
+            return;
+        
+        if (m_SelectedNode.Owner == this && m_SelectedNode.IsCity == false)
+            if (m_Resources.TryTake(CITY_COST))
+            {
+                m_SelectedNode.IsCity = true;
+                m_VictoryPoints++;
+            }
     }
 
     public enum TurnState {
@@ -227,8 +246,8 @@ class Player
         Pregame2,
         Start,
         Main,
-        BuildSettlement,
-        BuildRoad,
+        Discard,
+        Robber,
         End
     }
 
@@ -236,10 +255,20 @@ class Player
 
     private TurnState m_TurnState;
 
-    private int[] m_Resources = new int[] {0, 0, 0, 0, 0};
+    private Resources m_Resources;
+    private Resources m_SelectedResources;
 
     private Board m_GameBoard;
 
-    private Board.Node m_SelectedNode;
-    private Board.Edge m_SelectedEdge;
+    private Node m_SelectedNode;
+    private Edge m_SelectedEdge;
+
+    private int m_VictoryPoints;
+
+    private bool[] m_Tabs = { true, false };
+
+    private static readonly Resources ROAD_COST = new Resources(1, 1, 0, 0, 0);
+    private static readonly Resources SETTLEMENT_COST = new Resources(1, 1, 1, 1, 0);
+    private static readonly Resources CITY_COST = new Resources(0, 0, 2, 0, 3);
+    private static readonly Resources DEVELOPMENT_CARD_COST = new Resources(0, 0, 1, 1, 1);
 }

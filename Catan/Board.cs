@@ -10,7 +10,12 @@ using ImGuiNET;
 
 namespace Catan;
 
-// TODO: Create player class, Organize structure
+// TODO:
+// Victory
+// Power cards
+// Robber
+// Trading
+
 class Board
 {
     //  Maximum board size as a percentage of an axis
@@ -331,7 +336,7 @@ class Board
         for (int i = 0; i < 10; i++)
             m_DensityMap.Add(new List<Tile>());
 
-        Resource[] resourceSpread = Tile.DEFAULT_RESOURCE_SPREAD;
+        Resources.Type[] resourceSpread = Tile.DEFAULT_RESOURCE_SPREAD;
         int[] numSpread = Tile.DEFAULT_NUMBER_SPREAD;
 
         if (!useDefault)
@@ -346,7 +351,7 @@ class Board
         {
             m_Tiles[i].Type = resourceSpread[i];
 
-            if (resourceSpread[i] == Resource.Empty)
+            if (resourceSpread[i] == Resources.Type.Empty)
             {
                 m_Tiles[i].Value = 7;
                 continue;
@@ -362,6 +367,14 @@ class Board
         Random rand = new Random();
 
         m_LastRoll = rand.Next(6) + 2 + rand.Next(6);
+
+        if (m_LastRoll == 7)
+        {
+            m_State = GameState.Robber;
+            m_TargetPlayerOffset = m_CurrentPlayer == 3 ? -3 : 1;
+            m_Players[m_CurrentPlayer + m_TargetPlayerOffset].SetState((Player.TurnState)m_State);
+            return;
+        }
 
         foreach (Tile tile in m_DensityMap[RollToArrayPos(m_LastRoll)])
             tile.Distribute();
@@ -382,7 +395,7 @@ class Board
             if(node.TestCollision(mousePos))
             {
                 if (pressed)
-                    m_Players[m_CurrentPlayer].SelectNode(node);
+                    m_Players[m_CurrentPlayer + m_TargetPlayerOffset].SelectNode(node);
                 return;
             }
             
@@ -390,14 +403,14 @@ class Board
             if (edge.TestCollision(mousePos))
             {
                 if (pressed)
-                    m_Players[m_CurrentPlayer].SelectEdge(edge);
+                    m_Players[m_CurrentPlayer + m_TargetPlayerOffset].SelectEdge(edge);
                 return;
             }
     }
 
     private void AdvanceTurn()
     {
-        if (!m_Players[m_CurrentPlayer].HasTurnEnded())
+        if (!m_Players[m_CurrentPlayer + m_TargetPlayerOffset].HasTurnEnded())
             return;
         
         switch (m_State)
@@ -422,9 +435,22 @@ class Board
                 m_State = GameState.Main;
             }
             break;
+
+        case GameState.Robber:
+            if (m_TargetPlayerOffset == 0)
+            {
+                m_State = GameState.Main;
+                m_Players[m_CurrentPlayer].SetState(Player.TurnState.Robber);
+                return;
+            }
+
+            else if ((++m_TargetPlayerOffset) + m_CurrentPlayer > 3)
+                m_TargetPlayerOffset = 0 - m_CurrentPlayer;
+            
+            break;
         }
 
-        m_Players[m_CurrentPlayer].SetState((Player.TurnState)m_State);
+        m_Players[m_CurrentPlayer + m_TargetPlayerOffset].SetState((Player.TurnState)m_State);
     }
 
     public void ShapeDraw(ShapeBatcher shapeBatcher)
@@ -445,213 +471,49 @@ class Board
             m_Tiles[i].SpriteDraw(spriteBatch, m_Font, windowHeight, m_LastRoll);
     }
 
-    public void UIDraw()
+    public void DebugUIDraw()
     {
-        ImGui.Text(String.Format("Player {0}", m_CurrentPlayer));
+        if (ImGui.Button("Shuffle Tiles"))
+            GenerateBoard(false);
+
         ImGui.Separator();
 
-        m_Players[m_CurrentPlayer].DrawUI();
-    }
-
-    public class Tile
-    {
-        public Tile()
+        if (ImGui.BeginTabBar("Players"))
         {
-            Position = Vector2.Zero;
-            Type = Resource.Empty;
-            Value = 0;
-        }
-
-        public Vector2 Position;
-
-        public Resource Type;
-
-        public int Value;
-
-        public Node[] Nodes = new Node[6];
-
-        public void Distribute()
-        {
-            for (int i = 0; i < 6; i++)
-                if (Nodes[i].Owner != null)
-                    Nodes[i].Owner.GiveResource(Type);
-        }
-
-        public void ShapeDraw(ShapeBatcher shapeBatcher, float scale)
-        {
-            shapeBatcher.DrawHex(Position, scale * .9f, GetResourceColour(Type));
-        }
-
-        public void SpriteDraw(SpriteBatch spriteBatch, SpriteFont font, float windowHeight, int active)
-        {
-            spriteBatch.DrawString(font, Value.ToString(), Position.FlipY(windowHeight), Value == active ? Color.Red : Color.Black);
-        }
-
-        // Default resource layout defined by rulebook
-        public static readonly Resource[] DEFAULT_RESOURCE_SPREAD = {
-                    Resource.Ore, Resource.Wool, Resource.Lumber,
-                Resource.Grain, Resource.Brick, Resource.Wool, Resource.Brick,
-            Resource.Grain, Resource.Lumber, Resource.Empty, Resource.Lumber, Resource.Ore,
-                Resource.Lumber, Resource.Ore, Resource.Grain, Resource.Wool,
-                    Resource.Brick, Resource.Grain, Resource.Wool
-            };
-
-        public static readonly int[] DEFAULT_NUMBER_SPREAD = {
-            10, 2, 9,
-            12, 6, 4, 10,
-            9, 11, 3, 8,
-            8, 3, 4, 5,
-            5, 6, 11
-        };
-
-        private static Color GetResourceColour(Resource resource)
-        {
-            switch(resource)
+            if (ImGui.BeginTabItem("Player 0"))
             {
-                case Resource.Empty:
-                    return Color.Wheat;
-
-                case Resource.Lumber:
-                    return Color.DarkGreen;
-
-                case Resource.Brick:
-                    return Color.Brown;
-
-                case Resource.Grain:
-                    return Color.Goldenrod;
-            
-                case Resource.Wool:
-                    return Color.LightGreen;
-            
-                case Resource.Ore:
-                    return Color.Gray;
+                m_Players[0].DebugDrawUI();
+                ImGui.EndTabItem();
             }
 
-            return Color.Black;
-        }
-    }
-
-    public class Node
-    {
-        public Node()
-        {
-            Position = Vector2.Zero;
-            Owner = null;
-            IsCity = false;
-            m_Hovered = false;
-            Selected = false;
-        }
-
-        public Vector2 Position;
-
-        public Player Owner;
-
-        public bool IsCity;
-
-        public bool Selected;
-
-        public Edge[] Edges = new Edge[] {null, null, null};
-
-        public Tile[] Tiles = new Tile[3];
-
-        private bool m_Hovered;
-
-        private static readonly float RADIUS = 5f;
-
-        public bool IsAvailable()
-        {
-            if (Owner != null)
-                return false;
-
-            foreach (Edge edge in Edges)
+            if (ImGui.BeginTabItem("Player 1"))
             {
-                if (edge == null)
-                    continue;
-                
-                int n = 0;
-                // Avoid checking self
-                if (edge.Nodes[n] == this)
-                    n++;
-                
-                if (edge.Nodes[n].Owner != null)
-                    return false;
+                m_Players[1].DebugDrawUI();
+                ImGui.EndTabItem();
             }
 
-            return true;
-        }
+            if (ImGui.BeginTabItem("Player 2"))
+            {
+                m_Players[2].DebugDrawUI();
+                ImGui.EndTabItem();
+            }
 
-        public bool TestCollision(Vector2 point)
-        {
-            m_Hovered = Vector2.DistanceSquared(Position, point) < RADIUS * RADIUS;
-            return m_Hovered;
-        }
+            if (ImGui.BeginTabItem("Player 3"))
+            {
+                m_Players[3].DebugDrawUI();
+                ImGui.EndTabItem();
+            }
 
-        public void Draw(ShapeBatcher shapeBatcher)
-        {
-            shapeBatcher.DrawCircle(Position, RADIUS + (m_Hovered || Selected ? 1f : 0f), 10, 1f, Owner != null ? Owner.Colour : Color.Black);
-            m_Hovered = false;
+            ImGui.EndTabBar();
         }
     }
 
-    public class Edge
+    public void GameUIDraw()
     {
-        public Edge()
-        {
-            Start = Vector2.Zero;
-            End = Vector2.Zero;
-            Owner = null;
-        }
+        ImGui.Text(String.Format("Player {0}", m_CurrentPlayer + m_TargetPlayerOffset));
+        ImGui.Separator();
 
-        public void CalculatePosition()
-        {
-            Vector2 centre = (Nodes[0].Position + Nodes[1].Position) / 2;
-
-            Start = ((Nodes[0].Position - centre) * .8f) + centre;
-            End = ((Nodes[1].Position - centre) * .8f) + centre;
-            m_Hovered = false;
-            Selected = false;
-        }
-
-        // Connections ordered N->S & E->W
-        public Vector2 Start;
-        public Vector2 End;
-
-        public Player Owner;
-
-        public Node[] Nodes = new Node[2];
-
-        public bool Selected;
-
-        private bool m_Hovered;
-
-        public bool IsAvailable()
-        {
-            return Owner == null;
-        }
-
-        public bool TestCollision(Vector2 point)
-        {
-            Vector2 v1 = End - Start;
-            Vector2 v2 = point - Start;
-            Vector2 v3 = Vector2.Normalize(v1);
-
-            float d  = Vector2.Dot(v3, v2);
-
-            if (d < 0 || d > v1.Length())
-                return false;
-            
-            m_Hovered = ((v3 * d) - v2).Length() <= LINE_WIDTH;
-
-            return m_Hovered;
-        }
-
-        public void Draw(ShapeBatcher shapeBatcher)
-        {
-            shapeBatcher.DrawLine(Start, End, LINE_WIDTH + ((m_Hovered || Selected) ? LINE_WIDTH * 2 : 0f), Owner != null ? Owner.Colour : Color.Black);
-            m_Hovered = false;
-        }
-
-        private static readonly float LINE_WIDTH = 1f;
+        m_Players[m_CurrentPlayer + m_TargetPlayerOffset].GameDrawUI();
     }
 
     private Tile[] m_Tiles = new Tile[19];
@@ -664,6 +526,7 @@ class Board
 
     private Player[] m_Players = new Player[4];
     private int m_CurrentPlayer = 0;
+    private int m_TargetPlayerOffset = 0;
 
     private float m_Scale;
 
@@ -678,17 +541,8 @@ class Board
         Pregame1 = (int)Player.TurnState.PreGame1,
         Pregame2 = (int)Player.TurnState.Pregame2,
         Main = (int)Player.TurnState.Start,
+        Robber = (int)Player.TurnState.Discard
     }
 
     private GameState m_State;
-}
-
-public enum Resource
-{
-    Empty = -1,
-    Lumber,
-    Brick,
-    Grain,
-    Wool,
-    Ore
 }

@@ -119,13 +119,12 @@ public class Game1 : Game
 
         if (ImGui.CollapsingHeader("Game Board"))
         {
-            if (ImGui.Button("Shuffle Tiles"))
-                m_Board.GenerateBoard(false);
+            m_Board.DebugUIDraw();
         }
         ImGui.End();
 
         ImGui.Begin("Gameplay");
-        m_Board.UIDraw();
+        m_Board.GameUIDraw();
         ImGui.End();
         m_GuiRenderer.EndLayout();
     }
