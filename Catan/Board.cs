@@ -50,6 +50,8 @@ class Board
         m_Players[0].SetState(Player.TurnState.PreGame1);
         m_State = GameState.Pregame1;
 
+        ResourceBank = new Resources(19, 19, 19, 19, 19);
+
         Vector2 centrePos = new Vector2(screenWidth, screenHeight) / 2f;
         PositionObjects(centrePos);
         MapObjects();
@@ -386,13 +388,36 @@ class Board
             return;
         }
 
-        foreach (Tile tile in m_DensityMap[RollToArrayPos(m_LastRoll)])
-            tile.Distribute();
+        DistributeResources();
     }
 
     private static int RollToArrayPos(int roll)
     {
         return roll - (roll > 7 ? 3 : 2);
+    }
+
+    private void DistributeResources()
+    {
+        List<Trade> trades = new List<Trade>();
+        foreach (Tile tile in m_DensityMap[RollToArrayPos(m_LastRoll)])
+            trades.AddRange(tile.Distribute());
+
+        Resources requested = new Resources();
+        foreach (Trade trade in trades)
+            requested = requested + trade.Materials;
+        
+        Resources mask = new Resources(1, 1, 1, 1, 1);
+        for (Resources.Type i = 0; (int)i < 5; i++)
+            if (ResourceBank.GetType(i) < requested.GetType(i))
+                mask.SetType(i, 0);
+        
+        for (int i = 0; i < trades.Count; i++)
+        {
+            trades[i].From = ResourceBank;
+            trades[i].Materials = trades[i].Materials * mask;
+
+            trades[i].TryExecute();
+        }
     }
 
     public void Update()
@@ -507,6 +532,10 @@ class Board
 
     public void DebugUIDraw()
     {
+        ImGui.Text("Bank");
+        ResourceBank.UIDraw(true);
+        ImGui.Separator();
+
         if (ImGui.Button("Shuffle Tiles"))
             GenerateBoard(false);
 
@@ -570,6 +599,8 @@ class Board
     private SpriteFont m_Font;
 
     private int m_LastRoll;
+
+    public Resources ResourceBank;
 
     private enum GameState
     {

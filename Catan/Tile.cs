@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
@@ -35,13 +37,24 @@ class Tile
             return Vector2.DistanceSquared(point, Position) < scale * scale * .75f;
         }
 
-        public void Distribute()
+        public List<Trade> Distribute()
         {
+            List<Trade> trades = new List<Trade>();
+
             if (Robber)
-                return;
+                return trades;
 
             foreach (Node node in Nodes)
-                node.Distribute(Type);
+                if (node.Owner != null)
+                    {
+                        Trade trade = new Trade();
+                        trade.Materials.AddType(Type, node.IsCity ? 2 : 1);
+                        trade.To = node.Owner.ResourceHand;
+
+                        trades.Add(trade);
+                    }
+
+            return trades;
         }
 
         public void ShapeDraw(ShapeBatcher shapeBatcher, float scale)

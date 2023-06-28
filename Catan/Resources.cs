@@ -6,8 +6,11 @@ using ImGuiNET;
 
 namespace Catan;
 
-struct Resources
+class Resources
 {
+    public Resources()
+    {}
+
     public Resources(int lumber, int brick, int grain, int wool, int ore)
     {
         Lumber = lumber;
@@ -22,6 +25,55 @@ struct Resources
     public int Grain;
     public int Wool;
     public int Ore;
+
+    public int GetType(Type type)
+    {
+        switch (type)
+        {
+        case Type.Lumber:
+            return Lumber;
+
+        case Type.Brick:
+            return Brick;
+
+        case Type.Grain:
+            return Grain;
+
+        case Type.Wool:
+            return Wool;
+
+        case Type.Ore:
+            return Ore;
+        }
+
+        return 0;
+    }
+
+    public void SetType(Type type, int num)
+    {
+        switch (type)
+        {
+        case Type.Lumber:
+            Lumber = num;
+            break;
+
+        case Type.Brick:
+            Brick = num;
+            break;
+
+        case Type.Grain:
+            Grain = num;
+            break;
+
+        case Type.Wool:
+            Wool = num;
+            break;
+
+        case Type.Ore:
+            Ore = num;
+            break;
+        }
+    }
 
     public void AddType(Type type, int amount)
     {
@@ -86,6 +138,18 @@ struct Resources
         
         target -= resourceCount;
         return false;
+    }
+
+    public void Add(Resources resources)
+    {
+        if (resources == null)
+            return;
+
+        Lumber += resources.Lumber;
+        Brick += resources.Brick;
+        Grain += resources.Grain;
+        Wool += resources.Wool;
+        Ore += resources.Ore;
     }
 
     public bool TryTake(Resources resources)
@@ -153,6 +217,39 @@ struct Resources
         ImGui.SameLine();
         if (ImGui.ArrowButton(name + "Down", ImGuiDir.Down) && resource > 0)
             resource--;
+    }
+
+    public static Resources operator+(Resources a, Resources b)
+    {
+        return new Resources(
+            a.Lumber + b.Lumber,
+            a.Brick + b.Brick,
+            a.Grain + b.Grain,
+            a.Wool + b.Wool,
+            a.Ore + b.Ore
+            );
+    }
+
+    public static Resources operator-(Resources a, Resources b)
+    {
+        return new Resources(
+            a.Lumber - b.Lumber,
+            a.Brick - b.Brick,
+            a.Grain - b.Grain,
+            a.Wool - b.Wool,
+            a.Ore - b.Ore
+        );
+    }
+
+    public static Resources operator*(Resources a, Resources b)
+    {
+        return new Resources(
+            a.Lumber * b.Lumber,
+            a.Brick * b.Brick,
+            a.Grain * b.Grain,
+            a.Wool * b.Wool,
+            a.Ore * b.Ore
+        );
     }
 
     public static Color GetResourceColour(Type resource)

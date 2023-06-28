@@ -16,16 +16,19 @@ class Player
         Colour = colour;
 
         m_VictoryPoints = 2;
+
+        ResourceHand = new Resources();
+        m_CurrentTrade = new Trade();
     }
 
     public void GiveResource(Resources.Type resource, int num = 1)
     {
-        m_Resources.AddType(resource, num);
+        ResourceHand.AddType(resource, num);
     }
 
     public Resources.Type StealResource()
     {
-        return m_Resources.Steal();
+        return ResourceHand.Steal();
     }
 
     public void StartTurn()
@@ -35,7 +38,7 @@ class Player
 
     public void SetState(TurnState state)
     {
-        if (state == TurnState.Discard && m_Resources.GetTotal() < 8)
+        if (state == TurnState.Discard && ResourceHand.GetTotal() < 8)
             state = TurnState.End;
 
         m_TurnState = state;
@@ -68,7 +71,7 @@ class Player
 
     public int GetHandSize()
     {
-        return m_Resources.GetTotal();
+        return ResourceHand.GetTotal();
     }
 
     public void SelectNode(Node node)
@@ -136,7 +139,7 @@ class Player
 
         ImGui.Separator();
 
-        m_Resources.UIDraw(true);
+        ResourceHand.UIDraw(true);
     }
 
     public void GameDrawUI()
@@ -144,7 +147,7 @@ class Player
         if (m_TurnState == TurnState.End)
             return;
 
-        m_Resources.UIDraw();
+        ResourceHand.UIDraw();
 
         ImGui.Separator();
 
@@ -186,9 +189,17 @@ class Player
         m_SelectedEdge.Owner = this;
 
         if (m_TurnState == TurnState.Pregame2)
+        {
+            Trade trade = new Trade();
+            trade.To = ResourceHand;
+            trade.From = m_GameBoard.ResourceBank;
+
             for (int i = 0; i < 3; i++)
                 if (m_SelectedNode.Tiles[i] != null)
-                    GiveResource(m_SelectedNode.Tiles[i].Type);
+                    trade.Materials.AddType(m_SelectedNode.Tiles[i].Type, 1);
+            
+            trade.TryExecute();
+        }
 
         EndTurn();
     }
@@ -243,13 +254,15 @@ class Player
     {
         int discardTarget = GetHandSize() / 2;
 
-        m_SelectedResources.UIDraw(true);
+        m_CurrentTrade.Materials.UIDraw(true);
+        m_CurrentTrade.To = m_GameBoard.ResourceBank;
+        m_CurrentTrade.From = ResourceHand;
 
-        if (ImGui.Button("Discard") && m_SelectedResources.GetTotal() == discardTarget)
-            if (m_Resources.TryTake(m_SelectedResources))
+        if (ImGui.Button("Discard") && m_CurrentTrade.Materials.GetTotal() == discardTarget)
+            if (m_CurrentTrade.TryExecute())
             {
                 m_TurnState = TurnState.End;
-                m_SelectedResources = new Resources();
+                m_CurrentTrade = new Trade();
             }
 
     }
@@ -296,11 +309,18 @@ class Player
             return;
         
         if (m_SelectedNode.IsAvailable(this))
-            if (m_Resources.TryTake(SETTLEMENT_COST))
+        {
+            Trade trade = new Trade();
+            trade.From = ResourceHand;
+            trade.To = m_GameBoard.ResourceBank;
+            trade.Materials = SETTLEMENT_COST;
+
+            if (trade.TryExecute())
             {
                 m_SelectedNode.Owner = this;
                 m_VictoryPoints++;
             }
+        }
     }
     
     private void TryBuildRoad()
@@ -309,8 +329,15 @@ class Player
             return;
         
         if (m_SelectedEdge.IsAvailable(this))
-            if (m_Resources.TryTake(ROAD_COST))
+        {
+            Trade trade = new Trade();
+            trade.From = ResourceHand;
+            trade.To = m_GameBoard.ResourceBank;
+            trade.Materials = ROAD_COST;
+
+            if (trade.TryExecute())
                 m_SelectedEdge.Owner = this;
+        }
     }
 
     private void TryBuildCity()
@@ -319,16 +346,28 @@ class Player
             return;
         
         if (m_SelectedNode.Owner == this && m_SelectedNode.IsCity == false)
-            if (m_Resources.TryTake(CITY_COST))
+        {
+            Trade trade = new Trade();
+            trade.From = ResourceHand;
+            trade.To = m_GameBoard.ResourceBank;
+            trade.Materials = CITY_COST;
+
+            if (trade.TryExecute())
             {
                 m_SelectedNode.IsCity = true;
                 m_VictoryPoints++;
             }
+        }
     }
 
     private void TryGetDevCard()
     {
-        m_Resources.TryTake(DEVELOPMENT_CARD_COST);
+        Trade trade = new Trade();
+        trade.From = ResourceHand;
+        trade.To = m_GameBoard.ResourceBank;
+        trade.Materials = DEVELOPMENT_CARD_COST;
+
+        trade.TryExecute();
     }
 
     public enum TurnState {
@@ -345,8 +384,8 @@ class Player
 
     private TurnState m_TurnState;
 
-    private Resources m_Resources;
-    private Resources m_SelectedResources;
+    public Resources ResourceHand;
+    private Trade m_CurrentTrade;
 
     private Board m_GameBoard;
 

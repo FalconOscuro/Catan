@@ -30,12 +30,6 @@ class Node
 
     private static readonly float RADIUS = 5f;
 
-    public void Distribute(Resources.Type resource)
-    {
-        if (Owner != null)
-            Owner.GiveResource(resource, IsCity ? 2 : 1);
-    }
-
     public bool IsAvailable(Player player = null)
     {
         if (Owner != null)
