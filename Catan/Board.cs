@@ -59,6 +59,30 @@ class Board
         PositionEdges();
 
         GenerateBoard();
+        CreateDevCardDeck();
+    }
+
+    private void CreateDevCardDeck()
+    {
+        DevelopmentCard[] tempArray = new DevelopmentCard[25];
+
+        for (int i = 0; i < 14; i++)
+            tempArray[i] = new Knight();
+        
+        for (int i = 14; i < 19; i++)
+            tempArray[i] = new VictoryPoint();
+        
+        tempArray[19] = new Monopoly();
+        tempArray[20] = new Monopoly();
+        tempArray[21] = new YearOfPlenty();
+        tempArray[22] = new YearOfPlenty();
+        tempArray[23] = new RoadBuilding();
+        tempArray[24] = new RoadBuilding();
+
+        Random rand = new Random();
+
+        rand.ShuffleArray(tempArray, 2);
+        DevelopmentCards = new Queue<DevelopmentCard>(tempArray);
     }
 
     /// <summary>
@@ -506,6 +530,37 @@ class Board
             }
     }
 
+    public void CheckLargestArmy()
+    {
+        int largestSize = 2;
+        Player largestPlayer = null;
+        Player currentLargest = null;
+
+        for (int i = 0; i < 4; i++)
+        {
+            if (m_Players[i].ArmySize > largestSize)
+                largestPlayer = m_Players[i];
+            
+            if (m_Players[i].LargestArmy)
+                currentLargest = m_Players[i];
+        }
+
+        if (largestPlayer == null)
+            return;
+        
+        else if (currentLargest == largestPlayer)
+            return;
+        
+        else if (currentLargest == null)
+            largestPlayer.LargestArmy = true;
+
+        else if (currentLargest.ArmySize < largestPlayer.ArmySize)
+        {
+            currentLargest.LargestArmy = false;
+            largestPlayer.LargestArmy = true;
+        }
+    }
+
     private void AdvanceTurn()
     {
         if (!m_Players[m_CurrentPlayer + m_TargetPlayerOffset].HasTurnEnded() || CheckVictory())
@@ -677,6 +732,7 @@ class Board
     private int m_LastRoll;
 
     public Resources ResourceBank;
+    public Queue<DevelopmentCard> DevelopmentCards;
 
     private Trade m_ActiveTrade;
 

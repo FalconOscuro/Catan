@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 using Microsoft.Xna.Framework;
 
 using ImGuiNET;
@@ -16,9 +18,11 @@ class Player
         Colour = colour;
 
         m_VictoryPoints = 2;
+        m_SelectedCard = 0;
 
         ResourceHand = new Resources();
         m_CurrentTrade = new Trade();
+        m_DevCards = new List<DevelopmentCard>();
     }
 
     public void GiveResource(Resources.Type resource, int num = 1)
@@ -40,6 +44,9 @@ class Player
     {
         if (state == TurnState.Discard && ResourceHand.GetTotal() < 8)
             state = TurnState.End;
+
+        else if (state == TurnState.Robber && m_TurnState == TurnState.Start)
+            state = TurnState.PreRollRobber;
 
         m_TurnState = state;
     }
@@ -63,11 +70,26 @@ class Player
         DeselectNode();
         DeselectEdge();
         DeselectTile();
+
+        m_SelectedCard = 0;
+
+        for (int i = 0; i < m_DevCards.Count; i++)
+            m_DevCards[i].Playable = true;
     }
 
     public bool HasWon()
+    {      
+        return m_VictoryPoints + (LargestArmy ? 2 : 0) + GetHiddenVP() >= 10;
+    }
+
+    private int GetHiddenVP()
     {
-        return m_VictoryPoints >= 10;
+        int victoryCards = 0;
+        foreach (DevelopmentCard developmentCard in m_DevCards)
+            if (developmentCard is VictoryPoint)
+                victoryCards++;
+        
+        return victoryCards;
     }
 
     public bool HasTurnEnded()
@@ -82,16 +104,12 @@ class Player
 
     public void SelectNode(Node node)
     {
-        bool alreadySelected = false;
         if (m_TurnState == TurnState.End)
             return;
 
-        else if (m_SelectedNode == node)
-            alreadySelected = true;
-
         DeselectNode();
 
-        if (!alreadySelected && node != null)
+        if (node != null)
         {
             m_SelectedNode = node;
             m_SelectedNode.Selected = true;
@@ -108,17 +126,12 @@ class Player
 
     public void SelectEdge(Edge edge)
     {
-        bool alreadySelected = false;
-
         if (m_TurnState == TurnState.End)
             return;
-
-        else if (m_SelectedEdge == edge)
-            alreadySelected = true;
         
         DeselectEdge();
 
-        if (!alreadySelected && edge != null)
+        if (edge != null)
         {
             m_SelectedEdge = edge;
             m_SelectedEdge.Selected = true;
@@ -135,17 +148,12 @@ class Player
 
     public void SelectTile(Tile tile)
     {
-        bool alreadySelected = false;
-
         if (m_TurnState == TurnState.End)
             return;
-
-        else if (m_SelectedTile == tile)
-            alreadySelected = true;
         
         DeselectTile();
 
-        if (!alreadySelected && tile != null)
+        if (tile != null)
         {
             m_SelectedTile = tile;
             m_SelectedTile.Selected = true;
@@ -163,7 +171,7 @@ class Player
     public void DebugDrawUI()
     {
         ImGui.Text(string.Format("State: {0}", m_TurnState.ToString()));
-        ImGui.Text(string.Format("VP: {0}", m_VictoryPoints));
+        ImGui.Text(string.Format("VP: {0}", m_VictoryPoints + (LargestArmy ? 2 : 0)));
         ImGui.Text(string.Format("Resource Cards: {0}", GetHandSize()));
 
         ImGui.Separator();
@@ -200,6 +208,7 @@ class Player
                 break;
             
             case TurnState.Robber:
+            case TurnState.PreRollRobber:
                 RobberUI();
                 break;
             
@@ -241,6 +250,18 @@ class Player
     {
         if (ImGui.Button("Roll"))
             Roll();
+        
+        int knightIndex = -1;
+        for (int i = 0; i < m_DevCards.Count; i++)
+            if (m_DevCards[i] is Knight && m_DevCards[i].Playable)
+                knightIndex = i;
+
+        if (knightIndex != -1)
+        {
+            ImGui.SameLine();
+            if (ImGui.Button("Play Knight"))
+                PlayCard(knightIndex);
+        }
     }
 
     private void TurnMainUI()
@@ -275,12 +296,48 @@ class Player
                 ImGui.EndTabItem();
             }
 
+            if (m_DevCards.Count > 0)
+                if (ImGui.BeginTabItem("Dev Cards"))
+                {
+                    string[] cards = new string[m_DevCards.Count];
+
+                    for (int i = 0; i < m_DevCards.Count; i++)
+                        cards[i] = m_DevCards[i].Name;
+
+                    ImGui.ListBox("Development Cards", ref m_SelectedCard, cards, cards.Length);
+
+                    if (!m_DevCards[m_SelectedCard].Playable)
+                        ImGui.Text("Unplayable");
+
+                    else if (ImGui.Button("Use"))
+                    {
+                        m_DevCards[m_SelectedCard].Activate(this);
+                    }
+
+                    ImGui.EndTabItem();
+                }
+
             ImGui.EndTabBar();
             ImGui.Separator();
         }
 
         if (ImGui.Button("End Turn"))
             EndTurn();
+    }
+
+    private void PlayCard(int pos)
+    {
+        if (pos >= m_DevCards.Count)
+            return;
+        
+        else if (!m_DevCards[pos].Playable)
+            return;
+        
+        m_DevCards[pos].Activate(this);
+        m_DevCards.RemoveAt(pos);
+
+        for (int i = 0; i < m_DevCards.Count; i++)
+            m_DevCards[i].Playable = false;
     }
 
     private void OfferTradeUI()
@@ -380,7 +437,12 @@ class Player
             }
 
             m_GameBoard.MoveRobber(m_SelectedTile);
-            m_TurnState = TurnState.Start;
+
+            if (m_TurnState == TurnState.PreRollRobber)
+                m_TurnState = TurnState.Start;
+
+            else
+                m_TurnState = TurnState.Main;
         }
     }
 
@@ -449,12 +511,16 @@ class Player
 
     private void TryGetDevCard()
     {
+        if (m_GameBoard.DevelopmentCards.Count < 0)
+            return;
+
         Trade trade = new Trade();
         trade.From = ResourceHand;
         trade.To = m_GameBoard.ResourceBank;
         trade.Giving = DEVELOPMENT_CARD_COST;
 
-        trade.TryExecute();
+        if (trade.TryExecute())
+            m_DevCards.Add(m_GameBoard.DevelopmentCards.Dequeue());
     }
 
     public enum TurnState {
@@ -464,11 +530,15 @@ class Player
         Main,
         Discard,
         Robber,
+        PreRollRobber,
         Trade,
         End
     }
 
     public Color Colour { get; private set; }
+
+    public int ArmySize { get; set; }
+    public bool LargestArmy { get; set; }
 
     private TurnState m_TurnState;
 
@@ -480,6 +550,9 @@ class Player
     private Node m_SelectedNode;
     private Edge m_SelectedEdge;
     private Tile m_SelectedTile;
+
+    private List<DevelopmentCard> m_DevCards;
+    private int m_SelectedCard;
 
     private struct Pieces
     {
