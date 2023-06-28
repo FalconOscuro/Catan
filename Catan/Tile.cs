@@ -10,6 +10,9 @@ class Tile
             Position = Vector2.Zero;
             Type = Resources.Type.Empty;
             Value = 0;
+
+            Selected = false;
+            Robber = false;
         }
 
         public Vector2 Position;
@@ -20,20 +23,58 @@ class Tile
 
         public Node[] Nodes = new Node[6];
 
+        public bool Selected;
+
+        public bool Robber;
+
+        public bool TestCollision(Vector2 point, float scale)
+        {
+            // Heavily simplified, using approximation of inner circle for collision
+            // .76f is magic number, actual scale is .9f of input scale & shortest edge distane is ~= .87 of scale
+            // .87 * .9f squared is then ~= to magic number .76f
+            return Vector2.DistanceSquared(point, Position) < scale * scale * .76f;
+        }
+
         public void Distribute()
         {
+            if (Robber)
+                return;
+
             foreach (Node node in Nodes)
                 node.Distribute(Type);
         }
 
         public void ShapeDraw(ShapeBatcher shapeBatcher, float scale)
         {
-            shapeBatcher.DrawHex(Position, scale * .9f, Resources.GetResourceColour(Type));
+            shapeBatcher.DrawHex(Position, (scale + (Selected ? 2f : 0f)) * .9f, Resources.GetResourceColour(Type));
         }
 
         public void SpriteDraw(SpriteBatch spriteBatch, SpriteFont font, float windowHeight, int active)
         {
-            spriteBatch.DrawString(font, Value.ToString(), Position.FlipY(windowHeight), Value == active ? Color.Red : Color.Black);
+            string text;
+            if (Robber)
+                text = "R";
+
+            else if (Value == 7)
+                return;
+
+            else
+                text = Value.ToString();
+
+            Color colour;
+            if (Value == active)
+            {
+                if (Robber)
+                    colour = Color.Gray;
+
+                else
+                    colour = Color.Red;
+            }
+
+            else
+                colour = Color.Black;
+
+            spriteBatch.DrawString(font, text, Position.FlipY(windowHeight), colour);
         }
 
         // Default resource layout defined by rulebook

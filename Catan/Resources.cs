@@ -1,3 +1,5 @@
+using System;
+
 using Microsoft.Xna.Framework;
 
 using ImGuiNET;
@@ -47,9 +49,57 @@ struct Resources
         }
     }
 
+    public Type Steal()
+    {
+        int total = GetTotal();
+        if (total == 0)
+            return Type.Empty;
+        
+        Random rand = new Random();
+        int target = rand.Next(total) + 1;
+
+        if (FindTarget(ref Lumber, ref target))
+            return Type.Lumber;
+        
+        else if (FindTarget(ref Brick, ref target))
+            return Type.Brick;
+        
+        else if (FindTarget(ref Grain, ref target))
+            return Type.Grain;
+        
+        else if (FindTarget(ref Wool, ref target))
+            return Type.Wool;
+
+        else if (FindTarget(ref Ore, ref target))
+            return Type.Ore;
+        
+        return Type.Empty;
+    }
+
+    private static bool FindTarget(ref int resourceCount, ref int target)
+    {
+        if (target <= resourceCount)
+        {
+            resourceCount--;
+            return true;
+        }
+        
+        target -= resourceCount;
+        return false;
+    }
+
     public bool TryTake(Resources resources)
     {
-        return false;
+        if (resources.Lumber > Lumber || resources.Brick > Brick || resources.Grain > Grain
+            || resources.Wool > Wool || resources.Ore > Ore)
+            return false;
+
+        Lumber -= resources.Lumber;
+        Brick -= resources.Brick;
+        Grain -= resources.Grain;
+        Wool -= resources.Wool;
+        Ore -= resources.Ore;
+        return true;
     }
 
     public int GetTotal()
@@ -71,25 +121,25 @@ struct Resources
             ImGui.TableNextRow();
 
             ImGui.TableSetColumnIndex(0);
-            DisplayResource(modify, ref Lumber);
+            DisplayResource(modify, Type.Lumber.ToString(), ref Lumber);
 
             ImGui.TableSetColumnIndex(1);
-            DisplayResource(modify, ref Brick);
+            DisplayResource(modify, Type.Brick.ToString(), ref Brick);
 
             ImGui.TableSetColumnIndex(2);
-            DisplayResource(modify, ref Grain);
+            DisplayResource(modify, Type.Grain.ToString(), ref Grain);
 
             ImGui.TableSetColumnIndex(3);
-            DisplayResource(modify, ref Wool);
+            DisplayResource(modify, Type.Wool.ToString(), ref Wool);
 
             ImGui.TableSetColumnIndex(4);
-            DisplayResource(modify, ref Ore);
+            DisplayResource(modify, Type.Ore.ToString(), ref Ore);
 
             ImGui.EndTable();
         }
     }
 
-    private static void DisplayResource(bool modify, ref int resource)
+    private static void DisplayResource(bool modify, string name, ref int resource)
     {
         ImGui.Text(string.Format("{0}", resource));
 
@@ -97,11 +147,11 @@ struct Resources
             return;
 
         ImGui.SameLine();
-        if (ImGui.ArrowButton(resource.GetHashCode().ToString() + "Up", ImGuiDir.Up))
+        if (ImGui.ArrowButton(name + "Up", ImGuiDir.Up))
             resource++;
             
         ImGui.SameLine();
-        if (ImGui.ArrowButton(resource.GetHashCode().ToString() + "Down", ImGuiDir.Down))
+        if (ImGui.ArrowButton(name + "Down", ImGuiDir.Down) && resource > 0)
             resource--;
     }
 

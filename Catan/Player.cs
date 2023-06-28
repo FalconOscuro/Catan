@@ -12,6 +12,7 @@ class Player
         m_TurnState = TurnState.End;
         m_SelectedNode = null;
         m_SelectedEdge = null;
+        m_SelectedTile = null;
         Colour = colour;
 
         m_VictoryPoints = 2;
@@ -22,6 +23,11 @@ class Player
         m_Resources.AddType(resource, num);
     }
 
+    public Resources.Type StealResource()
+    {
+        return m_Resources.Steal();
+    }
+
     public void StartTurn()
     {
         m_TurnState = TurnState.Start;
@@ -29,6 +35,9 @@ class Player
 
     public void SetState(TurnState state)
     {
+        if (state == TurnState.Discard && m_Resources.GetTotal() < 8)
+            state = TurnState.End;
+
         m_TurnState = state;
     }
 
@@ -44,6 +53,7 @@ class Player
 
         DeselectNode();
         DeselectEdge();
+        DeselectTile();
     }
 
     public bool HasWon()
@@ -99,6 +109,25 @@ class Player
         m_SelectedEdge = null;
     }
 
+    public void SelectTile(Tile tile)
+    {
+        if (m_TurnState == TurnState.End)
+            return;
+        
+        DeselectTile();
+
+        m_SelectedTile = tile;
+        m_SelectedTile.Selected = true;
+    }
+
+    private void DeselectTile()
+    {
+        if (m_SelectedTile != null)
+            m_SelectedTile.Selected = false;
+
+        m_SelectedTile = null;
+    }
+
     public void DebugDrawUI()
     {
         ImGui.Text(string.Format("State: {0}", m_TurnState.ToString()));
@@ -112,11 +141,8 @@ class Player
 
     public void GameDrawUI()
     {
-        if (m_TurnState == TurnState.PreGame1 || m_TurnState == TurnState.Pregame2)
-        {
-            PreGameUI();
+        if (m_TurnState == TurnState.End)
             return;
-        }
 
         m_Resources.UIDraw();
 
@@ -124,6 +150,11 @@ class Player
 
         switch(m_TurnState)
         {
+            case TurnState.PreGame1:
+            case TurnState.Pregame2:
+                PreGameUI();
+                break;
+
             case TurnState.Start:
                 TurnStartUI();
                 break;
@@ -133,6 +164,11 @@ class Player
                 break;
             
             case TurnState.Discard:
+                DiscardUI();
+                break;
+            
+            case TurnState.Robber:
+                RobberUI();
                 break;
         }
     }
@@ -181,6 +217,11 @@ class Player
 
                 if (ImGui.Button("City"))
                     TryBuildCity();
+
+                ImGui.SameLine();
+                if (ImGui.Button("Development Card"))
+                    TryGetDevCard();
+
                 ImGui.EndTabItem();
             }
 
@@ -202,7 +243,51 @@ class Player
     {
         int discardTarget = GetHandSize() / 2;
 
+        m_SelectedResources.UIDraw(true);
 
+        if (ImGui.Button("Discard") && m_SelectedResources.GetTotal() == discardTarget)
+            if (m_Resources.TryTake(m_SelectedResources))
+            {
+                m_TurnState = TurnState.End;
+                m_SelectedResources = new Resources();
+            }
+
+    }
+
+    private void RobberUI()
+    {
+        if (ImGui.Button("Move Robber") && m_SelectedTile != null)
+        {
+            if (m_SelectedTile.Robber)
+                return;
+
+            bool targetablePlayer = false;
+            foreach (Node node in m_SelectedTile.Nodes)
+                if (node.Owner != null && node.Owner != this)
+                    targetablePlayer = true;
+            
+            if (targetablePlayer)
+            {
+                if (m_SelectedNode == null)
+                    return;
+                
+                else if (m_SelectedNode.Owner == null || m_SelectedNode.Owner == this)
+                    return;
+
+                bool adjacent = false;
+                foreach (Node node in m_SelectedTile.Nodes)
+                    if (node == m_SelectedNode)
+                        adjacent = true;
+                
+                if (!adjacent)
+                    return;
+                
+                GiveResource(m_SelectedNode.Owner.StealResource());
+            }
+
+            m_GameBoard.MoveRobber(m_SelectedTile);
+            m_TurnState = TurnState.Start;
+        }
     }
 
     private void TryBuildSettlement()
@@ -241,6 +326,11 @@ class Player
             }
     }
 
+    private void TryGetDevCard()
+    {
+        m_Resources.TryTake(DEVELOPMENT_CARD_COST);
+    }
+
     public enum TurnState {
         PreGame1,
         Pregame2,
@@ -262,6 +352,7 @@ class Player
 
     private Node m_SelectedNode;
     private Edge m_SelectedEdge;
+    private Tile m_SelectedTile;
 
     private int m_VictoryPoints;
 

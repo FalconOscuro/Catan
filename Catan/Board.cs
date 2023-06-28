@@ -13,8 +13,8 @@ namespace Catan;
 // TODO:
 // Victory
 // Power cards
-// Robber
 // Trading
+// City Representation
 
 class Board
 {
@@ -354,12 +354,23 @@ class Board
             if (resourceSpread[i] == Resources.Type.Empty)
             {
                 m_Tiles[i].Value = 7;
+                m_Tiles[i].Robber = true;
+                m_RobberPos = m_Tiles[i];
                 continue;
             }
 
             m_DensityMap[RollToArrayPos(numSpread[n])].Add(m_Tiles[i]);
             m_Tiles[i].Value = numSpread[n++];
         }
+    }
+
+    public void MoveRobber(Tile target)
+    {
+        if (m_RobberPos != null)
+            m_RobberPos.Robber = false;
+        
+        m_RobberPos = target;
+        m_RobberPos.Robber = true;
     }
 
     public void RollDice()
@@ -404,6 +415,14 @@ class Board
             {
                 if (pressed)
                     m_Players[m_CurrentPlayer + m_TargetPlayerOffset].SelectEdge(edge);
+                return;
+            }
+
+        foreach (Tile tile in m_Tiles)
+            if (tile.TestCollision(mousePos, m_Scale))
+            {
+                if (pressed)
+                    m_Players[m_CurrentPlayer + m_TargetPlayerOffset].SelectTile(tile);
                 return;
             }
     }
@@ -517,6 +536,7 @@ class Board
     }
 
     private Tile[] m_Tiles = new Tile[19];
+    private Tile m_RobberPos;
 
     private Node[] m_Nodes = new Node[54];
 
