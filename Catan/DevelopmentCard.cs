@@ -51,7 +51,7 @@ class RoadBuilding : DevelopmentCard
 
     public override void Activate(Player owner)
     {
-        throw new System.NotImplementedException();
+        owner.SetState(Player.TurnState.RoadBuilding);
     }
 }
 
@@ -63,7 +63,7 @@ class YearOfPlenty : DevelopmentCard
 
     public override void Activate(Player owner)
     {
-        throw new System.NotImplementedException();
+        owner.SetState(Player.TurnState.YearOfPlenty);
     }
 }
 
@@ -75,6 +75,6 @@ class Monopoly : DevelopmentCard
 
     public override void Activate(Player owner)
     {
-        throw new System.NotImplementedException();
+        owner.SetState(Player.TurnState.Monopoly);
     }
 }

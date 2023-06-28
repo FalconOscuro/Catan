@@ -650,6 +650,24 @@ class Board
         m_Players[m_CurrentPlayer + m_TargetPlayerOffset].SetActiveTrade(m_ActiveTrade);
     }
 
+    public void Monopoly(Resources.Type type)
+    {
+        Trade trade = new Trade();
+        trade.To = m_Players[m_CurrentPlayer].ResourceHand;
+
+        Resources mask = new Resources();
+        mask.SetType(type, 1);
+
+        for (int i = 0; i < 4; i++)
+        {
+            if (i == m_CurrentPlayer)
+                continue;
+
+            trade.Giving = m_Players[i].ResourceHand * mask;
+            trade.TryExecute();
+        }
+    }
+
     public void ShapeDraw(ShapeBatcher shapeBatcher)
     {
         for (int i = 0; i < 19; i++)

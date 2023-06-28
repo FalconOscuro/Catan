@@ -48,6 +48,9 @@ class Player
         else if (state == TurnState.Robber && m_TurnState == TurnState.Start)
             state = TurnState.PreRollRobber;
 
+        if (state != TurnState.Trade)
+            m_CurrentTrade = new Trade();
+
         m_TurnState = state;
     }
 
@@ -59,7 +62,7 @@ class Player
     private void Roll()
     {
         m_GameBoard.RollDice();
-        m_TurnState = TurnState.Main;
+        SetState(TurnState.Main);
     }
 
     private void EndTurn()
@@ -215,6 +218,19 @@ class Player
             case TurnState.Trade:
                 TradeAcceptUI();
                 break;
+
+            case TurnState.RoadBuilding:
+            case TurnState.RoadBuilding2:
+                RoadBuildingUI();
+                break;
+
+            case TurnState.YearOfPlenty:
+                YearOfPlentyUI();
+                break;
+
+            case TurnState.Monopoly:
+                MonopolyUI();
+                break;
         }
     }
 
@@ -343,10 +359,8 @@ class Player
     private void OfferTradeUI()
     {
         bool bank = m_CurrentTrade.To == m_GameBoard.ResourceBank;
-        m_CurrentTrade.From = ResourceHand;
 
-        if (ImGui.Checkbox("Bank Trade", ref bank))
-            m_CurrentTrade.To = bank ? m_GameBoard.ResourceBank : null;
+        ImGui.Checkbox("Bank Trade", ref bank);
         
         m_CurrentTrade.UIDraw();
 
@@ -354,8 +368,11 @@ class Player
 
         if (ImGui.Button("Trade"))
         {
+            m_CurrentTrade.From = ResourceHand;
+
             if (bank)
             {
+                m_CurrentTrade.To = m_GameBoard.ResourceBank;
                 for (Resources.Type i = 0; (int)i < 5; i++)
                     if (m_CurrentTrade.Giving.GetType(i) % 4 != 0)
                         return;
@@ -391,18 +408,18 @@ class Player
     private void DiscardUI()
     {
         int discardTarget = GetHandSize() / 2;
-
         m_CurrentTrade.Giving.UIDraw(true);
-        m_CurrentTrade.To = m_GameBoard.ResourceBank;
-        m_CurrentTrade.From = ResourceHand;
 
         if (ImGui.Button("Discard") && m_CurrentTrade.Giving.GetTotal() == discardTarget)
+        {
+            m_CurrentTrade.To = m_GameBoard.ResourceBank;
+            m_CurrentTrade.From = ResourceHand;
+
             if (m_CurrentTrade.TryExecute())
             {
-                m_TurnState = TurnState.End;
-                m_CurrentTrade = new Trade();
+                EndTurn();
             }
-
+        }
     }
 
     private void RobberUI()
@@ -439,17 +456,56 @@ class Player
             m_GameBoard.MoveRobber(m_SelectedTile);
 
             if (m_TurnState == TurnState.PreRollRobber)
-                m_TurnState = TurnState.Start;
+                SetState(TurnState.Start);
 
             else
-                m_TurnState = TurnState.Main;
+                SetState(TurnState.Main);
         }
     }
 
-    private void TryBuildSettlement()
+    private void RoadBuildingUI()
+    {
+        if (ImGui.Button("Build Road"))
+            if (TryBuildRoad(true))
+            {
+                if (m_TurnState == TurnState.RoadBuilding)
+                    SetState(TurnState.RoadBuilding2);
+                
+                else
+                    SetState(TurnState.Main);
+            }
+    }
+
+    private void YearOfPlentyUI()
+    {
+        m_CurrentTrade.Giving.UIDraw(true);
+
+        if (ImGui.Button("Take") && m_CurrentTrade.Giving.GetTotal() == 2)
+        {
+            m_CurrentTrade.From = m_GameBoard.ResourceBank;
+            m_CurrentTrade.To = ResourceHand;
+
+            if (m_CurrentTrade.TryExecute())
+                SetState(TurnState.Main);
+        }
+    }
+
+    private void MonopolyUI()
+    {
+        for (Resources.Type i = 0; (int)i < 5; i++)
+            {
+                if ((int)i != 0)
+                    ImGui.SameLine();
+
+                if (ImGui.Button(i.ToString()))
+                    m_GameBoard.Monopoly(i);
+            }
+    }
+
+    private bool TryBuildSettlement(bool ignoreCost = false)
     {
         if (m_SelectedNode == null)
-            return;
+            return false;
         
         if (m_SelectedNode.IsAvailable(this) && m_Pieces.Settlements > 0)
         {
@@ -458,19 +514,22 @@ class Player
             trade.To = m_GameBoard.ResourceBank;
             trade.Giving = SETTLEMENT_COST;
 
-            if (trade.TryExecute())
+            if (ignoreCost ? true : trade.TryExecute())
             {
                 m_SelectedNode.Owner = this;
                 m_Pieces.Settlements--;
                 m_VictoryPoints++;
+                return true;
             }
         }
+
+        return false;
     }
     
-    private void TryBuildRoad()
+    private bool TryBuildRoad(bool ignoreCost = false)
     {
         if (m_SelectedEdge == null)
-            return;
+            return false;
         
         if (m_SelectedEdge.IsAvailable(this) && m_Pieces.Roads > 0)
         {
@@ -479,12 +538,15 @@ class Player
             trade.To = m_GameBoard.ResourceBank;
             trade.Giving = ROAD_COST;
 
-            if (trade.TryExecute())
+            if (ignoreCost ? true : trade.TryExecute())
             {
                 m_SelectedEdge.Owner = this;
                 m_Pieces.Roads--;
+                return true;
             }
         }
+
+        return false;
     }
 
     private void TryBuildCity()
@@ -531,6 +593,10 @@ class Player
         Discard,
         Robber,
         PreRollRobber,
+        RoadBuilding,
+        RoadBuilding2,
+        YearOfPlenty,
+        Monopoly,
         Trade,
         End
     }
