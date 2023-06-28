@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
@@ -29,6 +31,75 @@ class Node
     private bool m_Hovered;
 
     private static readonly float RADIUS = 5f;
+
+    public List<Edge> StartRecurse(Player player)
+    {
+        if (Owner != player && Owner != null)
+            return new List<Edge>();
+
+        List<Edge>[] paths = new List<Edge>[3];
+
+        for (int i = 0; i < 3; i++)
+        {
+            if (Edges[i] != null)
+                paths[i] = Edges[i].Recurse(player, this);
+
+            else
+                paths[i] = new List<Edge>();
+        }
+        
+        List<Edge> longest = paths[0];
+
+        for (int i = 0; i < 3; i++)
+        {
+            if (paths[i].Count > longest.Count)
+                longest = paths[i];
+
+            for (int j = i + 1; j < 3; j++)
+            {
+                bool overlap = false;
+                for (int k = 0; k < paths[i].Count && !overlap; k++)
+                {
+                    if (paths[j].Contains(paths[i][k]))
+                        overlap = true;
+                }
+
+                if (overlap)
+                    continue;
+                
+                List<Edge> path = new List<Edge>(paths[i]);
+                path.AddRange(paths[j]);
+
+                if (path.Count > longest.Count)
+                    longest = path;
+            }
+        }
+        return longest;
+    }
+
+    public List<Edge> Recurse(Player player)
+    {
+        if (Owner != player && Owner != null)
+            return new List<Edge>();
+        
+        List<Edge>[] paths = new List<Edge>[3];
+
+        for (int i = 0; i < 3; i++)
+        {
+            if (Edges[i] != null)
+                paths[i] = Edges[i].Recurse(player, this);
+
+            else
+                paths[i] = new List<Edge>();   
+        }
+
+        List<Edge> longest = paths[0];
+        for (int i = 1; i < 3; i++)
+            if (paths[i].Count > longest.Count)
+                longest = paths[i];
+
+        return longest;
+    }
 
     public bool IsAvailable(Player player = null)
     {

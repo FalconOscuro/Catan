@@ -11,9 +11,7 @@ using ImGuiNET;
 namespace Catan;
 
 // TODO:
-// Power cards
 // Ports
-// Longest Road & Largest Army
 
 class Board
 {
@@ -393,27 +391,35 @@ class Board
     {
         m_Nodes[10].Owner = m_Players[0];
         m_Nodes[10].Edges[2].Owner = m_Players[0];
+        m_Players[0].RegisterNode(m_Nodes[10]);
 
         m_Nodes[13].Owner = m_Players[1];
         m_Nodes[13].Edges[0].Owner = m_Players[1];
+        m_Players[1].RegisterNode(m_Nodes[13]);
 
         m_Nodes[19].Owner = m_Players[2];
         m_Nodes[19].Edges[1].Owner = m_Players[2];
+        m_Players[2].RegisterNode(m_Nodes[19]);
 
         m_Nodes[29].Owner = m_Players[0];
         m_Nodes[29].Edges[2].Owner = m_Players[0];
+        m_Players[0].RegisterNode(m_Nodes[29]);
 
         m_Nodes[35].Owner = m_Players[2];
         m_Nodes[35].Edges[0].Owner = m_Players[2];
+        m_Players[2].RegisterNode(m_Nodes[35]);
 
         m_Nodes[40].Owner = m_Players[3];
         m_Nodes[40].Edges[2].Owner = m_Players[3];
+        m_Players[3].RegisterNode(m_Nodes[40]);
 
         m_Nodes[42].Owner = m_Players[1];
         m_Nodes[42].Edges[2].Owner = m_Players[1];
+        m_Players[1].RegisterNode(m_Nodes[42]);
 
         m_Nodes[44].Owner = m_Players[3];
         m_Nodes[44].Edges[0].Owner = m_Players[3];
+        m_Players[3].RegisterNode(m_Nodes[44]);
 
 
         Trade trade = new Trade();
@@ -665,6 +671,37 @@ class Board
 
             trade.Giving = m_Players[i].ResourceHand * mask;
             trade.TryExecute();
+        }
+    }
+
+    public void CheckLongestRoad(bool reCalc)
+    {
+        if (reCalc)
+            foreach (Player player in m_Players)
+                player.FindLongestRoad();
+        
+        Player current = m_Players[0];
+        Player champ = null;
+
+        for (int i = 0; i < 4; i++)
+        {
+            if (m_Players[i].RoadLength > current.RoadLength)
+                current = m_Players[i];
+
+            if (m_Players[i].LongestRoad)
+                champ = m_Players[i];
+        }
+
+        if (current.RoadLength < 3)
+            return;
+
+        else if (champ == null)
+            current.LongestRoad = true;
+
+        else if (current.RoadLength > champ.RoadLength)
+        {
+            current.LongestRoad = true;
+            champ.LongestRoad = false;
         }
     }
 

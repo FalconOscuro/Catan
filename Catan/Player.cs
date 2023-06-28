@@ -20,9 +20,17 @@ class Player
         m_VictoryPoints = 2;
         m_SelectedCard = 0;
 
+        RoadLength = 0;
+        ArmySize = 0;
+
+        m_Pieces = new Pieces();
+        m_Road = new List<Edge>();
+        m_Highlighted = false;
+
         ResourceHand = new Resources();
         m_CurrentTrade = new Trade();
         m_DevCards = new List<DevelopmentCard>();
+        m_OwnedNodes = new List<Node>();
     }
 
     public void GiveResource(Resources.Type resource, int num = 1)
@@ -67,6 +75,8 @@ class Player
 
     private void EndTurn()
     {
+        FindLongestRoad();
+
         m_TurnState = TurnState.End;
         m_CurrentTrade = new Trade();
 
@@ -82,7 +92,7 @@ class Player
 
     public bool HasWon()
     {      
-        return m_VictoryPoints + (LargestArmy ? 2 : 0) + GetHiddenVP() >= 10;
+        return m_VictoryPoints + (LargestArmy ? 2 : 0) + (LongestRoad ? 2 : 0) + GetHiddenVP() >= 10;
     }
 
     private int GetHiddenVP()
@@ -141,6 +151,22 @@ class Player
         }
     }
 
+    public void FindLongestRoad()
+    {
+        RoadLength = 0;
+
+        for (int i = 0; i < m_OwnedNodes.Count; i++)
+        {
+            List<Edge> path = m_OwnedNodes[i].StartRecurse(this);
+
+            if (path.Count > RoadLength)
+            {
+                RoadLength = path.Count;
+                m_Road = path;
+            }
+        }
+    }
+
     private void DeselectEdge()
     {
         if (m_SelectedEdge != null)
@@ -174,12 +200,24 @@ class Player
     public void DebugDrawUI()
     {
         ImGui.Text(string.Format("State: {0}", m_TurnState.ToString()));
-        ImGui.Text(string.Format("VP: {0}", m_VictoryPoints + (LargestArmy ? 2 : 0)));
+        ImGui.Text(string.Format("VP: {0}", m_VictoryPoints + (LargestArmy ? 2 : 0) + (LongestRoad ? 2 : 0)));
         ImGui.Text(string.Format("Resource Cards: {0}", GetHandSize()));
-
+        ImGui.Text(string.Format("Longest Road: {0}", RoadLength));
         ImGui.Separator();
 
+        if (ImGui.Button("Calculate Longest Road"))
+            FindLongestRoad();
+
+        ImGui.Checkbox("Highlight Road", ref m_Highlighted);
+        for (int i = 0; i < m_Road.Count; i++)
+            m_Road[i].Selected = m_Highlighted;
+
         ResourceHand.UIDraw(true);
+    }
+
+    public void RegisterNode(Node node)
+    {
+        m_OwnedNodes.Add(node);
     }
 
     public void GameDrawUI()
@@ -245,6 +283,7 @@ class Player
 
         m_SelectedNode.Owner = this;
         m_SelectedEdge.Owner = this;
+        m_OwnedNodes.Add(m_SelectedNode);
 
         if (m_TurnState == TurnState.Pregame2)
         {
@@ -498,7 +537,10 @@ class Player
                     ImGui.SameLine();
 
                 if (ImGui.Button(i.ToString()))
+                {
                     m_GameBoard.Monopoly(i);
+                    SetState(TurnState.Main);
+                }
             }
     }
 
@@ -519,6 +561,8 @@ class Player
                 m_SelectedNode.Owner = this;
                 m_Pieces.Settlements--;
                 m_VictoryPoints++;
+                m_OwnedNodes.Add(m_SelectedNode);
+                m_GameBoard.CheckLongestRoad(true);
                 return true;
             }
         }
@@ -538,10 +582,13 @@ class Player
             trade.To = m_GameBoard.ResourceBank;
             trade.Giving = ROAD_COST;
 
-            if (ignoreCost ? true : trade.TryExecute())
+            if (trade.TryExecute())
             {
                 m_SelectedEdge.Owner = this;
                 m_Pieces.Roads--;
+
+                FindLongestRoad();
+                m_GameBoard.CheckLongestRoad(false);
                 return true;
             }
         }
@@ -606,6 +653,11 @@ class Player
     public int ArmySize { get; set; }
     public bool LargestArmy { get; set; }
 
+    public int RoadLength { get; private set; }
+    public bool LongestRoad { get; set; }
+    private List<Edge> m_Road;
+    private bool m_Highlighted;
+
     private TurnState m_TurnState;
 
     public Resources ResourceHand;
@@ -634,6 +686,7 @@ class Player
         public int Roads;
     }
     private Pieces m_Pieces;
+    private List<Node> m_OwnedNodes;
 
     private int m_VictoryPoints;
 
