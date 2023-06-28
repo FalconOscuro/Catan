@@ -11,10 +11,9 @@ using ImGuiNET;
 namespace Catan;
 
 // TODO:
-// Victory
 // Power cards
 // Trading
-// City Representation
+// Bank
 
 class Board
 {
@@ -398,6 +397,9 @@ class Board
 
     public void Update()
     {
+        if (m_State == GameState.End)
+            return;
+
         AdvanceTurn();
 
         bool pressed = Mouse.GetState().LeftButton.HasFlag(ButtonState.Pressed);
@@ -429,7 +431,7 @@ class Board
 
     private void AdvanceTurn()
     {
-        if (!m_Players[m_CurrentPlayer + m_TargetPlayerOffset].HasTurnEnded())
+        if (!m_Players[m_CurrentPlayer + m_TargetPlayerOffset].HasTurnEnded() || CheckVictory())
             return;
         
         switch (m_State)
@@ -437,6 +439,7 @@ class Board
         case GameState.Main:
             if (++m_CurrentPlayer > 3)
                 m_CurrentPlayer = 0;
+            CheckVictory();
             break;
 
         case GameState.Pregame1:
@@ -470,6 +473,18 @@ class Board
         }
 
         m_Players[m_CurrentPlayer + m_TargetPlayerOffset].SetState((Player.TurnState)m_State);
+    }
+
+    private bool CheckVictory()
+    {
+        if (m_Players[m_CurrentPlayer].HasWon())
+        {
+            m_State = GameState.End;
+            m_Players[m_CurrentPlayer].SetState(Player.TurnState.End);
+            return true;
+        }
+
+        return false;
     }
 
     public void ShapeDraw(ShapeBatcher shapeBatcher)
@@ -561,7 +576,8 @@ class Board
         Pregame1 = (int)Player.TurnState.PreGame1,
         Pregame2 = (int)Player.TurnState.Pregame2,
         Main = (int)Player.TurnState.Start,
-        Robber = (int)Player.TurnState.Discard
+        Robber = (int)Player.TurnState.Discard,
+        End
     }
 
     private GameState m_State;
