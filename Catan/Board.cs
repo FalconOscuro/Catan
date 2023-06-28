@@ -12,8 +12,8 @@ namespace Catan;
 
 // TODO:
 // Power cards
-// Trading
-// Bank
+// Ports
+// Longest Road & Largest Army
 
 class Board
 {
@@ -43,8 +43,8 @@ class Board
             m_Edges[i] = new Edge();
         
         m_Players[0] = new Player(this, Color.Red);
-        m_Players[1] = new Player(this, Color.White);
-        m_Players[2] = new Player(this, Color.Orange);
+        m_Players[1] = new Player(this, Color.Orange);
+        m_Players[2] = new Player(this, Color.White);
         m_Players[3] = new Player(this, Color.Blue);
 
         m_Players[0].SetState(Player.TurnState.PreGame1);
@@ -365,6 +365,58 @@ class Board
         }
     }
 
+    private void QuickStart()
+    {
+        m_Nodes[10].Owner = m_Players[0];
+        m_Nodes[10].Edges[2].Owner = m_Players[0];
+
+        m_Nodes[13].Owner = m_Players[1];
+        m_Nodes[13].Edges[0].Owner = m_Players[1];
+
+        m_Nodes[19].Owner = m_Players[2];
+        m_Nodes[19].Edges[1].Owner = m_Players[2];
+
+        m_Nodes[29].Owner = m_Players[0];
+        m_Nodes[29].Edges[2].Owner = m_Players[0];
+
+        m_Nodes[35].Owner = m_Players[2];
+        m_Nodes[35].Edges[0].Owner = m_Players[2];
+
+        m_Nodes[40].Owner = m_Players[3];
+        m_Nodes[40].Edges[2].Owner = m_Players[3];
+
+        m_Nodes[42].Owner = m_Players[1];
+        m_Nodes[42].Edges[2].Owner = m_Players[1];
+
+        m_Nodes[44].Owner = m_Players[3];
+        m_Nodes[44].Edges[0].Owner = m_Players[3];
+
+
+        Trade trade = new Trade();
+        trade.From = ResourceBank;
+
+        trade.Giving = new Resources(2, 0, 1, 0, 0);
+        trade.To = m_Players[0].ResourceHand;
+        trade.TryExecute();
+
+        trade.Giving = new Resources(0, 0, 2, 0, 1);
+        trade.To = m_Players[1].ResourceHand;
+        trade.TryExecute();
+
+        trade.Giving = new Resources(1, 1, 1, 0, 0);
+        trade.To = m_Players[2].ResourceHand;
+        trade.TryExecute();
+
+        trade.Giving = new Resources(1, 1, 0, 0, 1);
+        trade.To = m_Players[3].ResourceHand;
+        trade.TryExecute();
+
+        m_Players[m_CurrentPlayer].SetState(Player.TurnState.End);
+        m_CurrentPlayer = 0;
+        m_State = GameState.Main;
+        m_Players[0].SetState(Player.TurnState.Start);
+    }
+
     public void MoveRobber(Tile target)
     {
         if (m_RobberPos != null)
@@ -404,7 +456,7 @@ class Board
 
         Resources requested = new Resources();
         foreach (Trade trade in trades)
-            requested = requested + trade.Materials;
+            requested = requested + trade.Giving;
         
         Resources mask = new Resources(1, 1, 1, 1, 1);
         for (Resources.Type i = 0; (int)i < 5; i++)
@@ -414,7 +466,7 @@ class Board
         for (int i = 0; i < trades.Count; i++)
         {
             trades[i].From = ResourceBank;
-            trades[i].Materials = trades[i].Materials * mask;
+            trades[i].Giving = trades[i].Giving * mask;
 
             trades[i].TryExecute();
         }
@@ -495,6 +547,21 @@ class Board
                 m_TargetPlayerOffset = 0 - m_CurrentPlayer;
             
             break;
+
+        case GameState.Trade:
+            if ((++m_TargetPlayerOffset) + m_CurrentPlayer > 3)
+                m_TargetPlayerOffset = 0 - m_CurrentPlayer;
+
+            if (m_TargetPlayerOffset == 0 || m_ActiveTrade.Complete)
+            {
+                m_State = GameState.Main;
+                m_TargetPlayerOffset = 0;
+                m_ActiveTrade = null;
+                return;
+            }
+
+            m_Players[m_CurrentPlayer + m_TargetPlayerOffset].SetActiveTrade(m_ActiveTrade);
+            break;
         }
 
         m_Players[m_CurrentPlayer + m_TargetPlayerOffset].SetState((Player.TurnState)m_State);
@@ -510,6 +577,22 @@ class Board
         }
 
         return false;
+    }
+
+    public void PostTrade(Trade trade)
+    {
+        if (trade == null)
+            return;
+        
+        m_State = GameState.Trade;
+        m_TargetPlayerOffset = 1;
+
+        if (m_CurrentPlayer + m_TargetPlayerOffset > 3)
+            m_TargetPlayerOffset = 0 - m_CurrentPlayer;
+
+        m_Players[m_CurrentPlayer + m_TargetPlayerOffset].SetState(Player.TurnState.Trade);
+        m_ActiveTrade = trade;
+        m_Players[m_CurrentPlayer + m_TargetPlayerOffset].SetActiveTrade(m_ActiveTrade);
     }
 
     public void ShapeDraw(ShapeBatcher shapeBatcher)
@@ -536,38 +619,31 @@ class Board
         ResourceBank.UIDraw(true);
         ImGui.Separator();
 
-        if (ImGui.Button("Shuffle Tiles"))
-            GenerateBoard(false);
-
-        ImGui.Separator();
-
-        if (ImGui.BeginTabBar("Players"))
+        if (ImGui.CollapsingHeader("Board"))
         {
-            if (ImGui.BeginTabItem("Player 0"))
-            {
-                m_Players[0].DebugDrawUI();
-                ImGui.EndTabItem();
-            }
+            if (ImGui.Button("Shuffle Tiles"))
+                GenerateBoard(false);
+            
+            if (m_State == GameState.Pregame1)
+                if (ImGui.Button("Quick Start"))
+                    QuickStart();
+        }
 
-            if (ImGui.BeginTabItem("Player 1"))
+        if (ImGui.CollapsingHeader("Players"))
+        {
+            if (ImGui.BeginTabBar("Players"))
             {
-                m_Players[1].DebugDrawUI();
-                ImGui.EndTabItem();
-            }
+                for (int i = 0; i < 4; i++)
+                {
+                    if (ImGui.BeginTabItem(string.Format("Player {0}", i)))
+                    {
+                        m_Players[i].DebugDrawUI();
+                        ImGui.EndTabItem();
+                    }
+                }
 
-            if (ImGui.BeginTabItem("Player 2"))
-            {
-                m_Players[2].DebugDrawUI();
-                ImGui.EndTabItem();
+                ImGui.EndTabBar();
             }
-
-            if (ImGui.BeginTabItem("Player 3"))
-            {
-                m_Players[3].DebugDrawUI();
-                ImGui.EndTabItem();
-            }
-
-            ImGui.EndTabBar();
         }
     }
 
@@ -602,12 +678,15 @@ class Board
 
     public Resources ResourceBank;
 
+    private Trade m_ActiveTrade;
+
     private enum GameState
     {
         Pregame1 = (int)Player.TurnState.PreGame1,
         Pregame2 = (int)Player.TurnState.Pregame2,
         Main = (int)Player.TurnState.Start,
         Robber = (int)Player.TurnState.Discard,
+        Trade = (int)Player.TurnState.Trade,
         End
     }
 

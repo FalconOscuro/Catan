@@ -44,6 +44,11 @@ class Player
         m_TurnState = state;
     }
 
+    public void SetActiveTrade(Trade trade)
+    {
+        m_CurrentTrade = trade;
+    }
+
     private void Roll()
     {
         m_GameBoard.RollDice();
@@ -53,6 +58,7 @@ class Player
     private void EndTurn()
     {
         m_TurnState = TurnState.End;
+        m_CurrentTrade = new Trade();
 
         DeselectNode();
         DeselectEdge();
@@ -76,13 +82,20 @@ class Player
 
     public void SelectNode(Node node)
     {
+        bool alreadySelected = false;
         if (m_TurnState == TurnState.End)
             return;
 
+        else if (m_SelectedNode == node)
+            alreadySelected = true;
+
         DeselectNode();
 
-        m_SelectedNode = node;
-        m_SelectedNode.Selected = true;
+        if (!alreadySelected && node != null)
+        {
+            m_SelectedNode = node;
+            m_SelectedNode.Selected = true;
+        }
     }
 
     private void DeselectNode()
@@ -95,13 +108,21 @@ class Player
 
     public void SelectEdge(Edge edge)
     {
+        bool alreadySelected = false;
+
         if (m_TurnState == TurnState.End)
             return;
+
+        else if (m_SelectedEdge == edge)
+            alreadySelected = true;
         
         DeselectEdge();
 
-        m_SelectedEdge = edge;
-        m_SelectedEdge.Selected = true;
+        if (!alreadySelected && edge != null)
+        {
+            m_SelectedEdge = edge;
+            m_SelectedEdge.Selected = true;
+        }
     }
 
     private void DeselectEdge()
@@ -114,13 +135,21 @@ class Player
 
     public void SelectTile(Tile tile)
     {
+        bool alreadySelected = false;
+
         if (m_TurnState == TurnState.End)
             return;
+
+        else if (m_SelectedTile == tile)
+            alreadySelected = true;
         
         DeselectTile();
 
-        m_SelectedTile = tile;
-        m_SelectedTile.Selected = true;
+        if (!alreadySelected && tile != null)
+        {
+            m_SelectedTile = tile;
+            m_SelectedTile.Selected = true;
+        }
     }
 
     private void DeselectTile()
@@ -173,6 +202,10 @@ class Player
             case TurnState.Robber:
                 RobberUI();
                 break;
+            
+            case TurnState.Trade:
+                TradeAcceptUI();
+                break;
         }
     }
 
@@ -196,7 +229,7 @@ class Player
 
             for (int i = 0; i < 3; i++)
                 if (m_SelectedNode.Tiles[i] != null)
-                    trade.Materials.AddType(m_SelectedNode.Tiles[i].Type, 1);
+                    trade.Giving.AddType(m_SelectedNode.Tiles[i].Type, 1);
             
             trade.TryExecute();
         }
@@ -238,7 +271,7 @@ class Player
 
             if (ImGui.BeginTabItem("Trade"))
             {
-                ImGui.Text("Hello there");
+                OfferTradeUI();
                 ImGui.EndTabItem();
             }
 
@@ -250,15 +283,63 @@ class Player
             EndTurn();
     }
 
+    private void OfferTradeUI()
+    {
+        bool bank = m_CurrentTrade.To == m_GameBoard.ResourceBank;
+        m_CurrentTrade.From = ResourceHand;
+
+        if (ImGui.Checkbox("Bank Trade", ref bank))
+            m_CurrentTrade.To = bank ? m_GameBoard.ResourceBank : null;
+        
+        m_CurrentTrade.UIDraw();
+
+        ImGui.Separator();
+
+        if (ImGui.Button("Trade"))
+        {
+            if (bank)
+            {
+                for (Resources.Type i = 0; (int)i < 5; i++)
+                    if (m_CurrentTrade.Giving.GetType(i) % 4 != 0)
+                        return;
+
+                if (m_CurrentTrade.Giving.GetTotal() / 4 == m_CurrentTrade.Receiving.GetTotal())
+                    m_CurrentTrade.TryExecute();
+            }
+
+            else
+                m_GameBoard.PostTrade(m_CurrentTrade);
+        }
+    }
+
+    private void TradeAcceptUI()
+    {
+        m_CurrentTrade.UIDraw(false);
+
+        ImGui.Separator();
+
+        if (ImGui.Button("Accept"))
+        {
+            m_CurrentTrade.To = ResourceHand;
+            m_CurrentTrade.TryExecute();
+            EndTurn();
+        }
+
+        ImGui.SameLine();
+
+        if (ImGui.Button("Decline"))
+            EndTurn();
+    }
+
     private void DiscardUI()
     {
         int discardTarget = GetHandSize() / 2;
 
-        m_CurrentTrade.Materials.UIDraw(true);
+        m_CurrentTrade.Giving.UIDraw(true);
         m_CurrentTrade.To = m_GameBoard.ResourceBank;
         m_CurrentTrade.From = ResourceHand;
 
-        if (ImGui.Button("Discard") && m_CurrentTrade.Materials.GetTotal() == discardTarget)
+        if (ImGui.Button("Discard") && m_CurrentTrade.Giving.GetTotal() == discardTarget)
             if (m_CurrentTrade.TryExecute())
             {
                 m_TurnState = TurnState.End;
@@ -308,16 +389,17 @@ class Player
         if (m_SelectedNode == null)
             return;
         
-        if (m_SelectedNode.IsAvailable(this))
+        if (m_SelectedNode.IsAvailable(this) && m_Pieces.Settlements > 0)
         {
             Trade trade = new Trade();
             trade.From = ResourceHand;
             trade.To = m_GameBoard.ResourceBank;
-            trade.Materials = SETTLEMENT_COST;
+            trade.Giving = SETTLEMENT_COST;
 
             if (trade.TryExecute())
             {
                 m_SelectedNode.Owner = this;
+                m_Pieces.Settlements--;
                 m_VictoryPoints++;
             }
         }
@@ -328,15 +410,18 @@ class Player
         if (m_SelectedEdge == null)
             return;
         
-        if (m_SelectedEdge.IsAvailable(this))
+        if (m_SelectedEdge.IsAvailable(this) && m_Pieces.Roads > 0)
         {
             Trade trade = new Trade();
             trade.From = ResourceHand;
             trade.To = m_GameBoard.ResourceBank;
-            trade.Materials = ROAD_COST;
+            trade.Giving = ROAD_COST;
 
             if (trade.TryExecute())
+            {
                 m_SelectedEdge.Owner = this;
+                m_Pieces.Roads--;
+            }
         }
     }
 
@@ -345,16 +430,18 @@ class Player
         if (m_SelectedNode == null)
             return;
         
-        if (m_SelectedNode.Owner == this && m_SelectedNode.IsCity == false)
+        if (m_SelectedNode.Owner == this && m_SelectedNode.IsCity == false && m_Pieces.Cities > 0)
         {
             Trade trade = new Trade();
             trade.From = ResourceHand;
             trade.To = m_GameBoard.ResourceBank;
-            trade.Materials = CITY_COST;
+            trade.Giving = CITY_COST;
 
             if (trade.TryExecute())
             {
                 m_SelectedNode.IsCity = true;
+                m_Pieces.Settlements++;
+                m_Pieces.Cities--;
                 m_VictoryPoints++;
             }
         }
@@ -365,7 +452,7 @@ class Player
         Trade trade = new Trade();
         trade.From = ResourceHand;
         trade.To = m_GameBoard.ResourceBank;
-        trade.Materials = DEVELOPMENT_CARD_COST;
+        trade.Giving = DEVELOPMENT_CARD_COST;
 
         trade.TryExecute();
     }
@@ -377,6 +464,7 @@ class Player
         Main,
         Discard,
         Robber,
+        Trade,
         End
     }
 
@@ -392,6 +480,21 @@ class Player
     private Node m_SelectedNode;
     private Edge m_SelectedEdge;
     private Tile m_SelectedTile;
+
+    private struct Pieces
+    {
+        public Pieces()
+        {
+            Settlements = 3;
+            Cities = 4;
+            Roads = 13;
+        }
+
+        public int Settlements;
+        public int Cities;
+        public int Roads;
+    }
+    private Pieces m_Pieces;
 
     private int m_VictoryPoints;
 

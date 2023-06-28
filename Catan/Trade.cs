@@ -1,3 +1,5 @@
+using ImGuiNET;
+
 namespace Catan;
 
 class Trade
@@ -6,25 +8,47 @@ class Trade
     {
         From = null;
         To = null;
-        Materials = new Resources();
+        Giving = new Resources();
+        Receiving = new Resources();
+
+        Complete = false;
     }
 
     public bool TryExecute()
     {
-        if (From == null || To == null || Materials == null)
+        if (From == null || To == null || Giving == null || Receiving == null)
             return false;
         
-        if (From.TryTake(Materials))
-        {
-            To.Add(Materials);
-            return true;
-        }
+        else if (Giving > From || Receiving > To)
+            return false;
         
-        return false;
+        From.TryTake(Giving);
+        To.TryTake(Receiving);
+
+        From.Add(Receiving);
+        To.Add(Giving);
+
+        Complete = true;
+
+        return true;
+    }
+
+    public void UIDraw(bool modify = true)
+    {
+        ImGui.Text("Giving");
+        Giving.UIDraw(modify);
+
+        ImGui.Separator();
+
+        ImGui.Text("Recieving");
+        Receiving.UIDraw(modify);
     }
 
     public Resources From;
     public Resources To;
 
-    public Resources Materials;
+    public Resources Giving;
+    public Resources Receiving;
+
+    public bool Complete { get; private set; }
 }

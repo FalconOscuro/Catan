@@ -48,7 +48,7 @@ class Tile
                 if (node.Owner != null)
                     {
                         Trade trade = new Trade();
-                        trade.Materials.AddType(Type, node.IsCity ? 2 : 1);
+                        trade.Giving.AddType(Type, node.IsCity ? 2 : 1);
                         trade.To = node.Owner.ResourceHand;
 
                         trades.Add(trade);

@@ -154,8 +154,7 @@ class Resources
 
     public bool TryTake(Resources resources)
     {
-        if (resources.Lumber > Lumber || resources.Brick > Brick || resources.Grain > Grain
-            || resources.Wool > Wool || resources.Ore > Ore)
+        if (resources > this)
             return false;
 
         Lumber -= resources.Lumber;
@@ -250,6 +249,30 @@ class Resources
             a.Wool * b.Wool,
             a.Ore * b.Ore
         );
+    }
+
+    public static bool operator<=(Resources a, Resources b)
+    {
+        return a.Lumber <= b.Lumber && a.Brick <= b.Brick 
+            && a.Grain <= b.Grain && a.Lumber <= b.Lumber && a.Ore <= b.Ore;
+    }
+
+    public static bool operator>=(Resources a, Resources b)
+    {
+        return a.Lumber >= b.Lumber && a.Brick >= b.Brick 
+            && a.Grain >= b.Grain && a.Lumber >= b.Lumber && a.Ore >= b.Ore;
+    }
+
+    public static bool operator<(Resources a, Resources b)
+    {
+        return a.Lumber < b.Lumber || a.Brick < b.Brick 
+            || a.Grain < b.Grain || a.Lumber < b.Lumber || a.Ore < b.Ore;
+    }
+
+    public static bool operator>(Resources a, Resources b)
+    {
+        return a.Lumber > b.Lumber || a.Brick > b.Brick 
+            || a.Grain > b.Grain || a.Lumber > b.Lumber || a.Ore > b.Ore;
     }
 
     public static Color GetResourceColour(Type resource)
