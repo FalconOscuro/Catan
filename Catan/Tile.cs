@@ -30,9 +30,9 @@ class Tile
         public bool TestCollision(Vector2 point, float scale)
         {
             // Heavily simplified, using approximation of inner circle for collision
-            // .76f is magic number, actual scale is .9f of input scale & shortest edge distane is ~= .87 of scale
-            // .87 * .9f squared is then ~= to magic number .76f
-            return Vector2.DistanceSquared(point, Position) < scale * scale * .76f;
+            // .75f is magic number, actual scale is .9f of input scale & shortest edge distane is ~= .87 of scale
+            // .87 * .9f squared is then ~= to magic number .75f
+            return Vector2.DistanceSquared(point, Position) < scale * scale * .75f;
         }
 
         public void Distribute()
@@ -46,7 +46,8 @@ class Tile
 
         public void ShapeDraw(ShapeBatcher shapeBatcher, float scale)
         {
-            shapeBatcher.DrawHex(Position, (scale + (Selected ? 2f : 0f)) * .9f, Resources.GetResourceColour(Type));
+            // Hexagon is basically a 6 sided circle ¯\_(ツ)_/¯
+            shapeBatcher.DrawFilledCircle(Position, (scale + (Selected ? 2f : 0f)) * .9f, 6, Resources.GetResourceColour(Type));
         }
 
         public void SpriteDraw(SpriteBatch spriteBatch, SpriteFont font, float windowHeight, int active)

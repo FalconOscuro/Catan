@@ -70,7 +70,16 @@ class Node
 
     public void Draw(ShapeBatcher shapeBatcher)
     {
-        shapeBatcher.DrawCircle(Position, RADIUS + (m_Hovered || Selected ? 1f : 0f), 10, 1f, Owner != null ? Owner.Colour : Color.Black);
+        float radius = RADIUS + (m_Hovered || Selected ? 1f : 0f);
+        Color colour = Owner != null ? Owner.Colour : Color.Black;
+        const int VERTEX_NUM = 10;
+
+        if (IsCity)
+            shapeBatcher.DrawFilledCircle(Position, radius, VERTEX_NUM, colour);
+        
+        else
+            shapeBatcher.DrawCircle(Position, radius, VERTEX_NUM, 1f, colour);
+        
         m_Hovered = false;
     }
 }
