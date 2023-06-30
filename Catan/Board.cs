@@ -195,6 +195,7 @@ class Board
     {
         MapNodes();
         MapEdges();
+        MapPorts();
     }
 
     private void MapNodes()
@@ -233,6 +234,19 @@ class Board
             MapAboveTile(i, (i * 2) + 7);
             MapBelowTile(i, (i * 2) + 15);
         }
+    }
+
+    private void MapPorts()
+    {
+        m_Ports[0] = new Port(m_Nodes[1], m_Nodes[0], Port.TradeType.Versatile);
+        m_Ports[1] = new Port(m_Nodes[4], m_Nodes[3], Port.TradeType.Grain);
+        m_Ports[2] = new Port(m_Nodes[15], m_Nodes[14], Port.TradeType.Ore);
+        m_Ports[3] = new Port(m_Nodes[7], m_Nodes[17], Port.TradeType.Lumber);
+        m_Ports[4] = new Port(m_Nodes[37], m_Nodes[26], Port.TradeType.Versatile);
+        m_Ports[5] = new Port(m_Nodes[28], m_Nodes[38], Port.TradeType.Brick);
+        m_Ports[6] = new Port(m_Nodes[45], m_Nodes[46], Port.TradeType.Wool);
+        m_Ports[7] = new Port(m_Nodes[47], m_Nodes[48], Port.TradeType.Versatile);
+        m_Ports[8] = new Port(m_Nodes[50], m_Nodes[51], Port.TradeType.Versatile);
     }
 
     private void MapAboveTile(int tileIndex, int nodeIndex)
@@ -707,6 +721,9 @@ class Board
 
     public void ShapeDraw(ShapeBatcher shapeBatcher)
     {
+        for (int i = 0; i < 9; i++)
+            m_Ports[i].Draw(shapeBatcher);
+
         for (int i = 0; i < 19; i++)
             m_Tiles[i].ShapeDraw(shapeBatcher, m_Scale);
         
@@ -771,6 +788,8 @@ class Board
     private Node[] m_Nodes = new Node[54];
 
     private Edge[] m_Edges = new Edge[72];
+
+    private Port[] m_Ports = new Port[9];
 
     private List<List<Tile>> m_DensityMap;
 

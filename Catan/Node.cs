@@ -14,6 +14,7 @@ class Node
         IsCity = false;
         m_Hovered = false;
         Selected = false;
+        PortType = Port.TradeType.Empty;
     }
 
     public Vector2 Position;
@@ -23,6 +24,8 @@ class Node
     public bool IsCity;
 
     public bool Selected;
+
+    public Port.TradeType PortType;
 
     public Edge[] Edges = new Edge[] {null, null, null};
 

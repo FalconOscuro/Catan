@@ -31,6 +31,7 @@ class Player
         m_CurrentTrade = new Trade();
         m_DevCards = new List<DevelopmentCard>();
         m_OwnedNodes = new List<Node>();
+        m_ExchangeRate = new Resources(4, 4, 4, 4, 4);
     }
 
     public void GiveResource(Resources.Type resource, int num = 1)
@@ -399,7 +400,15 @@ class Player
     {
         bool bank = m_CurrentTrade.To == m_GameBoard.ResourceBank;
 
-        ImGui.Checkbox("Bank Trade", ref bank);
+        if (ImGui.Checkbox("Bank Trade", ref bank))
+            m_CurrentTrade.To = bank ? m_GameBoard.ResourceBank : null;
+
+        if (bank)
+        {
+            ImGui.Text("Exchange rate");
+            m_ExchangeRate.UIDraw();
+        }
+        ImGui.Separator();
         
         m_CurrentTrade.UIDraw();
 
@@ -411,9 +420,8 @@ class Player
 
             if (bank)
             {
-                m_CurrentTrade.To = m_GameBoard.ResourceBank;
                 for (Resources.Type i = 0; (int)i < 5; i++)
-                    if (m_CurrentTrade.Giving.GetType(i) % 4 != 0)
+                    if (m_CurrentTrade.Giving.GetType(i) % m_ExchangeRate.GetType(i) != 0)
                         return;
 
                 if (m_CurrentTrade.Giving.GetTotal() / 4 == m_CurrentTrade.Receiving.GetTotal())
@@ -562,12 +570,29 @@ class Player
                 m_Pieces.Settlements--;
                 m_VictoryPoints++;
                 m_OwnedNodes.Add(m_SelectedNode);
+                UpdateExchange(m_SelectedNode.PortType);
                 m_GameBoard.CheckLongestRoad(true);
                 return true;
             }
         }
 
         return false;
+    }
+
+    private void UpdateExchange(Port.TradeType port)
+    {
+        if (port == Port.TradeType.Empty)
+            return;
+        
+        else if (port == Port.TradeType.Versatile)
+        {
+            for (Resources.Type i = 0; (int)i < 5; i++)
+                if (m_ExchangeRate.GetType(i) > 3)
+                    m_ExchangeRate.SetType(i, 3);
+        }
+        
+        else
+            m_ExchangeRate.SetType((Resources.Type)port, 2);
     }
     
     private bool TryBuildRoad(bool ignoreCost = false)
@@ -662,6 +687,7 @@ class Player
 
     public Resources ResourceHand;
     private Trade m_CurrentTrade;
+    private Resources m_ExchangeRate;
 
     private Board m_GameBoard;
 
