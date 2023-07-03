@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 
 using ImGuiNET;
 
@@ -74,7 +75,7 @@ class Player
         SetState(TurnState.Main);
     }
 
-    private void EndTurn()
+    protected void EndTurn()
     {
         FindLongestRoad();
 
@@ -158,22 +159,6 @@ class Player
         }
     }
 
-    public void FindLongestRoad()
-    {
-        RoadLength = 0;
-
-        for (int i = 0; i < m_OwnedNodes.Count; i++)
-        {
-            List<Edge> path = m_OwnedNodes[i].StartRecurse(this);
-
-            if (path.Count > RoadLength)
-            {
-                RoadLength = path.Count;
-                m_Road = path;
-            }
-        }
-    }
-
     private void DeselectEdge()
     {
         if (m_SelectedEdge != null)
@@ -204,6 +189,28 @@ class Player
         m_SelectedTile = null;
     }
 
+    public virtual void Update()
+    {}
+
+    public virtual void SpriteDraw(SpriteBatch spriteBatch, SpriteFont font, float windowHeight)
+    {}
+
+    public void FindLongestRoad()
+    {
+        RoadLength = 0;
+
+        for (int i = 0; i < m_OwnedNodes.Count; i++)
+        {
+            List<Edge> path = m_OwnedNodes[i].StartRecurse(this);
+
+            if (path.Count > RoadLength)
+            {
+                RoadLength = path.Count;
+                m_Road = path;
+            }
+        }
+    }
+
     public void RegisterNode(Node node)
     {
         m_OwnedNodes.Add(node);
@@ -212,7 +219,7 @@ class Player
     /// <summary>
     /// Debug menu UI
     /// </summary>
-    public void DebugDrawUI()
+    public virtual void DebugDrawUI()
     {
         ImGui.Text(string.Format("State: {0}", m_TurnState.ToString()));
         ImGui.Text(string.Format("VP: {0}", m_VictoryPoints + (LargestArmy ? 2 : 0) + (LongestRoad ? 2 : 0)));
@@ -339,7 +346,7 @@ class Player
             if (ImGui.BeginTabItem("Build"))
             {
                 if (ImGui.Button("Settlement"))
-                    TryBuildSettlement();
+                    TryBuildSettlement(m_SelectedNode);
 
                 ImGui.SameLine();
 
@@ -567,25 +574,31 @@ class Player
     /// <summary>
     /// Attempt to build a settlement
     /// </summary>
-    private bool TryBuildSettlement(bool ignoreCost = false)
+    protected bool TryBuildSettlement(Node targetNode)
     {
-        if (m_SelectedNode == null)
+        bool freeResource = m_TurnState == TurnState.Pregame2;
+        bool purchased = m_TurnState == TurnState.PreGame1 || freeResource;
+
+        if (targetNode == null)
             return false;
         
-        if (m_SelectedNode.IsAvailable(this) && m_Pieces.Settlements > 0)
+        else if (targetNode.IsAvailable(purchased ? null : this) && m_Pieces.Settlements > 0)
         {
             Trade trade = new Trade();
             trade.From = ResourceHand;
             trade.To = m_GameBoard.ResourceBank;
             trade.Giving = SETTLEMENT_COST;
 
-            if (ignoreCost ? true : trade.TryExecute())
+            if (!purchased)
+                purchased = trade.TryExecute();
+
+            if (purchased)
             {
-                m_SelectedNode.Owner = this;
+                targetNode.Owner = this;
                 m_Pieces.Settlements--;
                 m_VictoryPoints++;
-                m_OwnedNodes.Add(m_SelectedNode);
-                UpdateExchange(m_SelectedNode.PortType);
+                m_OwnedNodes.Add(targetNode);
+                UpdateExchange(targetNode.PortType);
                 m_GameBoard.CheckLongestRoad(true);
                 return true;
             }
@@ -597,7 +610,7 @@ class Player
     /// <summary>
     /// Updates exchange rate when claiming new nodes
     /// </summary>
-    private void UpdateExchange(Port.TradeType port)
+    protected void UpdateExchange(Port.TradeType port)
     {
         if (port == Port.TradeType.Empty)
             return;
@@ -616,7 +629,7 @@ class Player
     /// <summary>
     /// Attempt to build a road
     /// </summary>
-    private bool TryBuildRoad(bool ignoreCost = false)
+    protected bool TryBuildRoad(bool ignoreCost = false)
     {
         if (m_SelectedEdge == null)
             return false;
@@ -647,7 +660,7 @@ class Player
     /// <summary>
     /// Attempt to build a city
     /// </summary>
-    private bool TryBuildCity()
+    protected bool TryBuildCity()
     {
         if (m_SelectedNode == null)
             return false;
@@ -675,7 +688,7 @@ class Player
     /// <summary>
     /// Attempt to buy a development card
     /// </summary>
-    private bool TryGetDevCard()
+    protected bool TryGetDevCard()
     {
         if (m_GameBoard.DevelopmentCards.Count < 0)
             return false;
@@ -757,7 +770,7 @@ class Player
     /// <summary>
     /// Current state
     /// </summary>
-    private TurnState m_TurnState;
+    protected TurnState m_TurnState;
 
     /// <summary>
     /// Owned resource cards
@@ -778,7 +791,7 @@ class Player
     /// <summary>
     /// Reference to the game board
     /// </summary>
-    private Board m_GameBoard;
+    protected Board m_GameBoard { get; private set; }
 
     // Actively selected elements by player
     // Cleared at end of turn

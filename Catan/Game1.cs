@@ -117,7 +117,7 @@ public class Game1 : Game
                 IsFixedTimeStep = fixedTimeStep;
         }
 
-        if (ImGui.CollapsingHeader("Game Board"))
+        if (ImGui.CollapsingHeader("Game"))
         {
             m_Board.DebugUIDraw();
         }

@@ -104,6 +104,110 @@ class Node
         return longest;
     }
 
+    public float GetWeight(Resources rarity, 
+        PlayerAgent.PlacementStrategy strategy,
+        ResourceWeights weights, 
+        PlayerAgent.NeighbourSearch neighbourSearch = PlayerAgent.NeighbourSearch.Disabled)
+    {
+        if (!IsAvailable())
+            return 0f;
+
+        return GetTileWeight(rarity, strategy, weights) + GetNeighbourWeight(rarity, strategy, weights, neighbourSearch) / 2f;
+    }
+
+    private float GetTileWeight(Resources rarity, PlayerAgent.PlacementStrategy strategy, ResourceWeights weights)
+    {
+        float weight = 0f;
+
+        foreach(Tile tile in Tiles)
+        {
+            float tileWeight = 0f;
+
+            if (tile == null)
+                continue;
+            
+            else if (tile.Type == Resources.Type.Empty)
+                continue;
+            
+            else if (strategy == PlayerAgent.PlacementStrategy.Abundance)
+            {
+                switch (tile.Type)
+                {
+                case (Resources.Type.Ore):
+                case (Resources.Type.Brick):
+                    tileWeight = 1/3f;
+                    break;
+                    
+                case (Resources.Type.Empty):
+                    break;
+                
+                default:
+                    tileWeight = .25f;
+                    break;
+                }
+            }
+
+            else
+            {
+                tileWeight = tile.GetProbability();
+
+                if (strategy == PlayerAgent.PlacementStrategy.Rarity)
+                    tileWeight /= rarity.GetType(tile.Type);
+            }
+
+            weight += tileWeight * weights.GetResourceWeight(tile.Type);
+        }
+
+        if (strategy == PlayerAgent.PlacementStrategy.MaxCards)
+            weight /= 36f;
+
+        return weight;
+    }
+
+    private float GetNeighbourWeight(Resources rarity, PlayerAgent.PlacementStrategy strategy, ResourceWeights weights,
+        PlayerAgent.NeighbourSearch neighbourSearch, Node parent = null)
+    {
+        if (neighbourSearch == PlayerAgent.NeighbourSearch.Disabled)
+            return 0f;
+        
+        bool skip = parent != null;
+        float neighourWeights = 0f;
+
+        foreach (Edge edge in Edges)
+        {
+            if (edge == null)
+                continue;
+                
+            int i = 0;
+            if (edge.Nodes[i] == this)
+                i++;
+                
+            if (edge.Nodes[i] == parent)
+                continue;
+
+            float tempWeight = 0f;
+
+            if (!skip)
+            {
+                tempWeight = edge.Nodes[i].GetNeighbourWeight(
+                    rarity, strategy, weights, 
+                    neighbourSearch, this);
+            }
+
+            else
+                tempWeight = edge.Nodes[i].GetWeight(rarity, strategy, weights);
+
+            if (neighbourSearch == PlayerAgent.NeighbourSearch.Best
+                && tempWeight > neighourWeights)
+                neighourWeights = tempWeight;
+                
+            else
+                neighourWeights += tempWeight;
+        } 
+
+        return neighourWeights;
+    }
+
     public bool IsAvailable(Player player = null)
     {
         if (Owner != null)

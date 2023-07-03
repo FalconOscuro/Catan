@@ -10,9 +10,6 @@ using ImGuiNET;
 
 namespace Catan;
 
-// TODO:
-// Ports
-
 class Board
 {
     //  Maximum board size as a percentage of an axis
@@ -32,21 +29,21 @@ class Board
         m_EdgeDist = MathF.Sqrt((m_Scale * m_Scale) * 1.25f);
 
         for (int i = 0; i < 19; i++)
-            m_Tiles[i] = new Tile();
+            Tiles[i] = new Tile();
 
         for (int i = 0; i < 54; i++)
-            m_Nodes[i] = new Node();
+            Nodes[i] = new Node();
         
         for (int i = 0; i < 72; i++)
             m_Edges[i] = new Edge();
         
-        m_Players[0] = new Player(this, Color.Red);
-        m_Players[1] = new Player(this, Color.Orange);
-        m_Players[2] = new Player(this, Color.White);
-        m_Players[3] = new Player(this, Color.Blue);
+        m_Players[0] = new PlayerAgent(this, Color.Red);
+        m_Players[1] = new PlayerAgent(this, Color.Orange);
+        m_Players[2] = new PlayerAgent(this, Color.White);
+        m_Players[3] = new PlayerAgent(this, Color.Blue);
 
         m_Players[0].SetState(Player.TurnState.PreGame1);
-        m_State = GameState.Pregame1;
+        m_State = GameState.Setup;
 
         ResourceBank = new Resources(19, 19, 19, 19, 19);
 
@@ -105,28 +102,28 @@ class Board
         Vector2 hexDistTR = new Vector2(-hexDistTL.X, hexDistTL.Y);
         Vector2 hexDistTR2 = hexDistTR * 2;
 
-        m_Tiles[0].Position = hexDistTL2;
-        m_Tiles[1].Position = hexDistTL + hexDistTR;
-        m_Tiles[2].Position = hexDistTR2;
-        m_Tiles[3].Position = hexDistTL2 - hexDistTR;
-        m_Tiles[4].Position = hexDistTL;
-        m_Tiles[5].Position = hexDistTR;
-        m_Tiles[6].Position = hexDistTR2 - hexDistTL;
-        m_Tiles[7].Position = hexDistTL2 - hexDistTR2;
-        m_Tiles[8].Position = hexDistTL - hexDistTR;
-        m_Tiles[9].Position = Vector2.Zero;
-        m_Tiles[10].Position = hexDistTR - hexDistTL;
-        m_Tiles[11].Position = hexDistTR2 - hexDistTL2;
-        m_Tiles[12].Position = hexDistTL - hexDistTR2;
-        m_Tiles[13].Position = -hexDistTR;
-        m_Tiles[14].Position = -hexDistTL;
-        m_Tiles[15].Position = hexDistTR - hexDistTL2;
-        m_Tiles[16].Position = -hexDistTR2;
-        m_Tiles[17].Position = -hexDistTL - hexDistTR;
-        m_Tiles[18].Position = -hexDistTL2;
+        Tiles[0].Position = hexDistTL2;
+        Tiles[1].Position = hexDistTL + hexDistTR;
+        Tiles[2].Position = hexDistTR2;
+        Tiles[3].Position = hexDistTL2 - hexDistTR;
+        Tiles[4].Position = hexDistTL;
+        Tiles[5].Position = hexDistTR;
+        Tiles[6].Position = hexDistTR2 - hexDistTL;
+        Tiles[7].Position = hexDistTL2 - hexDistTR2;
+        Tiles[8].Position = hexDistTL - hexDistTR;
+        Tiles[9].Position = Vector2.Zero;
+        Tiles[10].Position = hexDistTR - hexDistTL;
+        Tiles[11].Position = hexDistTR2 - hexDistTL2;
+        Tiles[12].Position = hexDistTL - hexDistTR2;
+        Tiles[13].Position = -hexDistTR;
+        Tiles[14].Position = -hexDistTL;
+        Tiles[15].Position = hexDistTR - hexDistTL2;
+        Tiles[16].Position = -hexDistTR2;
+        Tiles[17].Position = -hexDistTL - hexDistTR;
+        Tiles[18].Position = -hexDistTL2;
 
         for(int i = 0; i < 19; i++)
-            m_Tiles[i].Position += centrePos;
+            Tiles[i].Position += centrePos;
     }
 
     /// <summary>
@@ -140,49 +137,49 @@ class Board
 
         for (int i = 0; i < 3; i++)
         {
-            m_Nodes[i * 2].Position = m_Tiles[i].Position + pointDistTL;
-            m_Nodes[(i * 2) + 1].Position = m_Tiles[i].Position + up;
+            Nodes[i * 2].Position = Tiles[i].Position + pointDistTL;
+            Nodes[(i * 2) + 1].Position = Tiles[i].Position + up;
         }
-        m_Nodes[6].Position = m_Tiles[2].Position + pointDistTR;
+        Nodes[6].Position = Tiles[2].Position + pointDistTR;
 
         for (int i = 3; i < 7; i++)
         {
-            m_Nodes[(i * 2) + 1].Position = m_Tiles[i].Position + pointDistTL;
-            m_Nodes[(i + 1) * 2].Position = m_Tiles[i].Position + up;
+            Nodes[(i * 2) + 1].Position = Tiles[i].Position + pointDistTL;
+            Nodes[(i + 1) * 2].Position = Tiles[i].Position + up;
         }
-        m_Nodes[15].Position = m_Tiles[6].Position + pointDistTR;
+        Nodes[15].Position = Tiles[6].Position + pointDistTR;
 
         for (int i = 7; i < 12; i++)
         {
-            m_Nodes[(i + 1) * 2].Position = m_Tiles[i].Position + pointDistTL;
-            m_Nodes[(i * 2) + 3].Position = m_Tiles[i].Position + up;
+            Nodes[(i + 1) * 2].Position = Tiles[i].Position + pointDistTL;
+            Nodes[(i * 2) + 3].Position = Tiles[i].Position + up;
         }
-        m_Nodes[26].Position = m_Tiles[11].Position + pointDistTR;
+        Nodes[26].Position = Tiles[11].Position + pointDistTR;
 
-        m_Nodes[27].Position = m_Tiles[7].Position - pointDistTR;
+        Nodes[27].Position = Tiles[7].Position - pointDistTR;
         for (int i = 12; i < 16; i++)
         {
-            m_Nodes[(i + 2) * 2].Position = m_Tiles[i].Position + pointDistTL;
-            m_Nodes[(i * 2) + 5].Position = m_Tiles[i].Position + up;
+            Nodes[(i + 2) * 2].Position = Tiles[i].Position + pointDistTL;
+            Nodes[(i * 2) + 5].Position = Tiles[i].Position + up;
         }
-        m_Nodes[36].Position = m_Tiles[15].Position + pointDistTR;
-        m_Nodes[37].Position = m_Nodes[36].Position + pointDistTR;
+        Nodes[36].Position = Tiles[15].Position + pointDistTR;
+        Nodes[37].Position = Nodes[36].Position + pointDistTR;
 
-        m_Nodes[38].Position = m_Nodes[28].Position - up;
+        Nodes[38].Position = Nodes[28].Position - up;
         for (int i = 16; i < 19; i++)
         {
-            m_Nodes[(i * 2) + 7].Position = m_Tiles[i].Position + pointDistTL;
-            m_Nodes[(i + 4) * 2].Position = m_Tiles[i].Position + up;
+            Nodes[(i * 2) + 7].Position = Tiles[i].Position + pointDistTL;
+            Nodes[(i + 4) * 2].Position = Tiles[i].Position + up;
         }
-        m_Nodes[45].Position = m_Nodes[44].Position - pointDistTL;
-        m_Nodes[46].Position = m_Nodes[45].Position + pointDistTR;
+        Nodes[45].Position = Nodes[44].Position - pointDistTL;
+        Nodes[46].Position = Nodes[45].Position + pointDistTR;
 
         for (int i = 16; i < 19; i++)
         {
-            m_Nodes[(i * 2) + 15].Position = m_Tiles[i].Position - pointDistTR;
-            m_Nodes[(i + 8) * 2].Position = m_Tiles[i].Position - up;
+            Nodes[(i * 2) + 15].Position = Tiles[i].Position - pointDistTR;
+            Nodes[(i + 8) * 2].Position = Tiles[i].Position - up;
         }
-        m_Nodes[53].Position = m_Nodes[52].Position + pointDistTR;
+        Nodes[53].Position = Nodes[52].Position + pointDistTR;
     }
 
     private void PositionEdges()
@@ -238,39 +235,39 @@ class Board
 
     private void MapPorts()
     {
-        m_Ports[0] = new Port(m_Nodes[1], m_Nodes[0], Port.TradeType.Versatile);
-        m_Ports[1] = new Port(m_Nodes[4], m_Nodes[3], Port.TradeType.Grain);
-        m_Ports[2] = new Port(m_Nodes[15], m_Nodes[14], Port.TradeType.Ore);
-        m_Ports[3] = new Port(m_Nodes[7], m_Nodes[17], Port.TradeType.Lumber);
-        m_Ports[4] = new Port(m_Nodes[37], m_Nodes[26], Port.TradeType.Versatile);
-        m_Ports[5] = new Port(m_Nodes[28], m_Nodes[38], Port.TradeType.Brick);
-        m_Ports[6] = new Port(m_Nodes[45], m_Nodes[46], Port.TradeType.Wool);
-        m_Ports[7] = new Port(m_Nodes[47], m_Nodes[48], Port.TradeType.Versatile);
-        m_Ports[8] = new Port(m_Nodes[50], m_Nodes[51], Port.TradeType.Versatile);
+        m_Ports[0] = new Port(Nodes[1], Nodes[0], Port.TradeType.Versatile);
+        m_Ports[1] = new Port(Nodes[4], Nodes[3], Port.TradeType.Grain);
+        m_Ports[2] = new Port(Nodes[15], Nodes[14], Port.TradeType.Ore);
+        m_Ports[3] = new Port(Nodes[7], Nodes[17], Port.TradeType.Lumber);
+        m_Ports[4] = new Port(Nodes[37], Nodes[26], Port.TradeType.Versatile);
+        m_Ports[5] = new Port(Nodes[28], Nodes[38], Port.TradeType.Brick);
+        m_Ports[6] = new Port(Nodes[45], Nodes[46], Port.TradeType.Wool);
+        m_Ports[7] = new Port(Nodes[47], Nodes[48], Port.TradeType.Versatile);
+        m_Ports[8] = new Port(Nodes[50], Nodes[51], Port.TradeType.Versatile);
     }
 
     private void MapAboveTile(int tileIndex, int nodeIndex)
     {
-        m_Nodes[nodeIndex].Tiles[1] = m_Tiles[tileIndex];
-        m_Tiles[tileIndex].Nodes[0] = m_Nodes[nodeIndex++];
+        Nodes[nodeIndex].Tiles[1] = Tiles[tileIndex];
+        Tiles[tileIndex].Nodes[0] = Nodes[nodeIndex++];
 
-        m_Nodes[nodeIndex].Tiles[2] = m_Tiles[tileIndex];
-        m_Tiles[tileIndex].Nodes[1] = m_Nodes[nodeIndex++];
+        Nodes[nodeIndex].Tiles[2] = Tiles[tileIndex];
+        Tiles[tileIndex].Nodes[1] = Nodes[nodeIndex++];
 
-        m_Nodes[nodeIndex].Tiles[2] = m_Tiles[tileIndex];
-        m_Tiles[tileIndex].Nodes[2] = m_Nodes[nodeIndex++];
+        Nodes[nodeIndex].Tiles[2] = Tiles[tileIndex];
+        Tiles[tileIndex].Nodes[2] = Nodes[nodeIndex++];
     }
 
     private void MapBelowTile(int tileIndex, int nodeIndex)
     {
-        m_Nodes[nodeIndex].Tiles[1] = m_Tiles[tileIndex];
-        m_Tiles[tileIndex].Nodes[3] = m_Nodes[nodeIndex++];
+        Nodes[nodeIndex].Tiles[1] = Tiles[tileIndex];
+        Tiles[tileIndex].Nodes[3] = Nodes[nodeIndex++];
 
-        m_Nodes[nodeIndex].Tiles[0] = m_Tiles[tileIndex];
-        m_Tiles[tileIndex].Nodes[4] = m_Nodes[nodeIndex++];
+        Nodes[nodeIndex].Tiles[0] = Tiles[tileIndex];
+        Tiles[tileIndex].Nodes[4] = Nodes[nodeIndex++];
 
-        m_Nodes[nodeIndex].Tiles[0] = m_Tiles[tileIndex];
-        m_Tiles[tileIndex].Nodes[5] = m_Nodes[nodeIndex++];
+        Nodes[nodeIndex].Tiles[0] = Tiles[tileIndex];
+        Tiles[tileIndex].Nodes[5] = Nodes[nodeIndex++];
     }
 
     private void MapEdges()
@@ -278,78 +275,78 @@ class Board
         // Row 1
         for (int i = 0; i < 6; i++)
         {
-            m_Edges[i].Nodes[0] = m_Nodes[i];
-            m_Edges[i].Nodes[1] = m_Nodes[i + 1];
+            m_Edges[i].Nodes[0] = Nodes[i];
+            m_Edges[i].Nodes[1] = Nodes[i + 1];
         }
 
         // Row 2
         for (int i = 6; i < 10; i++)
         {
-            m_Edges[i].Nodes[0] = m_Nodes[(i - 6) * 2];
-            m_Edges[i].Nodes[1] = m_Nodes[((i - 2) * 2)];
+            m_Edges[i].Nodes[0] = Nodes[(i - 6) * 2];
+            m_Edges[i].Nodes[1] = Nodes[((i - 2) * 2)];
         }
 
         // Row 3
         for (int i = 10; i < 18; i++)
         {
-            m_Edges[i].Nodes[0] = m_Nodes[i - 3];
-            m_Edges[i].Nodes[1] = m_Nodes[i - 2];
+            m_Edges[i].Nodes[0] = Nodes[i - 3];
+            m_Edges[i].Nodes[1] = Nodes[i - 2];
         }
 
         // Row 4
         for (int i = 18; i < 23; i++)
         {
-            m_Edges[i].Nodes[0] = m_Nodes[((i - 15) * 2) + 1];
-            m_Edges[i].Nodes[1] = m_Nodes[((i - 10) * 2) + 1];
+            m_Edges[i].Nodes[0] = Nodes[((i - 15) * 2) + 1];
+            m_Edges[i].Nodes[1] = Nodes[((i - 10) * 2) + 1];
         }
 
         // Row 5
         for (int i = 23; i < 33; i++)
         {
-            m_Edges[i].Nodes[0] = m_Nodes[i - 7];
-            m_Edges[i].Nodes[1] = m_Nodes[i - 6];
+            m_Edges[i].Nodes[0] = Nodes[i - 7];
+            m_Edges[i].Nodes[1] = Nodes[i - 6];
         }
 
         // Row 6
         for (int i = 33; i < 39; i++)
         {
-            m_Edges[i].Nodes[0] = m_Nodes[(i - 25) * 2];
-            m_Edges[i].Nodes[1] = m_Nodes[((i - 20) * 2) + 1];
+            m_Edges[i].Nodes[0] = Nodes[(i - 25) * 2];
+            m_Edges[i].Nodes[1] = Nodes[((i - 20) * 2) + 1];
         }
 
         // Row 7
         for (int i = 39; i < 49; i++)
         {
-            m_Edges[i].Nodes[0] = m_Nodes[i - 12];
-            m_Edges[i].Nodes[1] = m_Nodes[i - 11];
+            m_Edges[i].Nodes[0] = Nodes[i - 12];
+            m_Edges[i].Nodes[1] = Nodes[i - 11];
         }
 
         // Row 8
         for (int i = 49; i < 54; i++)
         {
-            m_Edges[i].Nodes[0] = m_Nodes[(i - 35) * 2];
-            m_Edges[i].Nodes[1] = m_Nodes[(i - 30) * 2];
+            m_Edges[i].Nodes[0] = Nodes[(i - 35) * 2];
+            m_Edges[i].Nodes[1] = Nodes[(i - 30) * 2];
         }
 
         // Row 9
         for (int i = 54; i < 62; i++)
         {
-            m_Edges[i].Nodes[0] = m_Nodes[i - 16];
-            m_Edges[i].Nodes[1] = m_Nodes[i - 15];
+            m_Edges[i].Nodes[0] = Nodes[i - 16];
+            m_Edges[i].Nodes[1] = Nodes[i - 15];
         }
 
         // Row 10
         for (int i = 62; i < 66; i++)
         {
-            m_Edges[i].Nodes[0] = m_Nodes[((i - 43) * 2) + 1];
-            m_Edges[i].Nodes[1] = m_Nodes[((i - 39) * 2) + 1];
+            m_Edges[i].Nodes[0] = Nodes[((i - 43) * 2) + 1];
+            m_Edges[i].Nodes[1] = Nodes[((i - 39) * 2) + 1];
         }
 
         // Row 11
         for (int i = 66; i < 72; i++)
         {
-            m_Edges[i].Nodes[0] = m_Nodes[i - 19];
-            m_Edges[i].Nodes[1] = m_Nodes[i - 18];
+            m_Edges[i].Nodes[0] = Nodes[i - 19];
+            m_Edges[i].Nodes[1] = Nodes[i - 18];
         }
 
         foreach (Edge edge in m_Edges)
@@ -386,54 +383,54 @@ class Board
         int n = 0;
         for (int i = 0; i < 19; i++)
         {
-            m_Tiles[i].Type = resourceSpread[i];
+            Tiles[i].Type = resourceSpread[i];
 
             if (resourceSpread[i] == Resources.Type.Empty)
             {
-                m_Tiles[i].Value = 7;
-                m_Tiles[i].Robber = true;
-                m_RobberPos = m_Tiles[i];
+                Tiles[i].Value = 0;
+                Tiles[i].Robber = true;
+                m_RobberPos = Tiles[i];
                 continue;
             }
 
-            m_DensityMap[RollToArrayPos(numSpread[n])].Add(m_Tiles[i]);
-            m_Tiles[i].Value = numSpread[n++];
+            m_DensityMap[RollToArrayPos(numSpread[n])].Add(Tiles[i]);
+            Tiles[i].Value = numSpread[n++];
         }
     }
 
     private void QuickStart()
     {
-        m_Nodes[10].Owner = m_Players[0];
-        m_Nodes[10].Edges[2].Owner = m_Players[0];
-        m_Players[0].RegisterNode(m_Nodes[10]);
+        Nodes[10].Owner = m_Players[0];
+        Nodes[10].Edges[2].Owner = m_Players[0];
+        m_Players[0].RegisterNode(Nodes[10]);
 
-        m_Nodes[13].Owner = m_Players[1];
-        m_Nodes[13].Edges[0].Owner = m_Players[1];
-        m_Players[1].RegisterNode(m_Nodes[13]);
+        Nodes[13].Owner = m_Players[1];
+        Nodes[13].Edges[0].Owner = m_Players[1];
+        m_Players[1].RegisterNode(Nodes[13]);
 
-        m_Nodes[19].Owner = m_Players[2];
-        m_Nodes[19].Edges[1].Owner = m_Players[2];
-        m_Players[2].RegisterNode(m_Nodes[19]);
+        Nodes[19].Owner = m_Players[2];
+        Nodes[19].Edges[1].Owner = m_Players[2];
+        m_Players[2].RegisterNode(Nodes[19]);
 
-        m_Nodes[29].Owner = m_Players[0];
-        m_Nodes[29].Edges[2].Owner = m_Players[0];
-        m_Players[0].RegisterNode(m_Nodes[29]);
+        Nodes[29].Owner = m_Players[0];
+        Nodes[29].Edges[2].Owner = m_Players[0];
+        m_Players[0].RegisterNode(Nodes[29]);
 
-        m_Nodes[35].Owner = m_Players[2];
-        m_Nodes[35].Edges[0].Owner = m_Players[2];
-        m_Players[2].RegisterNode(m_Nodes[35]);
+        Nodes[35].Owner = m_Players[2];
+        Nodes[35].Edges[0].Owner = m_Players[2];
+        m_Players[2].RegisterNode(Nodes[35]);
 
-        m_Nodes[40].Owner = m_Players[3];
-        m_Nodes[40].Edges[2].Owner = m_Players[3];
-        m_Players[3].RegisterNode(m_Nodes[40]);
+        Nodes[40].Owner = m_Players[3];
+        Nodes[40].Edges[2].Owner = m_Players[3];
+        m_Players[3].RegisterNode(Nodes[40]);
 
-        m_Nodes[42].Owner = m_Players[1];
-        m_Nodes[42].Edges[2].Owner = m_Players[1];
-        m_Players[1].RegisterNode(m_Nodes[42]);
+        Nodes[42].Owner = m_Players[1];
+        Nodes[42].Edges[2].Owner = m_Players[1];
+        m_Players[1].RegisterNode(Nodes[42]);
 
-        m_Nodes[44].Owner = m_Players[3];
-        m_Nodes[44].Edges[0].Owner = m_Players[3];
-        m_Players[3].RegisterNode(m_Nodes[44]);
+        Nodes[44].Owner = m_Players[3];
+        Nodes[44].Edges[0].Owner = m_Players[3];
+        m_Players[3].RegisterNode(Nodes[44]);
 
 
         Trade trade = new Trade();
@@ -518,14 +515,16 @@ class Board
 
     public void Update()
     {
-        if (m_State == GameState.End)
+        if (m_State == GameState.End || m_State == GameState.Setup)
             return;
+
+        m_Players[m_CurrentPlayer + m_TargetPlayerOffset].Update();
 
         AdvanceTurn();
 
         bool pressed = Mouse.GetState().LeftButton.HasFlag(ButtonState.Pressed);
         Vector2 mousePos = Mouse.GetState().Position.FlipY(Game1.WindowDimensions.Y);
-        foreach (Node node in m_Nodes)
+        foreach (Node node in Nodes)
             if(node.TestCollision(mousePos))
             {
                 if (pressed)
@@ -541,7 +540,7 @@ class Board
                 return;
             }
 
-        foreach (Tile tile in m_Tiles)
+        foreach (Tile tile in Tiles)
             if (tile.TestCollision(mousePos, m_Scale))
             {
                 if (pressed)
@@ -725,19 +724,22 @@ class Board
             m_Ports[i].Draw(shapeBatcher);
 
         for (int i = 0; i < 19; i++)
-            m_Tiles[i].ShapeDraw(shapeBatcher, m_Scale);
+            Tiles[i].ShapeDraw(shapeBatcher, m_Scale);
         
         for (int i = 0; i < 72; i++)
             m_Edges[i].Draw(shapeBatcher);
 
         for (int i = 0; i < 54; i++)
-            m_Nodes[i].Draw(shapeBatcher);
+            Nodes[i].Draw(shapeBatcher);
     }
 
     public void SpriteDraw(SpriteBatch spriteBatch, float windowHeight)
     {
         for (int i = 0; i < 19; i++)
-            m_Tiles[i].SpriteDraw(spriteBatch, m_Font, windowHeight, m_LastRoll);
+            Tiles[i].SpriteDraw(spriteBatch, m_Font, windowHeight, m_LastRoll);
+        
+        for (int i = 0; i < 4; i++)
+            m_Players[i].SpriteDraw(spriteBatch, m_Font, windowHeight);
     }
 
     public void DebugUIDraw()
@@ -748,6 +750,8 @@ class Board
 
         if (ImGui.CollapsingHeader("Board"))
         {
+            ImGui.Text(String.Format("Board State: {0}", m_State.ToString()));
+
             if (ImGui.Button("Shuffle Tiles"))
                 GenerateBoard(false);
             
@@ -776,16 +780,34 @@ class Board
 
     public void GameUIDraw()
     {
-        ImGui.Text(String.Format("Player {0}", m_CurrentPlayer + m_TargetPlayerOffset));
-        ImGui.Separator();
+        if (m_State == GameState.Setup)
+        {
+            if (ImGui.Button("Start Game"))
+                m_State = GameState.Pregame1;
 
-        m_Players[m_CurrentPlayer + m_TargetPlayerOffset].GameDrawUI();
+            ImGui.SameLine();
+            if (ImGui.Button("Quick Start"))
+                QuickStart();
+
+            ImGui.SameLine();
+            if (ImGui.Button("Shuffle Board"))
+                GenerateBoard(false);
+        }
+
+
+        else
+        {
+            ImGui.Text(String.Format("Player {0}", m_CurrentPlayer + m_TargetPlayerOffset));
+            ImGui.Separator();
+
+            m_Players[m_CurrentPlayer + m_TargetPlayerOffset].GameDrawUI();
+        }
     }
 
-    private Tile[] m_Tiles = new Tile[19];
+    public Tile[] Tiles = new Tile[19];
     private Tile m_RobberPos;
 
-    private Node[] m_Nodes = new Node[54];
+    public Node[] Nodes = new Node[54];
 
     private Edge[] m_Edges = new Edge[72];
 
@@ -817,7 +839,8 @@ class Board
         Main = (int)Player.TurnState.Start,
         Robber = (int)Player.TurnState.Discard,
         Trade = (int)Player.TurnState.Trade,
-        End
+        End,
+        Setup
     }
 
     private GameState m_State;

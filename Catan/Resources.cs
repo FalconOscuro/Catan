@@ -311,3 +311,48 @@ class Resources
         Ore
     }
 }
+
+struct ResourceWeights
+{
+    public ResourceWeights()
+    {
+        Lumber = 1f;
+        Brick = 1f;
+        Grain = 1f;
+        Wool = 1f;
+        Ore = 1f;
+    }
+
+    public ResourceWeights(float lumber, float brick, float grain, float wool, float ore)
+    {
+        Lumber = lumber;
+        Brick = brick;
+        Grain = grain;
+        Wool = wool;
+        Ore = ore;
+    }
+
+    public float GetResourceWeight(Resources.Type type)
+    {
+        switch (type)
+        {
+        case (Resources.Type.Lumber):
+            return Lumber;
+        case (Resources.Type.Brick):
+            return Brick;
+        case (Resources.Type.Grain):
+            return Grain;
+        case (Resources.Type.Wool):
+            return Wool;
+        case (Resources.Type.Ore):
+            return Ore;
+        }
+        return 1f;
+    }
+
+    public float Lumber;
+    public float Brick;
+    public float Grain;
+    public float Wool;
+    public float Ore;
+}

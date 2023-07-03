@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 using Microsoft.Xna.Framework;
@@ -69,7 +70,7 @@ class Tile
             if (Robber)
                 text = "R";
 
-            else if (Value == 7)
+            else if (Value == 0)
                 return;
 
             else
@@ -89,6 +90,14 @@ class Tile
                 colour = Color.Black;
 
             spriteBatch.DrawString(font, text, Position.FlipY(windowHeight), colour);
+        }
+
+        public int GetProbability()
+        {
+            if (Value == 0)
+                return 0;
+            
+            return 6 - Math.Abs(7 - Value);
         }
 
         // Default resource layout defined by rulebook
