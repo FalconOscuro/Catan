@@ -96,6 +96,9 @@ class Player
         return m_VictoryPoints + (LargestArmy ? 2 : 0) + (LongestRoad ? 2 : 0) + GetHiddenVP() >= 10;
     }
 
+    /// <summary>
+    /// Get Victory Points from development cards
+    /// </summary>
     private int GetHiddenVP()
     {
         int victoryCards = 0;
@@ -115,6 +118,9 @@ class Player
     {
         return ResourceHand.GetTotal();
     }
+
+
+    // Selection & deselection of elements
 
     public void SelectNode(Node node)
     {
@@ -198,6 +204,14 @@ class Player
         m_SelectedTile = null;
     }
 
+    public void RegisterNode(Node node)
+    {
+        m_OwnedNodes.Add(node);
+    }
+
+    /// <summary>
+    /// Debug menu UI
+    /// </summary>
     public void DebugDrawUI()
     {
         ImGui.Text(string.Format("State: {0}", m_TurnState.ToString()));
@@ -216,10 +230,8 @@ class Player
         ResourceHand.UIDraw(true);
     }
 
-    public void RegisterNode(Node node)
-    {
-        m_OwnedNodes.Add(node);
-    }
+
+    // Gameplay UI
 
     public void GameDrawUI()
     {
@@ -552,6 +564,9 @@ class Player
             }
     }
 
+    /// <summary>
+    /// Attempt to build a settlement
+    /// </summary>
     private bool TryBuildSettlement(bool ignoreCost = false)
     {
         if (m_SelectedNode == null)
@@ -579,6 +594,9 @@ class Player
         return false;
     }
 
+    /// <summary>
+    /// Updates exchange rate when claiming new nodes
+    /// </summary>
     private void UpdateExchange(Port.TradeType port)
     {
         if (port == Port.TradeType.Empty)
@@ -595,6 +613,9 @@ class Player
             m_ExchangeRate.SetType((Resources.Type)port, 2);
     }
     
+    /// <summary>
+    /// Attempt to build a road
+    /// </summary>
     private bool TryBuildRoad(bool ignoreCost = false)
     {
         if (m_SelectedEdge == null)
@@ -605,9 +626,11 @@ class Player
             Trade trade = new Trade();
             trade.From = ResourceHand;
             trade.To = m_GameBoard.ResourceBank;
-            trade.Giving = ROAD_COST;
 
-            if (trade.TryExecute())
+            if (!ignoreCost)
+                trade.Giving = ROAD_COST;
+
+            if (trade.TryExecute() || ignoreCost)
             {
                 m_SelectedEdge.Owner = this;
                 m_Pieces.Roads--;
@@ -621,10 +644,13 @@ class Player
         return false;
     }
 
-    private void TryBuildCity()
+    /// <summary>
+    /// Attempt to build a city
+    /// </summary>
+    private bool TryBuildCity()
     {
         if (m_SelectedNode == null)
-            return;
+            return false;
         
         if (m_SelectedNode.Owner == this && m_SelectedNode.IsCity == false && m_Pieces.Cities > 0)
         {
@@ -639,14 +665,20 @@ class Player
                 m_Pieces.Settlements++;
                 m_Pieces.Cities--;
                 m_VictoryPoints++;
+                return true;
             }
         }
+
+        return false;
     }
 
-    private void TryGetDevCard()
+    /// <summary>
+    /// Attempt to buy a development card
+    /// </summary>
+    private bool TryGetDevCard()
     {
         if (m_GameBoard.DevelopmentCards.Count < 0)
-            return;
+            return false;
 
         Trade trade = new Trade();
         trade.From = ResourceHand;
@@ -654,9 +686,17 @@ class Player
         trade.Giving = DEVELOPMENT_CARD_COST;
 
         if (trade.TryExecute())
+        {
             m_DevCards.Add(m_GameBoard.DevelopmentCards.Dequeue());
+            return true;
+        }
+
+        return false;
     }
 
+    /// <summary>
+    /// Different potential states
+    /// </summary>
     public enum TurnState {
         PreGame1,
         Pregame2,
@@ -673,28 +713,83 @@ class Player
         End
     }
 
+    /// <summary>
+    /// Display player colour
+    /// </summary>
+    /// <value></value>
     public Color Colour { get; private set; }
 
+    // Largest Army
+
+    /// <summary>
+    /// Played knight cards
+    /// </summary>
+    /// <value></value>
     public int ArmySize { get; set; }
+
+    /// <summary>
+    /// Boolean largest army victory managed by game
+    /// </summary>
     public bool LargestArmy { get; set; }
 
+    // Longest Road
+
+    /// <summary>
+    /// Segment length of longest road
+    /// </summary>
     public int RoadLength { get; private set; }
+
+    /// <summary>
+    /// Boolean longest road victory card, managed by game
+    /// </summary>
     public bool LongestRoad { get; set; }
+
+    /// <summary>
+    /// List describing longest road
+    /// </summary>
     private List<Edge> m_Road;
+
+    /// <summary>
+    /// Debug longest road highlight
+    /// </summary>
     private bool m_Highlighted;
 
+    /// <summary>
+    /// Current state
+    /// </summary>
     private TurnState m_TurnState;
 
+    /// <summary>
+    /// Owned resource cards
+    /// </summary>
     public Resources ResourceHand;
+
+    /// <summary>
+    /// Stores trade whilst being created
+    /// </summary>
     private Trade m_CurrentTrade;
+
+    /// <summary>
+    /// Exchange rate with bank
+    /// Starts at 4,4,4,4,4 & varies based on ports
+    /// </summary>
     private Resources m_ExchangeRate;
 
+    /// <summary>
+    /// Reference to the game board
+    /// </summary>
     private Board m_GameBoard;
+
+    // Actively selected elements by player
+    // Cleared at end of turn
 
     private Node m_SelectedNode;
     private Edge m_SelectedEdge;
     private Tile m_SelectedTile;
 
+    /// <summary>
+    /// Owned developments cards
+    /// </summary>
     private List<DevelopmentCard> m_DevCards;
     private int m_SelectedCard;
 
@@ -711,13 +806,23 @@ class Player
         public int Cities;
         public int Roads;
     }
+    /// <summary>
+    /// Limit for number of pieces the player can place
+    /// </summary>
     private Pieces m_Pieces;
+
+    /// <summary>
+    /// List of all nodes owned by this player
+    /// Primarily used as starting points for finding longest road
+    /// </summary>
     private List<Node> m_OwnedNodes;
 
+    /// <summary>
+    /// Victory points owned by player
+    /// </summary>
     private int m_VictoryPoints;
 
-    private bool[] m_Tabs = { true, false };
-
+    // Static variables showing costs for different elements
     private static readonly Resources ROAD_COST = new Resources(1, 1, 0, 0, 0);
     private static readonly Resources SETTLEMENT_COST = new Resources(1, 1, 1, 1, 0);
     private static readonly Resources CITY_COST = new Resources(0, 0, 2, 0, 3);
