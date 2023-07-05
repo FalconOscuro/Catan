@@ -7,7 +7,7 @@ namespace Catan;
 
 class Node
 {
-    public Node()
+    public Node(int id)
     {
         Position = Vector2.Zero;
         Owner = null;
@@ -15,7 +15,10 @@ class Node
         m_Hovered = false;
         Selected = false;
         PortType = Port.TradeType.Empty;
+        ID = id;
     }
+
+    public int ID { get; private set; }
 
     public Vector2 Position;
 
@@ -34,6 +37,22 @@ class Node
     private bool m_Hovered;
 
     private static readonly float RADIUS = 5f;
+
+    public Node GetNeighbourNode(int index)
+    {
+        // Out of range
+        if (index < 0 || index >= 3)
+            return null;
+        
+        else if (Edges[index] == null)
+            return null;
+        
+        int n = 0;
+        if (Edges[index].Nodes[n] == this)
+            n++;
+        
+        return Edges[index].Nodes[n];
+    }
 
     public List<Edge> StartRecurse(Player player)
     {
@@ -227,7 +246,7 @@ class Node
             if (edge.Nodes[n].Owner != null)
                 return false;
             
-            else if (edge.Owner == player)
+            else if (edge.Owner == player || player == null)
                 available = true;
         }
 

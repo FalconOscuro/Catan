@@ -145,11 +145,11 @@ class Resources
         if (resources == null)
             return;
 
-        Lumber += resources.Lumber;
-        Brick += resources.Brick;
-        Grain += resources.Grain;
-        Wool += resources.Wool;
-        Ore += resources.Ore;
+        Lumber = MathHelper.Max(Lumber + resources.Lumber, 0);
+        Brick = MathHelper.Max(Brick + resources.Brick, 0);
+        Grain = MathHelper.Max(Grain + resources.Grain, 0);
+        Wool = MathHelper.Max(Wool + resources.Wool, 0);
+        Ore = MathHelper.Max(Ore + resources.Ore, 0);
     }
 
     public bool TryTake(Resources resources)
@@ -221,22 +221,22 @@ class Resources
     public static Resources operator+(Resources a, Resources b)
     {
         return new Resources(
-            a.Lumber + b.Lumber,
-            a.Brick + b.Brick,
-            a.Grain + b.Grain,
-            a.Wool + b.Wool,
-            a.Ore + b.Ore
+            MathHelper.Max(a.Lumber + b.Lumber, 0),
+            MathHelper.Max(a.Brick + b.Brick, 0),
+            MathHelper.Max(a.Grain + b.Grain, 0),
+            MathHelper.Max(a.Wool + b.Wool, 0),
+            MathHelper.Max(a.Ore + b.Ore, 0)
             );
     }
 
     public static Resources operator-(Resources a, Resources b)
     {
         return new Resources(
-            a.Lumber - b.Lumber,
-            a.Brick - b.Brick,
-            a.Grain - b.Grain,
-            a.Wool - b.Wool,
-            a.Ore - b.Ore
+            MathHelper.Max(a.Lumber - b.Lumber, 0),
+            MathHelper.Max(a.Brick - b.Brick, 0),
+            MathHelper.Max(a.Grain - b.Grain, 0),
+            MathHelper.Max(a.Wool - b.Wool, 0),
+            MathHelper.Max(a.Ore - b.Ore, 0)
         );
     }
 

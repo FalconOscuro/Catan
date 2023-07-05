@@ -111,9 +111,7 @@ public class Game1 : Game
             ImGui.Separator();
 
             bool fixedTimeStep = IsFixedTimeStep;
-            ImGui.Checkbox("Use Fixed Timestep", ref fixedTimeStep);
-
-            if (fixedTimeStep != IsFixedTimeStep)
+            if (ImGui.Checkbox("Use Fixed Timestep", ref fixedTimeStep))
                 IsFixedTimeStep = fixedTimeStep;
         }
 

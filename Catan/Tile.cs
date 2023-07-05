@@ -38,7 +38,7 @@ class Tile
             return Vector2.DistanceSquared(point, Position) < scale * scale * .75f;
         }
 
-        public List<Trade> Distribute()
+        public List<Trade> Distribute(Board board)
         {
             List<Trade> trades = new List<Trade>();
 
@@ -48,9 +48,9 @@ class Tile
             foreach (Node node in Nodes)
                 if (node.Owner != null)
                     {
-                        Trade trade = new Trade();
+                        Trade trade = new Trade(board);
                         trade.Giving.AddType(Type, node.IsCity ? 2 : 1);
-                        trade.To = node.Owner.ResourceHand;
+                        trade.To = node.Owner;
 
                         trades.Add(trade);
                     }

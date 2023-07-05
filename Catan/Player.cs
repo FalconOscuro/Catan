@@ -18,7 +18,7 @@ class Player
         m_SelectedTile = null;
         Colour = colour;
 
-        m_VictoryPoints = 2;
+        m_VictoryPoints = 0;
         m_SelectedCard = 0;
 
         RoadLength = 0;
@@ -29,11 +29,14 @@ class Player
         m_Highlighted = false;
 
         ResourceHand = new Resources();
-        m_CurrentTrade = new Trade();
+        m_CurrentTrade = new Trade(m_GameBoard);
         m_DevCards = new List<DevelopmentCard>();
         m_OwnedNodes = new List<Node>();
         m_ExchangeRate = new Resources(4, 4, 4, 4, 4);
     }
+
+    public virtual void StartGame()
+    {}
 
     public void GiveResource(Resources.Type resource, int num = 1)
     {
@@ -59,7 +62,7 @@ class Player
             state = TurnState.PreRollRobber;
 
         if (state != TurnState.Trade)
-            m_CurrentTrade = new Trade();
+            m_CurrentTrade = new Trade(m_GameBoard);
 
         m_TurnState = state;
     }
@@ -69,8 +72,14 @@ class Player
         m_CurrentTrade = trade;
     }
 
-    private void Roll()
+    public virtual void OnTradeComplete(Trade trade)
+    { }
+
+    protected void Roll()
     {
+        if (m_TurnState != TurnState.Start)
+            return;
+
         m_GameBoard.RollDice();
         SetState(TurnState.Main);
     }
@@ -80,7 +89,7 @@ class Player
         FindLongestRoad();
 
         m_TurnState = TurnState.End;
-        m_CurrentTrade = new Trade();
+        m_CurrentTrade = new Trade(m_GameBoard);
 
         DeselectNode();
         DeselectEdge();
@@ -137,7 +146,7 @@ class Player
         }
     }
 
-    private void DeselectNode()
+    protected void DeselectNode()
     {
         if (m_SelectedNode != null)
             m_SelectedNode.Selected = false;
@@ -159,7 +168,7 @@ class Player
         }
     }
 
-    private void DeselectEdge()
+    protected void DeselectEdge()
     {
         if (m_SelectedEdge != null)
             m_SelectedEdge.Selected = false;
@@ -181,7 +190,7 @@ class Player
         }
     }
 
-    private void DeselectTile()
+    protected void DeselectTile()
     {
         if (m_SelectedTile != null)
             m_SelectedTile.Selected = false;
@@ -307,9 +316,9 @@ class Player
 
         if (m_TurnState == TurnState.Pregame2)
         {
-            Trade trade = new Trade();
-            trade.To = ResourceHand;
-            trade.From = m_GameBoard.ResourceBank;
+            Trade trade = new Trade(m_GameBoard);
+            trade.To = this;
+            trade.From = null;
 
             for (int i = 0; i < 3; i++)
                 if (m_SelectedNode.Tiles[i] != null)
@@ -351,7 +360,7 @@ class Player
                 ImGui.SameLine();
 
                 if (ImGui.Button("Road"))
-                    TryBuildRoad();
+                    TryBuildRoad(m_SelectedEdge);
 
                 ImGui.SameLine();
 
@@ -417,10 +426,10 @@ class Player
 
     private void OfferTradeUI()
     {
-        bool bank = m_CurrentTrade.To == m_GameBoard.ResourceBank;
+        bool bank = m_CurrentTrade.To == null;
 
         if (ImGui.Checkbox("Bank Trade", ref bank))
-            m_CurrentTrade.To = bank ? m_GameBoard.ResourceBank : null;
+            m_CurrentTrade.To = bank ? null : this;
 
         if (bank)
         {
@@ -435,7 +444,7 @@ class Player
 
         if (ImGui.Button("Trade"))
         {
-            m_CurrentTrade.From = ResourceHand;
+            m_CurrentTrade.From = this;
 
             if (bank)
             {
@@ -460,7 +469,7 @@ class Player
 
         if (ImGui.Button("Accept"))
         {
-            m_CurrentTrade.To = ResourceHand;
+            m_CurrentTrade.To = this;
             m_CurrentTrade.TryExecute();
             EndTurn();
         }
@@ -478,8 +487,8 @@ class Player
 
         if (ImGui.Button("Discard") && m_CurrentTrade.Giving.GetTotal() == discardTarget)
         {
-            m_CurrentTrade.To = m_GameBoard.ResourceBank;
-            m_CurrentTrade.From = ResourceHand;
+            m_CurrentTrade.To = null;
+            m_CurrentTrade.From = this;
 
             if (m_CurrentTrade.TryExecute())
             {
@@ -532,7 +541,7 @@ class Player
     private void RoadBuildingUI()
     {
         if (ImGui.Button("Build Road"))
-            if (TryBuildRoad(true))
+            if (TryBuildRoad(m_SelectedEdge))
             {
                 if (m_TurnState == TurnState.RoadBuilding)
                     SetState(TurnState.RoadBuilding2);
@@ -548,8 +557,8 @@ class Player
 
         if (ImGui.Button("Take") && m_CurrentTrade.Giving.GetTotal() == 2)
         {
-            m_CurrentTrade.From = m_GameBoard.ResourceBank;
-            m_CurrentTrade.To = ResourceHand;
+            m_CurrentTrade.From = null;
+            m_CurrentTrade.To = this;
 
             if (m_CurrentTrade.TryExecute())
                 SetState(TurnState.Main);
@@ -584,9 +593,9 @@ class Player
         
         else if (targetNode.IsAvailable(purchased ? null : this) && m_Pieces.Settlements > 0)
         {
-            Trade trade = new Trade();
-            trade.From = ResourceHand;
-            trade.To = m_GameBoard.ResourceBank;
+            Trade trade = new Trade(m_GameBoard);
+            trade.From = this;
+            trade.To = null;
             trade.Giving = SETTLEMENT_COST;
 
             if (!purchased)
@@ -594,6 +603,17 @@ class Player
 
             if (purchased)
             {
+                if (freeResource)
+                {
+                    trade.Giving = new Resources();
+
+                    foreach (Tile tile in targetNode.Tiles)
+                        if (tile != null)
+                            trade.Receiving.AddType(tile.Type, 1);
+                    
+                    trade.TryExecute();
+                }
+
                 targetNode.Owner = this;
                 m_Pieces.Settlements--;
                 m_VictoryPoints++;
@@ -629,23 +649,28 @@ class Player
     /// <summary>
     /// Attempt to build a road
     /// </summary>
-    protected bool TryBuildRoad(bool ignoreCost = false)
+    protected bool TryBuildRoad(Edge targetEdge)
     {
-        if (m_SelectedEdge == null)
+        bool purchased = 
+            m_TurnState == TurnState.PreGame1 || m_TurnState == TurnState.Pregame2
+            || m_TurnState == TurnState.RoadBuilding || m_TurnState == TurnState.RoadBuilding2;
+
+        if (targetEdge == null)
             return false;
         
-        if (m_SelectedEdge.IsAvailable(this) && m_Pieces.Roads > 0)
+        if (targetEdge.IsAvailable(this) && m_Pieces.Roads > 0)
         {
-            Trade trade = new Trade();
-            trade.From = ResourceHand;
-            trade.To = m_GameBoard.ResourceBank;
+            Trade trade = new Trade(m_GameBoard);
+            trade.From = this;
+            trade.To = null;
+            trade.Giving = ROAD_COST;
 
-            if (!ignoreCost)
-                trade.Giving = ROAD_COST;
+            if (!purchased)
+                purchased = trade.TryExecute();
 
-            if (trade.TryExecute() || ignoreCost)
+            if (purchased)
             {
-                m_SelectedEdge.Owner = this;
+                targetEdge.Owner = this;
                 m_Pieces.Roads--;
 
                 FindLongestRoad();
@@ -667,9 +692,9 @@ class Player
         
         if (m_SelectedNode.Owner == this && m_SelectedNode.IsCity == false && m_Pieces.Cities > 0)
         {
-            Trade trade = new Trade();
-            trade.From = ResourceHand;
-            trade.To = m_GameBoard.ResourceBank;
+            Trade trade = new Trade(m_GameBoard);
+            trade.From = this;
+            trade.To = null;
             trade.Giving = CITY_COST;
 
             if (trade.TryExecute())
@@ -693,9 +718,9 @@ class Player
         if (m_GameBoard.DevelopmentCards.Count < 0)
             return false;
 
-        Trade trade = new Trade();
-        trade.From = ResourceHand;
-        trade.To = m_GameBoard.ResourceBank;
+        Trade trade = new Trade(m_GameBoard);
+        trade.From = this;
+        trade.To = null;
         trade.Giving = DEVELOPMENT_CARD_COST;
 
         if (trade.TryExecute())
@@ -796,9 +821,9 @@ class Player
     // Actively selected elements by player
     // Cleared at end of turn
 
-    private Node m_SelectedNode;
-    private Edge m_SelectedEdge;
-    private Tile m_SelectedTile;
+    protected Node m_SelectedNode;
+    protected Edge m_SelectedEdge;
+    protected Tile m_SelectedTile;
 
     /// <summary>
     /// Owned developments cards
@@ -810,9 +835,9 @@ class Player
     {
         public Pieces()
         {
-            Settlements = 3;
+            Settlements = 5;
             Cities = 4;
-            Roads = 13;
+            Roads = 15;
         }
 
         public int Settlements;
@@ -836,8 +861,8 @@ class Player
     private int m_VictoryPoints;
 
     // Static variables showing costs for different elements
-    private static readonly Resources ROAD_COST = new Resources(1, 1, 0, 0, 0);
-    private static readonly Resources SETTLEMENT_COST = new Resources(1, 1, 1, 1, 0);
-    private static readonly Resources CITY_COST = new Resources(0, 0, 2, 0, 3);
-    private static readonly Resources DEVELOPMENT_CARD_COST = new Resources(0, 0, 1, 1, 1);
+    protected static readonly Resources ROAD_COST = new Resources(1, 1, 0, 0, 0);
+    protected static readonly Resources SETTLEMENT_COST = new Resources(1, 1, 1, 1, 0);
+    protected static readonly Resources CITY_COST = new Resources(0, 0, 2, 0, 3);
+    protected static readonly Resources DEVELOPMENT_CARD_COST = new Resources(0, 0, 1, 1, 1);
 }

@@ -32,17 +32,17 @@ class Board
             Tiles[i] = new Tile();
 
         for (int i = 0; i < 54; i++)
-            Nodes[i] = new Node();
+            Nodes[i] = new Node(i);
         
         for (int i = 0; i < 72; i++)
             m_Edges[i] = new Edge();
         
-        m_Players[0] = new PlayerAgent(this, Color.Red);
-        m_Players[1] = new PlayerAgent(this, Color.Orange);
-        m_Players[2] = new PlayerAgent(this, Color.White);
-        m_Players[3] = new PlayerAgent(this, Color.Blue);
+        Players[0] = new PlayerAgent(this, Color.Red);
+        Players[1] = new PlayerAgent(this, Color.Orange);
+        Players[2] = new PlayerAgent(this, Color.White);
+        Players[3] = new PlayerAgent(this, Color.Blue);
 
-        m_Players[0].SetState(Player.TurnState.PreGame1);
+        Players[0].SetState(Player.TurnState.PreGame1);
         m_State = GameState.Setup;
 
         ResourceBank = new Resources(19, 19, 19, 19, 19);
@@ -400,62 +400,70 @@ class Board
 
     private void QuickStart()
     {
-        Nodes[10].Owner = m_Players[0];
-        Nodes[10].Edges[2].Owner = m_Players[0];
-        m_Players[0].RegisterNode(Nodes[10]);
+        Nodes[10].Owner = Players[0];
+        Nodes[10].Edges[2].Owner = Players[0];
+        Players[0].RegisterNode(Nodes[10]);
 
-        Nodes[13].Owner = m_Players[1];
-        Nodes[13].Edges[0].Owner = m_Players[1];
-        m_Players[1].RegisterNode(Nodes[13]);
+        Nodes[13].Owner = Players[1];
+        Nodes[13].Edges[0].Owner = Players[1];
+        Players[1].RegisterNode(Nodes[13]);
 
-        Nodes[19].Owner = m_Players[2];
-        Nodes[19].Edges[1].Owner = m_Players[2];
-        m_Players[2].RegisterNode(Nodes[19]);
+        Nodes[19].Owner = Players[2];
+        Nodes[19].Edges[1].Owner = Players[2];
+        Players[2].RegisterNode(Nodes[19]);
 
-        Nodes[29].Owner = m_Players[0];
-        Nodes[29].Edges[2].Owner = m_Players[0];
-        m_Players[0].RegisterNode(Nodes[29]);
+        Nodes[29].Owner = Players[0];
+        Nodes[29].Edges[2].Owner = Players[0];
+        Players[0].RegisterNode(Nodes[29]);
 
-        Nodes[35].Owner = m_Players[2];
-        Nodes[35].Edges[0].Owner = m_Players[2];
-        m_Players[2].RegisterNode(Nodes[35]);
+        Nodes[35].Owner = Players[2];
+        Nodes[35].Edges[0].Owner = Players[2];
+        Players[2].RegisterNode(Nodes[35]);
 
-        Nodes[40].Owner = m_Players[3];
-        Nodes[40].Edges[2].Owner = m_Players[3];
-        m_Players[3].RegisterNode(Nodes[40]);
+        Nodes[40].Owner = Players[3];
+        Nodes[40].Edges[2].Owner = Players[3];
+        Players[3].RegisterNode(Nodes[40]);
 
-        Nodes[42].Owner = m_Players[1];
-        Nodes[42].Edges[2].Owner = m_Players[1];
-        m_Players[1].RegisterNode(Nodes[42]);
+        Nodes[42].Owner = Players[1];
+        Nodes[42].Edges[2].Owner = Players[1];
+        Players[1].RegisterNode(Nodes[42]);
 
-        Nodes[44].Owner = m_Players[3];
-        Nodes[44].Edges[0].Owner = m_Players[3];
-        m_Players[3].RegisterNode(Nodes[44]);
+        Nodes[44].Owner = Players[3];
+        Nodes[44].Edges[0].Owner = Players[3];
+        Players[3].RegisterNode(Nodes[44]);
 
 
-        Trade trade = new Trade();
-        trade.From = ResourceBank;
+        Trade trade = new Trade(this);
+        trade.From = null;
 
         trade.Giving = new Resources(2, 0, 1, 0, 0);
-        trade.To = m_Players[0].ResourceHand;
+        trade.To = Players[0];
         trade.TryExecute();
 
         trade.Giving = new Resources(0, 0, 2, 0, 1);
-        trade.To = m_Players[1].ResourceHand;
+        trade.To = Players[1];
         trade.TryExecute();
 
         trade.Giving = new Resources(1, 1, 1, 0, 0);
-        trade.To = m_Players[2].ResourceHand;
+        trade.To = Players[2];
         trade.TryExecute();
 
         trade.Giving = new Resources(1, 1, 0, 0, 1);
-        trade.To = m_Players[3].ResourceHand;
+        trade.To = Players[3];
         trade.TryExecute();
 
-        m_Players[m_CurrentPlayer].SetState(Player.TurnState.End);
+        Players[m_CurrentPlayer].SetState(Player.TurnState.End);
         m_CurrentPlayer = 0;
         m_State = GameState.Main;
-        m_Players[0].SetState(Player.TurnState.Start);
+        Players[0].SetState(Player.TurnState.Start);
+
+        StartGame();
+    }
+
+    private void StartGame()
+    {
+        foreach (Player player in Players)
+            player.StartGame();
     }
 
     public void MoveRobber(Tile target)
@@ -477,7 +485,7 @@ class Board
         {
             m_State = GameState.Robber;
             m_TargetPlayerOffset = m_CurrentPlayer == 3 ? -3 : 1;
-            m_Players[m_CurrentPlayer + m_TargetPlayerOffset].SetState((Player.TurnState)m_State);
+            Players[m_CurrentPlayer + m_TargetPlayerOffset].SetState((Player.TurnState)m_State);
             return;
         }
 
@@ -493,7 +501,7 @@ class Board
     {
         List<Trade> trades = new List<Trade>();
         foreach (Tile tile in m_DensityMap[RollToArrayPos(m_LastRoll)])
-            trades.AddRange(tile.Distribute());
+            trades.AddRange(tile.Distribute(this));
 
         Resources requested = new Resources();
         foreach (Trade trade in trades)
@@ -506,7 +514,7 @@ class Board
         
         for (int i = 0; i < trades.Count; i++)
         {
-            trades[i].From = ResourceBank;
+            trades[i].From = null;
             trades[i].Giving = trades[i].Giving * mask;
 
             trades[i].TryExecute();
@@ -518,7 +526,7 @@ class Board
         if (m_State == GameState.End || m_State == GameState.Setup)
             return;
 
-        m_Players[m_CurrentPlayer + m_TargetPlayerOffset].Update();
+        Players[m_CurrentPlayer + m_TargetPlayerOffset].Update();
 
         AdvanceTurn();
 
@@ -528,7 +536,7 @@ class Board
             if(node.TestCollision(mousePos))
             {
                 if (pressed)
-                    m_Players[m_CurrentPlayer + m_TargetPlayerOffset].SelectNode(node);
+                    Players[m_CurrentPlayer + m_TargetPlayerOffset].SelectNode(node);
                 return;
             }
             
@@ -536,7 +544,7 @@ class Board
             if (edge.TestCollision(mousePos))
             {
                 if (pressed)
-                    m_Players[m_CurrentPlayer + m_TargetPlayerOffset].SelectEdge(edge);
+                    Players[m_CurrentPlayer + m_TargetPlayerOffset].SelectEdge(edge);
                 return;
             }
 
@@ -544,7 +552,7 @@ class Board
             if (tile.TestCollision(mousePos, m_Scale))
             {
                 if (pressed)
-                    m_Players[m_CurrentPlayer + m_TargetPlayerOffset].SelectTile(tile);
+                    Players[m_CurrentPlayer + m_TargetPlayerOffset].SelectTile(tile);
                 return;
             }
     }
@@ -557,11 +565,11 @@ class Board
 
         for (int i = 0; i < 4; i++)
         {
-            if (m_Players[i].ArmySize > largestSize)
-                largestPlayer = m_Players[i];
+            if (Players[i].ArmySize > largestSize)
+                largestPlayer = Players[i];
             
-            if (m_Players[i].LargestArmy)
-                currentLargest = m_Players[i];
+            if (Players[i].LargestArmy)
+                currentLargest = Players[i];
         }
 
         if (largestPlayer == null)
@@ -582,7 +590,7 @@ class Board
 
     private void AdvanceTurn()
     {
-        if (!m_Players[m_CurrentPlayer + m_TargetPlayerOffset].HasTurnEnded() || CheckVictory())
+        if (!Players[m_CurrentPlayer + m_TargetPlayerOffset].HasTurnEnded() || CheckVictory())
             return;
         
         switch (m_State)
@@ -613,7 +621,7 @@ class Board
             if (m_TargetPlayerOffset == 0)
             {
                 m_State = GameState.Main;
-                m_Players[m_CurrentPlayer].SetState(Player.TurnState.Robber);
+                Players[m_CurrentPlayer].SetState(Player.TurnState.Robber);
                 return;
             }
 
@@ -634,19 +642,19 @@ class Board
                 return;
             }
 
-            m_Players[m_CurrentPlayer + m_TargetPlayerOffset].SetActiveTrade(m_ActiveTrade);
+            Players[m_CurrentPlayer + m_TargetPlayerOffset].SetActiveTrade(m_ActiveTrade);
             break;
         }
 
-        m_Players[m_CurrentPlayer + m_TargetPlayerOffset].SetState((Player.TurnState)m_State);
+        Players[m_CurrentPlayer + m_TargetPlayerOffset].SetState((Player.TurnState)m_State);
     }
 
     private bool CheckVictory()
     {
-        if (m_Players[m_CurrentPlayer].HasWon())
+        if (Players[m_CurrentPlayer].HasWon())
         {
             m_State = GameState.End;
-            m_Players[m_CurrentPlayer].SetState(Player.TurnState.End);
+            Players[m_CurrentPlayer].SetState(Player.TurnState.End);
             return true;
         }
 
@@ -664,15 +672,15 @@ class Board
         if (m_CurrentPlayer + m_TargetPlayerOffset > 3)
             m_TargetPlayerOffset = 0 - m_CurrentPlayer;
 
-        m_Players[m_CurrentPlayer + m_TargetPlayerOffset].SetState(Player.TurnState.Trade);
+        Players[m_CurrentPlayer + m_TargetPlayerOffset].SetState(Player.TurnState.Trade);
         m_ActiveTrade = trade;
-        m_Players[m_CurrentPlayer + m_TargetPlayerOffset].SetActiveTrade(m_ActiveTrade);
+        Players[m_CurrentPlayer + m_TargetPlayerOffset].SetActiveTrade(m_ActiveTrade);
     }
 
     public void Monopoly(Resources.Type type)
     {
-        Trade trade = new Trade();
-        trade.To = m_Players[m_CurrentPlayer].ResourceHand;
+        Trade trade = new Trade(this);
+        trade.To = Players[m_CurrentPlayer];
 
         Resources mask = new Resources();
         mask.SetType(type, 1);
@@ -682,27 +690,33 @@ class Board
             if (i == m_CurrentPlayer)
                 continue;
 
-            trade.Giving = m_Players[i].ResourceHand * mask;
+            trade.Giving = Players[i].ResourceHand * mask;
             trade.TryExecute();
         }
+    }
+
+    public void OnCompleteTrade(Trade trade)
+    {
+        foreach (Player player in Players)
+            player.OnTradeComplete(trade);
     }
 
     public void CheckLongestRoad(bool reCalc)
     {
         if (reCalc)
-            foreach (Player player in m_Players)
+            foreach (Player player in Players)
                 player.FindLongestRoad();
         
-        Player current = m_Players[0];
+        Player current = Players[0];
         Player champ = null;
 
         for (int i = 0; i < 4; i++)
         {
-            if (m_Players[i].RoadLength > current.RoadLength)
-                current = m_Players[i];
+            if (Players[i].RoadLength > current.RoadLength)
+                current = Players[i];
 
-            if (m_Players[i].LongestRoad)
-                champ = m_Players[i];
+            if (Players[i].LongestRoad)
+                champ = Players[i];
         }
 
         if (current.RoadLength < 3)
@@ -739,7 +753,7 @@ class Board
             Tiles[i].SpriteDraw(spriteBatch, m_Font, windowHeight, m_LastRoll);
         
         for (int i = 0; i < 4; i++)
-            m_Players[i].SpriteDraw(spriteBatch, m_Font, windowHeight);
+            Players[i].SpriteDraw(spriteBatch, m_Font, windowHeight);
     }
 
     public void DebugUIDraw()
@@ -768,7 +782,7 @@ class Board
                 {
                     if (ImGui.BeginTabItem(string.Format("Player {0}", i)))
                     {
-                        m_Players[i].DebugDrawUI();
+                        Players[i].DebugDrawUI();
                         ImGui.EndTabItem();
                     }
                 }
@@ -783,7 +797,10 @@ class Board
         if (m_State == GameState.Setup)
         {
             if (ImGui.Button("Start Game"))
+            {
                 m_State = GameState.Pregame1;
+                StartGame();
+            }
 
             ImGui.SameLine();
             if (ImGui.Button("Quick Start"))
@@ -800,7 +817,7 @@ class Board
             ImGui.Text(String.Format("Player {0}", m_CurrentPlayer + m_TargetPlayerOffset));
             ImGui.Separator();
 
-            m_Players[m_CurrentPlayer + m_TargetPlayerOffset].GameDrawUI();
+            Players[m_CurrentPlayer + m_TargetPlayerOffset].GameDrawUI();
         }
     }
 
@@ -815,7 +832,7 @@ class Board
 
     private List<List<Tile>> m_DensityMap;
 
-    private Player[] m_Players = new Player[4];
+    public Player[] Players = new Player[4];
     private int m_CurrentPlayer = 0;
     private int m_TargetPlayerOffset = 0;
 

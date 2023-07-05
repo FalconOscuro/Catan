@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -16,6 +17,42 @@ class PlayerAgent : Player
         base(board, colour)
     {
         m_ResourceRarity = null;
+        m_Predictions = new Dictionary<Player, Resources>();
+    }
+
+    public override void StartGame()
+    {
+        m_Predictions = new Dictionary<Player, Resources>();
+        base.StartGame();
+
+        foreach (Player player in m_GameBoard.Players)
+        {
+            if (player == this)
+                continue;
+
+            m_Predictions.Add(player, new Resources());
+        }
+    }
+
+    public override void OnTradeComplete(Trade trade)
+    {
+        base.OnTradeComplete(trade);
+
+        if (trade.From != this && trade.From != null)
+        {
+            Resources prediction = m_Predictions[trade.From];
+            prediction = (prediction + trade.Receiving) - trade.Giving;
+
+            m_Predictions[trade.From] = prediction;
+        }
+
+        if (trade.To != this && trade.To != null)
+        {
+            Resources prediction = m_Predictions[trade.To];
+            prediction = (prediction + trade.Giving) - trade.Receiving;
+
+            m_Predictions[trade.To] = prediction;
+        }
     }
 
     public override void Update()
@@ -31,12 +68,32 @@ class PlayerAgent : Player
         switch (m_TurnState)
         {
         case TurnState.PreGame1:
-            TryBuildSettlement(GetHighestValueNode());
+        case TurnState.Pregame2:
+            Node node = GetHighestValueNode();
+            TryBuildSettlement(node);
+            TryBuildRoad(FindBestEdge(node));
             EndTurn();
             break;
-        }
 
+        case TurnState.Start:
+            Roll();
+            break;
+
+        case TurnState.Main:
+            TurnMain();
+            break;
+        }
         m_Continue = !m_Step;
+    }
+
+    private void TurnMain()
+    {
+        Node target = CanBuildSettlement();
+
+        if (TryBuildSettlement(target))
+            return;
+
+        EndTurn();
     }
 
     public override void SpriteDraw(SpriteBatch spriteBatch, SpriteFont font, float windowHeight)
@@ -79,6 +136,10 @@ class PlayerAgent : Player
                 CalculateWeights();
 
             ImGui.SameLine();
+            if (ImGui.Button("Calculate distances"))
+                CalculateDistances();
+
+            ImGui.SameLine();
             if (ImGui.Button("Re-calculate rarity"))
                     CalculateRarity();
         
@@ -86,6 +147,24 @@ class PlayerAgent : Player
             {
                 ImGui.Text("Resource abundance");
                 m_ResourceRarity.UIDraw();
+            }
+        }
+
+        if (ImGui.CollapsingHeader("Predictions"))
+        {
+            if (ImGui.BeginTabBar("Players"))
+            {
+                int i = 0;
+                foreach (KeyValuePair<Player, Resources> prediction in m_Predictions)
+                {
+                    if (ImGui.BeginTabItem(string.Format("Prediction {0}", i++)))
+                    {
+                        prediction.Value.UIDraw();
+                        ImGui.EndTabItem();
+                    }
+                }
+
+                ImGui.EndTabBar();
             }
         }
     }
@@ -97,6 +176,98 @@ class PlayerAgent : Player
         for (int i = 0; i < 54; i++)
             m_NodeWeights[i] = m_GameBoard.Nodes[i].GetWeight(
                 m_ResourceRarity, m_PlacementStrategy, weights, m_NeighbourSearch);
+    }
+
+    private void CalculateDistances()
+    {
+        m_DistanceMap = new float[54];
+        float step = 1f / (m_SearchDepth + 1);
+
+        for (int i = 0; i < 54; i++)
+        {
+            Node node  = m_GameBoard.Nodes[i];
+
+            if(node.IsAvailable(this))
+               ApplyDistances(i, step);
+
+            else if (!node.IsAvailable())
+            {
+                for (int j = 0; j < 3; j++)
+                {
+                   Node neighbour = node.GetNeighbourNode(j);
+                   
+                    if (neighbour == null)
+                        continue;
+                    
+                    else if (neighbour.Owner == this)
+                        ApplyDistances(i, step);
+                }
+            }
+        }
+    }
+
+    private Edge FindBestEdge(Node node)
+    {
+        float maxWeight = 0f;
+        Edge maxEdge = null;
+
+        for (int i = 0; i < 3; i++)
+        {
+            float weight = 0f;
+            Edge edge = node.Edges[i];
+            if (edge == null)
+                continue;
+
+            else if (edge.Owner != null)
+                continue;
+
+            Node neighbour = node.GetNeighbourNode(i);
+            
+            for (int j = 0; j < 3; j++)
+            {
+                Edge edge1 = neighbour.Edges[j];
+
+                if (edge1 == null)
+                    continue;
+                
+                Node search = neighbour.GetNeighbourNode(i);
+                if (edge1.Owner != null || search.Owner != null || search == node)
+                    continue;
+                
+                weight += m_NodeWeights[search.ID]; 
+            }
+            weight /= 2;
+
+            if (weight > maxWeight)
+            {
+                maxWeight = weight;
+                maxEdge = edge;
+            }
+        }
+
+        return maxEdge;
+    }
+
+    private void ApplyDistances(int index, float step, float value = 1f)
+    {
+        if (m_DistanceMap[index] >= value)
+            return;
+        
+        m_DistanceMap[index] = value;
+        value -= step;
+
+        if (value < step - (step / 2))
+            return;
+
+        Node node = m_GameBoard.Nodes[index];
+        for (int i = 0; i < 3; i++)
+        {
+            Node neighbour = node.GetNeighbourNode(i);
+            if (neighbour == null)
+                continue;
+            
+            ApplyDistances(neighbour.ID, step, value);
+        }
     }
 
     private void CalculateRarity()
@@ -121,7 +292,29 @@ class PlayerAgent : Player
         return m_GameBoard.Nodes[index];
     }
 
+    private Node CanBuildSettlement()
+    {
+        if (ResourceHand < SETTLEMENT_COST)
+            return null;
+        
+        float targetWeight = 0f;
+        Node target = null;
+        foreach (Node node in m_GameBoard.Nodes)
+        {
+            if (node.IsAvailable(this) && m_NodeWeights[node.ID] > targetWeight)
+            {
+                targetWeight = m_NodeWeights[node.ID];
+                target = node;
+            }
+        }
+
+        return target;
+    }
+
     private float[] m_NodeWeights = new float[54];
+    private float[] m_DistanceMap = new float[54];
+
+    private int m_SearchDepth = 1;
 
     private bool m_ShowWeights = false;
 
@@ -155,6 +348,8 @@ class PlayerAgent : Player
     private bool m_Continue = true;
 
     private Resources m_ResourceRarity;
+
+    private Dictionary<Player, Resources> m_Predictions;
 
     private static readonly ResourceWeights PRIMARY_RESOURCES = new ResourceWeights(.2950f, .3233f, .3675f, .3100f, .3233f);
 }
