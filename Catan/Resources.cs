@@ -332,6 +332,15 @@ struct ResourceWeights
         Ore = ore;
     }
 
+    public float GetResourcesWeight(Resources resources)
+    {
+        return Lumber * resources.Lumber +
+            Brick * resources.Brick +
+            Grain * resources.Grain +
+            Wool * resources.Wool +
+            Ore * resources.Ore;
+    }
+
     public float GetResourceWeight(Resources.Type type)
     {
         switch (type)

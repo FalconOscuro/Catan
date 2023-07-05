@@ -5,6 +5,9 @@ using Microsoft.Xna.Framework.Graphics;
 
 namespace Catan;
 
+/// <summary>
+/// Single board node
+/// </summary>
 class Node
 {
     public Node(int id)
@@ -18,26 +21,56 @@ class Node
         ID = id;
     }
 
+    /// <summary>
+    /// ID equal to position in node array
+    /// </summary>
     public int ID { get; private set; }
 
+    /// <summary>
+    /// Worldspace position for rendering
+    /// </summary>
     public Vector2 Position;
 
+    /// <summary>
+    /// Current owner, null if un-owned
+    /// </summary>
     public Player Owner;
 
     public bool IsCity;
 
     public bool Selected;
 
+    /// <summary>
+    /// Connect port type
+    /// </summary>
     public Port.TradeType PortType;
 
+    /// <summary>
+    /// Connected edges
+    /// </summary>
     public Edge[] Edges = new Edge[] {null, null, null};
 
+    /// <summary>
+    /// Adjacent tiles
+    /// </summary>
     public Tile[] Tiles = new Tile[3];
 
+    /// <summary>
+    /// Similar to selected, set to active if collision is detected
+    /// Regardless of mouse-press
+    /// </summary>
     private bool m_Hovered;
 
+    /// <summary>
+    /// Radius of drawn circle
+    /// </summary>
     private static readonly float RADIUS = 5f;
 
+    /// <summary>
+    /// Get neighbouring node
+    /// </summary>
+    /// <param name="index">index of edge to traverse</param>
+    /// <returns>null if nonexistant edge</returns>
     public Node GetNeighbourNode(int index)
     {
         // Out of range
@@ -54,6 +87,31 @@ class Node
         return Edges[index].Nodes[n];
     }
 
+    /// <summary>
+    /// Fetch 2nd order node
+    /// </summary>
+    /// <param name="x">path from root</param>
+    /// <param name="y">path from branch</param>
+    public Node GetSecondOrderNode(int x, int y)
+    {
+        Node branchNode = GetNeighbourNode(x);
+
+        if (branchNode == null)
+            return null;
+        
+        Node leafNode = branchNode.GetNeighbourNode(y);
+
+        if (leafNode == this)
+            return null;
+        
+        return leafNode;
+    }
+
+    /// <summary>
+    /// Recursion entry point to find longest path
+    /// </summary>
+    /// <param name="player"></param>
+    /// <returns></returns>
     public List<Edge> StartRecurse(Player player)
     {
         if (Owner != player && Owner != null)
@@ -99,6 +157,11 @@ class Node
         return longest;
     }
 
+    /// <summary>
+    /// recurse to find longest road
+    /// </summary>
+    /// <param name="player"></param>
+    /// <returns></returns>
     public List<Edge> Recurse(Player player)
     {
         if (Owner != player && Owner != null)
@@ -123,110 +186,9 @@ class Node
         return longest;
     }
 
-    public float GetWeight(Resources rarity, 
-        PlayerAgent.PlacementStrategy strategy,
-        ResourceWeights weights, 
-        PlayerAgent.NeighbourSearch neighbourSearch = PlayerAgent.NeighbourSearch.Disabled)
-    {
-        if (!IsAvailable())
-            return 0f;
-
-        return GetTileWeight(rarity, strategy, weights) + GetNeighbourWeight(rarity, strategy, weights, neighbourSearch) / 2f;
-    }
-
-    private float GetTileWeight(Resources rarity, PlayerAgent.PlacementStrategy strategy, ResourceWeights weights)
-    {
-        float weight = 0f;
-
-        foreach(Tile tile in Tiles)
-        {
-            float tileWeight = 0f;
-
-            if (tile == null)
-                continue;
-            
-            else if (tile.Type == Resources.Type.Empty)
-                continue;
-            
-            else if (strategy == PlayerAgent.PlacementStrategy.Abundance)
-            {
-                switch (tile.Type)
-                {
-                case (Resources.Type.Ore):
-                case (Resources.Type.Brick):
-                    tileWeight = 1/3f;
-                    break;
-                    
-                case (Resources.Type.Empty):
-                    break;
-                
-                default:
-                    tileWeight = .25f;
-                    break;
-                }
-            }
-
-            else
-            {
-                tileWeight = tile.GetProbability();
-
-                if (strategy == PlayerAgent.PlacementStrategy.Rarity)
-                    tileWeight /= rarity.GetType(tile.Type);
-            }
-
-            weight += tileWeight * weights.GetResourceWeight(tile.Type);
-        }
-
-        if (strategy == PlayerAgent.PlacementStrategy.MaxCards)
-            weight /= 36f;
-
-        return weight;
-    }
-
-    private float GetNeighbourWeight(Resources rarity, PlayerAgent.PlacementStrategy strategy, ResourceWeights weights,
-        PlayerAgent.NeighbourSearch neighbourSearch, Node parent = null)
-    {
-        if (neighbourSearch == PlayerAgent.NeighbourSearch.Disabled)
-            return 0f;
-        
-        bool skip = parent != null;
-        float neighourWeights = 0f;
-
-        foreach (Edge edge in Edges)
-        {
-            if (edge == null)
-                continue;
-                
-            int i = 0;
-            if (edge.Nodes[i] == this)
-                i++;
-                
-            if (edge.Nodes[i] == parent)
-                continue;
-
-            float tempWeight = 0f;
-
-            if (!skip)
-            {
-                tempWeight = edge.Nodes[i].GetNeighbourWeight(
-                    rarity, strategy, weights, 
-                    neighbourSearch, this);
-            }
-
-            else
-                tempWeight = edge.Nodes[i].GetWeight(rarity, strategy, weights);
-
-            if (neighbourSearch == PlayerAgent.NeighbourSearch.Best
-                && tempWeight > neighourWeights)
-                neighourWeights = tempWeight;
-                
-            else
-                neighourWeights += tempWeight;
-        } 
-
-        return neighourWeights;
-    }
-
+    /// <summary>
+    /// Is this a valid position to build a settlement
+    /// </summary>
     public bool IsAvailable(Player player = null)
     {
         if (Owner != null)

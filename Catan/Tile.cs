@@ -8,7 +8,7 @@ namespace Catan;
 
 class Tile
 {
-    public Tile()
+    public Tile(int id)
         {
             Position = Vector2.Zero;
             Type = Resources.Type.Empty;
@@ -16,11 +16,14 @@ class Tile
 
             Selected = false;
             Robber = false;
+            ID = id;
         }
 
         public Vector2 Position;
 
         public Resources.Type Type;
+
+        public int ID { get; private set; }
 
         public int Value;
 

@@ -3,6 +3,8 @@ using System.Collections.Generic;
 
 using Microsoft.Xna.Framework;
 
+using ImGuiNET;
+
 namespace Catan;
 
 static class Utility
@@ -23,6 +25,19 @@ static class Utility
                 array[n] = array[pos];
                 array[pos] = temp;
             }
+        }
+    }
+
+    public static void HelpMarker(string description)
+    {
+        ImGui.TextDisabled("(?)");
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.BeginTooltip();
+            ImGui.PushTextWrapPos(ImGui.GetFontSize() * 35f);
+            ImGui.TextUnformatted(description);
+            ImGui.PopTextWrapPos();
+            ImGui.EndTooltip();
         }
     }
 

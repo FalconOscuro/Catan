@@ -29,7 +29,7 @@ class Board
         m_EdgeDist = MathF.Sqrt((m_Scale * m_Scale) * 1.25f);
 
         for (int i = 0; i < 19; i++)
-            Tiles[i] = new Tile();
+            Tiles[i] = new Tile(i);
 
         for (int i = 0; i < 54; i++)
             Nodes[i] = new Node(i);
@@ -384,6 +384,7 @@ class Board
         for (int i = 0; i < 19; i++)
         {
             Tiles[i].Type = resourceSpread[i];
+            Tiles[i].Robber = false;
 
             if (resourceSpread[i] == Resources.Type.Empty)
             {

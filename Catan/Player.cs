@@ -501,41 +501,48 @@ class Player
     {
         if (ImGui.Button("Move Robber") && m_SelectedTile != null)
         {
-            if (m_SelectedTile.Robber)
-                return;
+            if (!TryMoveRobber(m_SelectedTile, m_SelectedNode))
+                return;            
 
-            bool targetablePlayer = false;
-            foreach (Node node in m_SelectedTile.Nodes)
-                if (node.Owner != null && node.Owner != this)
-                    targetablePlayer = true;
-            
-            if (targetablePlayer)
-            {
-                if (m_SelectedNode == null)
-                    return;
-                
-                else if (m_SelectedNode.Owner == null || m_SelectedNode.Owner == this)
-                    return;
-
-                bool adjacent = false;
-                foreach (Node node in m_SelectedTile.Nodes)
-                    if (node == m_SelectedNode)
-                        adjacent = true;
-                
-                if (!adjacent)
-                    return;
-                
-                GiveResource(m_SelectedNode.Owner.StealResource());
-            }
-
-            m_GameBoard.MoveRobber(m_SelectedTile);
-
-            if (m_TurnState == TurnState.PreRollRobber)
+            else if (m_TurnState == TurnState.PreRollRobber)
                 SetState(TurnState.Start);
 
             else
                 SetState(TurnState.Main);
         }
+    }
+
+    protected bool TryMoveRobber(Tile targetTile, Node targetNode)
+    {
+        if (targetTile.Robber)
+            return false;
+        
+        bool targetablePlayer = false;
+        foreach (Node node in targetTile.Nodes)
+            if (node.Owner != null && node.Owner != this)
+                targetablePlayer = true;
+        
+        if (targetablePlayer)
+        {
+            if (targetNode == null)
+                return false;
+            
+            else if (targetNode.Owner == null || targetNode.Owner == this)
+                return false;
+
+            bool adjacent = false;
+            foreach (Node node in targetTile.Nodes)
+                if (node == targetNode)
+                    adjacent = true;
+            
+            if (!adjacent)
+                return false;
+            
+            GiveResource(targetNode.Owner.StealResource());
+        }
+
+        m_GameBoard.MoveRobber(targetTile);
+        return true;
     }
 
     private void RoadBuildingUI()
