@@ -83,6 +83,10 @@ class PlayerAgent : Player
         case TurnState.Robber:
             Robber();
             break;
+        
+        case TurnState.Discard:
+            Discard();
+            break;
 
         case TurnState.Main:
             TurnMain();
@@ -174,6 +178,40 @@ class PlayerAgent : Player
         TryMoveRobber(targetTile, targetNode);
 
         m_TurnState = TurnState.Main;
+    }
+
+    private void Discard()
+    {
+        Resources removing = new Resources();
+
+        // Simple method, get rid of most numerous cards
+        for (int i = 0; i < GetHandSize() / 2; i++)
+        {
+            Resources remaining = ResourceHand - removing;
+
+            int max = 0;
+            Resources.Type type = Resources.Type.Empty;
+            for (Resources.Type j = 0; (int)j < 5; j++)
+            {
+                int typeNum = remaining.GetType(j);
+
+                if (typeNum > max)
+                {
+                    max = typeNum;
+                    type = j;
+                }
+            }
+
+            removing.AddType(type, 1);
+        }
+
+        Trade trade = new Trade(m_GameBoard);
+        trade.From = this;
+        trade.To = null;
+        trade.Giving = removing;
+        trade.TryExecute();
+
+        EndTurn();
     }
 
     public override void SpriteDraw(SpriteBatch spriteBatch, SpriteFont font, float windowHeight)
