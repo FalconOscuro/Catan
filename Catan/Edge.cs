@@ -15,7 +15,6 @@ class Edge
 
         m_Hovered = false;
         Selected = false;
-        m_Traversed = false;
     }
 
     public void CalculatePosition()
@@ -24,24 +23,6 @@ class Edge
 
         Start = ((Nodes[0].Position - centre) * .8f) + centre;
         End = ((Nodes[1].Position - centre) * .8f) + centre;
-    }
-
-    public List<Edge> Recurse(Player owner, Node last)
-    {
-        if (Owner != owner || m_Traversed)
-            return new List<Edge>();
-        
-        m_Traversed = true;
-        Node target = Nodes[0];
-        if (target == last)
-            target = Nodes[1];
-
-        List<Edge> path = target.Recurse(owner);
-
-        path.Add(this);
-        m_Traversed = false;
-
-        return path;
     }
 
     // Connections ordered N->S & E->W
@@ -53,8 +34,6 @@ class Edge
     public Node[] Nodes = new Node[2];
 
     public bool Selected;
-
-    private bool m_Traversed;
 
     private bool m_Hovered;
 

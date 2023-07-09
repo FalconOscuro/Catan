@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 using Microsoft.Xna.Framework;
@@ -28,10 +29,12 @@ class Player
         m_Road = new List<Edge>();
         m_Highlighted = false;
 
+        m_ControlledNodes = new List<NodeContainer>();
+        m_OwnedEdges = new List<EdgeContainer>();
+
         ResourceHand = new Resources();
         m_CurrentTrade = new Trade(m_GameBoard);
         m_DevCards = new List<DevelopmentCard>();
-        m_OwnedNodes = new List<Node>();
         m_ExchangeRate = new Resources(4, 4, 4, 4, 4);
     }
 
@@ -208,21 +211,33 @@ class Player
     {
         RoadLength = 0;
 
-        for (int i = 0; i < m_OwnedNodes.Count; i++)
+        int unSearched = m_OwnedEdges.Count;
+
+        while (RoadLength < unSearched)
         {
-            List<Edge> path = m_OwnedNodes[i].StartRecurse(this);
+            int i = 0;
+            while (m_OwnedEdges[i].Traversed)
+                i++;
 
-            if (path.Count > RoadLength)
+            List<Edge> road = m_OwnedEdges[i].TraverseLongest(this);
+
+            if (road.Count > RoadLength)
             {
-                RoadLength = path.Count;
-                m_Road = path;
+                RoadLength = road.Count;
+                m_Road = road;
             }
-        }
-    }
 
-    public void RegisterNode(Node node)
-    {
-        m_OwnedNodes.Add(node);
+            unSearched = 0;
+            foreach (EdgeContainer edge in m_OwnedEdges)
+                if (!edge.Traversed)
+                    unSearched++;
+        }
+
+        for (int i = 0; i < m_OwnedEdges.Count; i++)
+            m_OwnedEdges[i].Traversed = false;
+        
+        for (int i = 0; i < m_ControlledNodes.Count; i++)
+            m_ControlledNodes[i].Traversed = false;
     }
 
     /// <summary>
@@ -312,7 +327,6 @@ class Player
 
         m_SelectedNode.Owner = this;
         m_SelectedEdge.Owner = this;
-        m_OwnedNodes.Add(m_SelectedNode);
 
         if (m_TurnState == TurnState.Pregame2)
         {
@@ -624,7 +638,6 @@ class Player
                 targetNode.Owner = this;
                 m_Pieces.Settlements--;
                 m_VictoryPoints++;
-                m_OwnedNodes.Add(targetNode);
                 UpdateExchange(targetNode.PortType);
                 m_GameBoard.CheckLongestRoad(true);
                 return true;
@@ -679,6 +692,8 @@ class Player
             {
                 targetEdge.Owner = this;
                 m_Pieces.Roads--;
+
+                NodeContainer.LinkNewEdge(targetEdge, ref m_ControlledNodes, ref m_OwnedEdges);
 
                 FindLongestRoad();
                 m_GameBoard.CheckLongestRoad(false);
@@ -856,11 +871,133 @@ class Player
     /// </summary>
     private Pieces m_Pieces;
 
-    /// <summary>
-    /// List of all nodes owned by this player
-    /// Primarily used as starting points for finding longest road
-    /// </summary>
-    private List<Node> m_OwnedNodes;
+    protected class EdgeContainer
+    {
+        public EdgeContainer(Edge edge, ref List<NodeContainer> nodes)
+        {
+            RefEdge = edge;
+            ConnectedNodes = new List<NodeContainer>();
+
+            int nodeCount = 0;
+            foreach (NodeContainer node in nodes)
+            {
+                for (int i = 0; i < 2; i++)
+                {
+                    if (node.RefNode == RefEdge.Nodes[i])
+                    {
+                        node.ConnectedEdges.Add(this);
+                        ConnectedNodes.Add(node);
+
+                        if (++nodeCount > 1)
+                            return;
+                        
+                        break;
+                    }
+                }
+            }
+        }
+
+        public List<Edge> TraverseLongest(in Player player)
+        {
+            if (Traversed)
+                return new List<Edge>();
+            
+            Traversed = true;
+
+            List<Edge> longest = new List<Edge>();
+
+            foreach (NodeContainer node in ConnectedNodes)
+                longest.AddRange(node.TraverseLongest(player));
+
+            longest.Add(RefEdge);
+            return longest;
+        }
+
+        public Edge RefEdge { get; private set; }
+        public bool Traversed = false;
+        public List<NodeContainer> ConnectedNodes { get; private set; }
+    }
+    protected List<EdgeContainer> m_OwnedEdges;
+
+    protected class NodeContainer
+    {
+        public NodeContainer(Node node, ref List<EdgeContainer> edges)
+        {
+            RefNode = node;
+            ConnectedEdges = new List<EdgeContainer>();
+
+            int edgeCount = 0;
+            foreach (EdgeContainer edge in edges)
+            {
+                for (int i = 0; i < 3; i++)
+                {
+                    if (edge.RefEdge == RefNode.Edges[i])
+                    {
+                        edge.ConnectedNodes.Add(this);
+                        ConnectedEdges.Add(edge);
+                        
+                        if (++edgeCount > 2)
+                            return;
+                        break;
+                    }
+                }
+            }
+        }
+
+        public List<Edge> TraverseLongest(in Player player)
+        {
+            if (Traversed || (RefNode.Owner != player && RefNode.Owner != null))
+                return new List<Edge>();
+
+            Traversed = true;
+
+            List<Edge> longest = new List<Edge>();
+
+            foreach(EdgeContainer edge in ConnectedEdges)
+            {
+                List<Edge> current = edge.TraverseLongest(player);
+
+                if (current.Count > longest.Count)
+                    longest = current;
+            }
+
+            return longest;
+        }
+
+        public Node RefNode { get; private set; }
+        public List<EdgeContainer> ConnectedEdges { get; private set; }
+        public bool Traversed = false;
+
+        public static void LinkNewEdge(Edge newEdge, ref List<NodeContainer> nodes, ref List<EdgeContainer> edges)
+        {
+            bool exists = false;
+            
+            int index = 0;
+            while (!exists && index < edges.Count)
+            {
+                exists = edges[index++].RefEdge == newEdge;
+            }
+
+            if (exists)
+                return;
+            
+            bool[] existingNodes = new bool[]{ false, false };
+
+            index = 0;
+            while (!existingNodes[0] && !existingNodes[1] && index < edges.Count)
+            {
+                existingNodes[0] |= nodes[index].RefNode == newEdge.Nodes[0];
+                existingNodes[1] |= nodes[index++].RefNode == newEdge.Nodes[1];
+            }
+
+            for (int i = 0; i < 2; i++)
+                if (!existingNodes[i])
+                    nodes.Add(new NodeContainer(newEdge.Nodes[i], ref edges));
+            
+            edges.Add(new EdgeContainer(newEdge, ref nodes));
+        }
+    }
+    protected List<NodeContainer> m_ControlledNodes;
 
     /// <summary>
     /// Victory points owned by player

@@ -403,35 +403,35 @@ class Board
     {
         Nodes[10].Owner = Players[0];
         Nodes[10].Edges[2].Owner = Players[0];
-        Players[0].RegisterNode(Nodes[10]);
+        //Players[0].RegisterNode(Nodes[10]);
 
         Nodes[13].Owner = Players[1];
         Nodes[13].Edges[0].Owner = Players[1];
-        Players[1].RegisterNode(Nodes[13]);
+        //Players[1].RegisterNode(Nodes[13]);
 
         Nodes[19].Owner = Players[2];
         Nodes[19].Edges[1].Owner = Players[2];
-        Players[2].RegisterNode(Nodes[19]);
+        //Players[2].RegisterNode(Nodes[19]);
 
         Nodes[29].Owner = Players[0];
         Nodes[29].Edges[2].Owner = Players[0];
-        Players[0].RegisterNode(Nodes[29]);
+        //Players[0].RegisterNode(Nodes[29]);
 
         Nodes[35].Owner = Players[2];
         Nodes[35].Edges[0].Owner = Players[2];
-        Players[2].RegisterNode(Nodes[35]);
+        //Players[2].RegisterNode(Nodes[35]);
 
         Nodes[40].Owner = Players[3];
         Nodes[40].Edges[2].Owner = Players[3];
-        Players[3].RegisterNode(Nodes[40]);
+        //Players[3].RegisterNode(Nodes[40]);
 
         Nodes[42].Owner = Players[1];
         Nodes[42].Edges[2].Owner = Players[1];
-        Players[1].RegisterNode(Nodes[42]);
+        //Players[1].RegisterNode(Nodes[42]);
 
         Nodes[44].Owner = Players[3];
         Nodes[44].Edges[0].Owner = Players[3];
-        Players[3].RegisterNode(Nodes[44]);
+        //Players[3].RegisterNode(Nodes[44]);
 
 
         Trade trade = new Trade(this);
@@ -759,20 +759,11 @@ class Board
 
     public void DebugUIDraw()
     {
-        ImGui.Text("Bank");
-        ResourceBank.UIDraw(true);
-        ImGui.Separator();
-
-        if (ImGui.CollapsingHeader("Board"))
+        if (ImGui.CollapsingHeader("Resources"))
         {
-            ImGui.Text(String.Format("Board State: {0}", m_State.ToString()));
-
-            if (ImGui.Button("Shuffle Tiles"))
-                GenerateBoard(false);
-            
-            if (m_State == GameState.Pregame1)
-                if (ImGui.Button("Quick Start"))
-                    QuickStart();
+            ImGui.Text("Bank");
+            ResourceBank.UIDraw(true);
+            ImGui.Separator();
         }
 
         if (ImGui.CollapsingHeader("Players"))
@@ -803,9 +794,9 @@ class Board
                 StartGame();
             }
 
-            ImGui.SameLine();
-            if (ImGui.Button("Quick Start"))
-                QuickStart();
+            //ImGui.SameLine();
+            //if (ImGui.Button("Quick Start"))
+            //    QuickStart();
 
             ImGui.SameLine();
             if (ImGui.Button("Shuffle Board"))
