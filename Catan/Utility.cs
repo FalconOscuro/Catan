@@ -52,6 +52,16 @@ static class Utility
         return new Vector2(point.X, screenHeight * (1f - (point.Y / screenHeight)));
     }
 
+    public static float NextFloat(this Random rand, float max = 1f, float min = 0f)
+    {
+        return (rand.NextSingle() * (max - min)) + min;
+    }
+
+    public static bool NextBool(this Random rand, float fraction = .5f)
+    {
+        return rand.NextSingle() < fraction;
+    }
+
     public static List<Edge> Dijkstra(this Node start, in Player targetPlayer)
     {
         Queue<DQueueItem> priorityQueue = new Queue<DQueueItem>();

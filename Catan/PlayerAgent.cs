@@ -65,6 +65,7 @@ class PlayerAgent : Player
     {
         GetResourceWeights();
         GetNodeWeights();
+        GetDistances();
         
         if (!m_Continue)
             return;
@@ -105,10 +106,19 @@ class PlayerAgent : Player
 
     private void TurnMain()
     {
-        Node target = CanBuildSettlement();
+        Node targetNode = GetHighestValueNode();
 
-        if (TryBuildSettlement(target))
-            return;
+        if (targetNode != null)
+        {
+            if (TryBuildSettlement(targetNode))
+                return;
+
+            List<Edge> expandPath = AStar(targetNode);
+            if (expandPath != null)
+                if (expandPath.Count > 0)
+                    if (TryBuildRoad(expandPath[expandPath.Count - 1]))
+                        return;
+        }
 
         EndTurn();
     }
@@ -281,7 +291,7 @@ class PlayerAgent : Player
         
         ImGui.SameLine();
         if (ImGui.Button("Distances"))
-            FindDistances();
+            GetDistances();
         
         ImGui.SameLine();
         if (ImGui.Button("Rarity"))
@@ -439,32 +449,13 @@ class PlayerAgent : Player
         return weight;
     }
 
-    private void FindDistances()
+    private void GetDistances()
     {
-        m_DistanceMap = new float[54];
-        float step = 1f / (m_SearchDepth + 1);
+        float step = 1f / (m_Behaviour.SearchDepth + 1);
 
-        for (int i = 0; i < 54; i++)
-        {
-            Node node  = m_GameBoard.Nodes[i];
-
-            if(node.IsAvailable(this))
-               ApplyDistances(i, step);
-
-            else if (!node.IsAvailable())
-            {
-                for (int j = 0; j < 3; j++)
-                {
-                   Node neighbour = node.GetNeighbourNode(j);
-                   
-                    if (neighbour == null)
-                        continue;
-                    
-                    else if (neighbour.Owner == this)
-                        ApplyDistances(i, step);
-                }
-            }
-        }
+        foreach (NodeContainer node in m_ControlledNodes)
+            if (m_DistanceMap[node.RefNode.ID] != 1f)
+                ApplyDistances(node.RefNode.ID, step);
     }
 
     private Edge FindBestEdge(Node node)
@@ -491,7 +482,7 @@ class PlayerAgent : Player
                 if (edge1 == null)
                     continue;
                 
-                Node search = neighbour.GetNeighbourNode(i);
+                Node search = neighbour.GetNeighbourNode(j);
                 if (edge1.Owner != null || search.Owner != null || search == node)
                     continue;
                 
@@ -499,7 +490,7 @@ class PlayerAgent : Player
             }
             weight /= 2;
 
-            if (weight > maxWeight)
+            if (weight > maxWeight || maxEdge == null)
             {
                 maxWeight = weight;
                 maxEdge = edge;
@@ -507,6 +498,65 @@ class PlayerAgent : Player
         }
 
         return maxEdge;
+    }
+
+    private List<Edge> AStar(Node node, List<Edge> path = null)
+    {
+        if (node.Owner == this)
+            return path;
+
+        else if (node.Owner != null)
+            return null;
+
+        if (path == null)
+            path = new List<Edge>();
+
+        List<Tuple<Node, int>> neighbours = new List<Tuple<Node, int>>();
+
+        for (int i = 0; i < 3; i++)
+        {
+            Node neighbour = node.GetNeighbourNode(i);
+
+            if (neighbour == null || path.Contains(node.Edges[i]))
+                continue;
+
+            else if (node.Edges[i].Owner == this)
+                return path;
+            
+            else if (node.Edges[i].Owner != null || m_DistanceMap[neighbour.ID] == 0f)
+                continue;
+            
+            int index = 0;
+            for (; index < neighbours.Count; index++)
+                if (m_DistanceMap[neighbours[index].Item1.ID] < m_DistanceMap[neighbour.ID])
+                    break;
+            
+            neighbours.Insert(index, new Tuple<Node, int>(neighbour, i));
+        }
+
+        List<Edge> foundPath = null;
+
+        foreach (Tuple<Node, int> neighbour in neighbours)
+        {
+            List<Edge> current = new List<Edge>(path);
+            current.Add(node.Edges[neighbour.Item2]);
+
+            current = AStar(neighbour.Item1, current);
+
+            if (current == null)
+                continue;
+
+            else if (current.Count <= MathF.Ceiling((1f - m_DistanceMap[neighbour.Item1.ID]) * (m_Behaviour.SearchDepth + 1)))
+                return current;
+            
+            else if (foundPath == null)
+                foundPath = current;
+            
+            else if (current.Count < foundPath.Count)
+                foundPath = current;
+        }
+
+        return foundPath;
     }
 
     private void ApplyDistances(int index, float step, float value = 1f)
@@ -542,10 +592,24 @@ class PlayerAgent : Player
     private Node GetHighestValueNode()
     {
         int index = 0;
+        float max = m_NodeWeights[0] + m_NeighbourWeights[0];
+        bool setup = IsSetup();
+
+        if (!setup)
+            max *= m_DistanceMap[0];
 
         for (int i = 1; i < 54; i++)
-            if (m_NodeWeights[i] + m_NeighbourWeights[i] > m_NodeWeights[index] + m_NeighbourWeights[index])
+        {
+            float weight = m_NeighbourWeights[i] + m_NodeWeights[i];
+            if (!setup)
+                weight *= m_DistanceMap[i];
+
+            if (weight > max)
+            {
                 index = i;
+                max = weight;
+            }
+        }
         
         if (m_NodeWeights[index] == 0f)
             return null;
@@ -553,31 +617,15 @@ class PlayerAgent : Player
         return m_GameBoard.Nodes[index];
     }
 
-    private Node CanBuildSettlement()
+    private bool IsSetup()
     {
-        if (ResourceHand < SETTLEMENT_COST)
-            return null;
-        
-        float targetWeight = 0f;
-        Node target = null;
-        foreach (Node node in m_GameBoard.Nodes)
-        {
-            if (node.IsAvailable(this) && m_NodeWeights[node.ID] > targetWeight)
-            {
-                targetWeight = m_NodeWeights[node.ID];
-                target = node;
-            }
-        }
-
-        return target;
+        return m_TurnState == TurnState.PreGame1 || m_TurnState == TurnState.Pregame2;
     }
 
     private float[] m_NodeWeights = new float[54];
     private float[] m_NeighbourWeights = new float[54];
     private float[] m_DistanceMap = new float[54];
     private float[] m_RobberWeights = new float[19];
-
-    private int m_SearchDepth = 1;
 
     private struct Behaviour
     {
@@ -604,36 +652,72 @@ class PlayerAgent : Player
         public float RobberThievery = 1f;
         public bool EvaluateGain = false;
 
+        public int SearchDepth = 2;
+
         public void DrawDebugUI()
         {
-            CreateSlider(ref MaxCards, "MaxCards");
-            CreateSlider(ref Abundance, "Abundance");
-            CreateSlider(ref Rarity, "Rarity");
+            if (ImGui.Button("Shuffle"))
+                Shuffle();
+            ImGui.Separator();
+
+            CreateSlider("MaxCards", ref MaxCards);
+            CreateSlider("Abundance", ref Abundance);
+            CreateSlider("Rarity", ref Rarity);
 
             ImGui.Separator();
 
             ImGui.Checkbox("Check Neighbours", ref CheckNeighbours);
-            CreateSlider(ref Neighbours, "Neighbour weighting");
+            CreateSlider("Neighbour weighting", ref Neighbours);
             ImGui.Checkbox("Use best neighbour", ref UseBestNeighbour);
 
             ImGui.Separator();
 
             ImGui.Checkbox("Resource Weights", ref UseResourceWeights);
-            CreateSlider(ref ResourceWeighting, "Resource Weighting");
+            CreateSlider("Resource Weighting", ref ResourceWeighting);
             ImGui.Checkbox("Use advanced resource weights", ref AdvancedResourceWeights);
 
             ImGui.Separator();
             ImGui.Checkbox("Track Resources", ref TrackResources);
             ImGui.Separator();
 
-            CreateSlider(ref RobberAvoidance, "Avoidance");
-            CreateSlider(ref RobberAggression, "Aggression");
-            CreateSlider(ref RobberCityMult, "Cities", 1f, 3f);
-            CreateSlider(ref RobberThievery, "Thievery");
+            CreateSlider("Avoidance", ref RobberAvoidance);
+            CreateSlider("Aggression", ref RobberAggression);
+            CreateSlider("Cities", ref RobberCityMult, 1f, 3f);
+            CreateSlider("Thievery", ref RobberThievery);
             ImGui.Checkbox("Evaluate gain", ref EvaluateGain);
+
+            ImGui.Separator();
+            ImGui.DragInt("Search Depth", ref SearchDepth, .5f, 2, 11, "%i", ImGuiSliderFlags.AlwaysClamp);
         }
 
-        private static void CreateSlider(ref float num, string name, float min = 0f, float max = 2f)
+        private void Shuffle()
+        {
+            Random rand = new Random();
+
+            MaxCards = rand.NextFloat(2f);
+            Abundance = rand.NextFloat(2f);
+            Rarity = rand.NextFloat(2f);
+
+            CheckNeighbours = rand.NextBool();
+            Neighbours = rand.NextFloat(2f);
+            UseBestNeighbour = rand.NextBool() && CheckNeighbours;
+
+            UseResourceWeights = rand.NextBool();
+            ResourceWeighting = rand.NextFloat(2f);
+            AdvancedResourceWeights = rand.NextBool() && UseResourceWeights;
+
+            TrackResources = rand.NextBool();
+
+            RobberAvoidance = rand.NextFloat(2f);
+            RobberAggression = rand.NextFloat(2f);
+            RobberCityMult = rand.NextFloat(3f, 1f);
+            RobberThievery = rand.NextFloat(2f);
+            EvaluateGain = rand.NextBool();
+
+            SearchDepth = rand.Next(2, 12);
+        }
+
+        private static void CreateSlider(string name, ref float num, float min = 0f, float max = 2f)
         {
             const float PRECISION = .0005f;
             const string FORMAT = "%.4f";
