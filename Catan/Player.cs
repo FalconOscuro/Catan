@@ -379,7 +379,7 @@ class Player
                 ImGui.SameLine();
 
                 if (ImGui.Button("City"))
-                    TryBuildCity();
+                    TryBuildCity(m_SelectedNode);
 
                 ImGui.SameLine();
                 if (ImGui.Button("Development Card"))
@@ -707,12 +707,12 @@ class Player
     /// <summary>
     /// Attempt to build a city
     /// </summary>
-    protected bool TryBuildCity()
+    protected bool TryBuildCity(Node target)
     {
-        if (m_SelectedNode == null)
+        if (target == null)
             return false;
         
-        if (m_SelectedNode.Owner == this && m_SelectedNode.IsCity == false && m_Pieces.Cities > 0)
+        if (target.Owner == this && target.IsCity == false && m_Pieces.Cities > 0)
         {
             Trade trade = new Trade(m_GameBoard);
             trade.From = this;
@@ -721,7 +721,7 @@ class Player
 
             if (trade.TryExecute())
             {
-                m_SelectedNode.IsCity = true;
+                target.IsCity = true;
                 m_Pieces.Settlements++;
                 m_Pieces.Cities--;
                 m_VictoryPoints++;

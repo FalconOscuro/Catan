@@ -19,11 +19,8 @@ class Trade
     {
         Resources from = GetTarget(From);
         Resources to = GetTarget(To);
-
-        if (Giving == null || Receiving == null)
-            return false;
         
-        else if (Giving > from || Receiving > to)
+        if (Giving > from || Receiving > to)
             return false;
         
         from.TryTake(Giving);

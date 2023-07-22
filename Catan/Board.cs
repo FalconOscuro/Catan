@@ -17,6 +17,8 @@ class Board
 
     public Board(int screenWidth, int screenHeight, SpriteFont font)
     {
+        GameLog = new Log();
+
         m_Font = font;
 
         float scaleY = (screenHeight * BOARD_SCREEN_FILL_PC) / 8f;
@@ -480,7 +482,12 @@ class Board
     {
         Random rand = new Random();
 
-        m_LastRoll = rand.Next(6) + 2 + rand.Next(6);
+        int roll1 = rand.Next(6) + 1;
+        int roll2 = rand.Next(6) + 1;
+
+        //GameLog.PostEvent(new DiceRollEvent(roll1, roll2, Players[m_CurrentPlayer]));
+
+        m_LastRoll = roll1 + roll2;
 
         if (m_LastRoll == 7)
         {
@@ -803,6 +810,10 @@ class Board
                 GenerateBoard(false);
         }
 
+        else if (m_State == GameState.End)
+        {
+            ImGui.Text(string.Format("Player {0} wins!", m_CurrentPlayer));
+        }
 
         else
         {
@@ -812,6 +823,8 @@ class Board
             Players[m_CurrentPlayer + m_TargetPlayerOffset].GameDrawUI();
         }
     }
+
+    public Log GameLog { get; private set; }
 
     public Tile[] Tiles = new Tile[19];
     private Tile m_RobberPos;
