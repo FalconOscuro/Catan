@@ -118,7 +118,7 @@ class PlayerAgent : Player
     {
         Node targetNode = GetHighestValueNode();
 
-        if (targetNode != null)
+        if (targetNode != null && m_Pieces.Settlements > 0)
         {
             if (TryBuildSettlement(targetNode))
                 return;
@@ -412,9 +412,9 @@ class PlayerAgent : Player
         }
     }
 
-    private static float GetNodeWeight(Resources resourceRarity, Behaviour behaviour, ResourceWeights resourceWeights, Node node)
+    private static float GetNodeWeight(Resources resourceRarity, Behaviour behaviour, ResourceWeights resourceWeights, Node node, bool ignoreOwned = false)
     {
-        if (!node.IsAvailable())
+        if (!node.IsAvailable() && !ignoreOwned)
             return 0f;
 
         float weight = 0f;
@@ -676,10 +676,10 @@ class PlayerAgent : Player
 
         foreach (NodeContainer node in m_ControlledNodes)
         {
-            if (node.RefNode.Owner != this)
+            if (node.RefNode.Owner != this || node.RefNode.IsCity)
                 continue;
 
-            float weight = GetNodeWeight(m_ResourceRarity, m_Behaviour, CITY_RESOURCES, node.RefNode);
+            float weight = GetNodeWeight(m_ResourceRarity, m_Behaviour, CITY_RESOURCES, node.RefNode, true);
 
             if (weight > maxWeight)
             {

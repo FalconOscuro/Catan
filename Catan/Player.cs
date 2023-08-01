@@ -853,7 +853,7 @@ class Player
     private List<DevelopmentCard> m_DevCards;
     private int m_SelectedCard;
 
-    private struct Pieces
+    protected struct Pieces
     {
         public Pieces()
         {
@@ -869,7 +869,7 @@ class Player
     /// <summary>
     /// Limit for number of pieces the player can place
     /// </summary>
-    private Pieces m_Pieces;
+    protected Pieces m_Pieces;
 
     protected class EdgeContainer
     {
@@ -938,6 +938,7 @@ class Player
                         
                         if (++edgeCount > 2)
                             return;
+                        
                         break;
                     }
                 }
@@ -984,10 +985,12 @@ class Player
             bool[] existingNodes = new bool[]{ false, false };
 
             index = 0;
-            while (!existingNodes[0] && !existingNodes[1] && index < edges.Count)
+            while ((!existingNodes[0] || !existingNodes[1]) && index < nodes.Count)
             {
-                existingNodes[0] |= nodes[index].RefNode == newEdge.Nodes[0];
-                existingNodes[1] |= nodes[index++].RefNode == newEdge.Nodes[1];
+                existingNodes[0] = existingNodes[0] || (nodes[index].RefNode == newEdge.Nodes[0]);
+                existingNodes[1] = existingNodes[1] || (nodes[index].RefNode == newEdge.Nodes[1]);
+
+                index++;
             }
 
             for (int i = 0; i < 2; i++)
