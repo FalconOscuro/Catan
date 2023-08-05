@@ -64,10 +64,10 @@ class Edge
         return false;
     }
 
-    public bool TestCollision(Vector2 point)
+    public bool TestCollision(Vector2 point, Vector2 offset, float scale)
     {
-        Vector2 v1 = End - Start;
-        Vector2 v2 = point - Start;
+        Vector2 v1 = (End - Start) * scale;
+        Vector2 v2 = point - ((Start * scale) + offset);
         Vector2 v3 = Vector2.Normalize(v1);
 
         float d  = Vector2.Dot(v3, v2);
@@ -80,9 +80,9 @@ class Edge
         return m_Hovered;
     }
 
-    public void Draw(ShapeBatcher shapeBatcher)
+    public void Draw(ShapeBatcher shapeBatcher, Vector2 offset, float scale)
     {
-        shapeBatcher.DrawLine(Start, End, LINE_WIDTH + ((m_Hovered || Selected) ? LINE_WIDTH * 2 : 0f), Owner != null ? Owner.Colour : Color.Black);
+        shapeBatcher.DrawLine((Start * scale) + offset, (End * scale) + offset, LINE_WIDTH + ((m_Hovered || Selected) ? LINE_WIDTH * 2.5f : 0f), Owner != null ? Owner.Colour : Color.Black);
         m_Hovered = false;
     }
 

@@ -1,0 +1,6 @@
+namespace Catan;
+
+class GoalAgent
+{
+    
+}

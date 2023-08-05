@@ -4,7 +4,7 @@ namespace Catan;
 
 class Trade
 {
-    public Trade(Board board)
+    public Trade(Catan board)
     {
         From = null;
         To = null;
@@ -17,31 +17,23 @@ class Trade
 
     public bool TryExecute()
     {
-        Resources from = GetTarget(From);
-        Resources to = GetTarget(To);
-
-        if (Giving == null || Receiving == null)
+        if (Giving == null || Receiving == null || From == null || To == null)
             return false;
         
-        else if (Giving > from || Receiving > to)
+        else if (Giving > From || Receiving > To)
             return false;
         
-        from.TryTake(Giving);
-        to.TryTake(Receiving);
+        From.TryTake(Giving);
+        To.TryTake(Receiving);
 
-        from.Add(Receiving);
-        to.Add(Giving);
+        From.Add(Receiving);
+        To.Add(Giving);
 
         Complete = true;
 
         m_Board.OnCompleteTrade(this);
 
         return true;
-    }
-
-    private Resources GetTarget(Player player)
-    {
-        return player == null ? m_Board.ResourceBank : player.ResourceHand;
     }
 
     public void UIDraw(bool modify = true)
@@ -55,13 +47,13 @@ class Trade
         Receiving.UIDraw(modify);
     }
 
-    public Player From;
-    public Player To;
+    public Resources From;
+    public Resources To;
 
     public Resources Giving;
     public Resources Receiving;
 
-    private Board m_Board;
+    private Catan m_Board;
 
     public bool Complete { get; private set; }
 }

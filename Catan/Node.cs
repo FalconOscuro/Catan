@@ -136,23 +136,25 @@ class Node
         return available;
     }
 
-    public bool TestCollision(Vector2 point)
+    public bool TestCollision(Vector2 point, Vector2 offset, float scale)
     {
-        m_Hovered = Vector2.DistanceSquared(Position, point) < RADIUS * RADIUS;
+        m_Hovered = Vector2.DistanceSquared((Position * scale) + offset, point) < RADIUS * RADIUS;
         return m_Hovered;
     }
 
-    public void Draw(ShapeBatcher shapeBatcher)
+    public void Draw(ShapeBatcher shapeBatcher, Vector2 offset, float scale)
     {
         float radius = RADIUS + (m_Hovered || Selected ? 1f : 0f);
         Color colour = Owner != null ? Owner.Colour : Color.Black;
         const int VERTEX_NUM = 10;
 
+        Vector2 drawPos = (Position * scale) + offset;
+
         if (IsCity)
-            shapeBatcher.DrawFilledCircle(Position, radius, VERTEX_NUM, colour);
+            shapeBatcher.DrawFilledCircle(drawPos, radius, VERTEX_NUM, colour);
         
         else
-            shapeBatcher.DrawCircle(Position, radius, VERTEX_NUM, 1f, colour);
+            shapeBatcher.DrawCircle(drawPos, radius, VERTEX_NUM, 1f, colour);
         
         m_Hovered = false;
     }

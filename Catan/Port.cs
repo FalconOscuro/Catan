@@ -20,17 +20,21 @@ struct Port
         b.PortType = type;
     }
 
-    public void Draw(ShapeBatcher shapeBatcher)
+    public void Draw(ShapeBatcher shapeBatcher, Vector2 offset, float scale)
     {
-        Vector2 pos = ((Nodes[0].Position + Nodes[1].Position) / 2) - Nodes[0].Position;
-        Vector2 offset = new Vector2(pos.Y, -pos.X);
+        Vector2 pos = ((Nodes[0].Position + Nodes[1].Position) * scale / 2) - (Nodes[0].Position * scale);
+        Vector2 portEnd = new Vector2(pos.Y, -pos.X);
         
-        pos += Nodes[0].Position + offset;
+        pos += (Nodes[0].Position * scale) + offset + portEnd;
 
         shapeBatcher.DrawFilledCircle(pos, 4f, 10, GetPortColour(Type));
 
-        shapeBatcher.DrawLine(Nodes[0].Position, (Nodes[0].Position + pos) / 2, 2f, Color.Brown);
-        shapeBatcher.DrawLine(Nodes[1].Position, (Nodes[1].Position + pos) / 2, 2f, Color.Brown);
+        for (int i = 0; i < 2; i++)
+        {
+            Vector2 start = (Nodes[i].Position * scale) + offset;
+
+            shapeBatcher.DrawLine(start, (start + pos) / 2, 2f, Color.Brown);
+        }
     }
 
     public static Color GetPortColour(TradeType type)

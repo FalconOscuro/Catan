@@ -10,7 +10,7 @@ namespace Catan;
 
 class Player
 {
-    public Player(Board board, Color colour)
+    public Player(Catan board, Color colour)
     {
         m_GameBoard = board;
         m_TurnState = TurnState.End;
@@ -19,23 +19,19 @@ class Player
         m_SelectedTile = null;
         Colour = colour;
 
-        m_VictoryPoints = 0;
         m_SelectedCard = 0;
 
         RoadLength = 0;
         ArmySize = 0;
 
-        m_Pieces = new Pieces();
+        m_Status = new PlayerStatus();
         m_Road = new List<Edge>();
         m_Highlighted = false;
 
         m_ControlledNodes = new List<NodeContainer>();
         m_OwnedEdges = new List<EdgeContainer>();
 
-        ResourceHand = new Resources();
         m_CurrentTrade = new Trade(m_GameBoard);
-        m_DevCards = new List<DevelopmentCard>();
-        m_ExchangeRate = new Resources(4, 4, 4, 4, 4);
     }
 
     public virtual void StartGame()
@@ -43,12 +39,12 @@ class Player
 
     public void GiveResource(Resources.Type resource, int num = 1)
     {
-        ResourceHand.AddType(resource, num);
+        m_Status.HeldResources.AddType(resource, num);
     }
 
     public Resources.Type StealResource()
     {
-        return ResourceHand.Steal();
+        return m_Status.HeldResources.Steal();
     }
 
     public void StartTurn()
@@ -58,7 +54,7 @@ class Player
 
     public void SetState(TurnState state)
     {
-        if (state == TurnState.Discard && ResourceHand.GetTotal() < 8)
+        if (state == TurnState.Discard && m_Status.HeldResources.GetTotal() < 8)
             state = TurnState.End;
 
         else if (state == TurnState.Robber && m_TurnState == TurnState.Start)
@@ -73,6 +69,11 @@ class Player
     public void SetActiveTrade(Trade trade)
     {
         m_CurrentTrade = trade;
+    }
+
+    public Resources GetHand()
+    {
+        return m_Status.HeldResources;
     }
 
     public virtual void OnTradeComplete(Trade trade)
@@ -100,13 +101,13 @@ class Player
 
         m_SelectedCard = 0;
 
-        for (int i = 0; i < m_DevCards.Count; i++)
-            m_DevCards[i].Playable = true;
+        for (int i = 0; i < m_Status.DevelopmentCards.Count; i++)
+            m_Status.DevelopmentCards[i].Playable = true;
     }
 
     public bool HasWon()
     {      
-        return m_VictoryPoints + (LargestArmy ? 2 : 0) + (LongestRoad ? 2 : 0) + GetHiddenVP() >= 10;
+        return m_Status.VictoryPoints + (LargestArmy ? 2 : 0) + (LongestRoad ? 2 : 0) + GetHiddenVP() >= 10;
     }
 
     /// <summary>
@@ -115,7 +116,7 @@ class Player
     private int GetHiddenVP()
     {
         int victoryCards = 0;
-        foreach (DevelopmentCard developmentCard in m_DevCards)
+        foreach (DevelopmentCard developmentCard in m_Status.DevelopmentCards)
             if (developmentCard is VictoryPoint)
                 victoryCards++;
         
@@ -129,7 +130,7 @@ class Player
 
     public int GetHandSize()
     {
-        return ResourceHand.GetTotal();
+        return m_Status.HeldResources.GetTotal();
     }
 
 
@@ -246,7 +247,7 @@ class Player
     public virtual void DebugDrawUI()
     {
         ImGui.Text(string.Format("State: {0}", m_TurnState.ToString()));
-        ImGui.Text(string.Format("VP: {0}", m_VictoryPoints + (LargestArmy ? 2 : 0) + (LongestRoad ? 2 : 0)));
+        ImGui.Text(string.Format("VP: {0}", m_Status.VictoryPoints + (LargestArmy ? 2 : 0) + (LongestRoad ? 2 : 0)));
         ImGui.Text(string.Format("Resource Cards: {0}", GetHandSize()));
         ImGui.Text(string.Format("Longest Road: {0}", RoadLength));
         ImGui.Separator();
@@ -258,7 +259,7 @@ class Player
         for (int i = 0; i < m_Road.Count; i++)
             m_Road[i].Selected = m_Highlighted;
 
-        ResourceHand.UIDraw(true);
+        m_Status.HeldResources.UIDraw(true);
     }
 
 
@@ -269,7 +270,7 @@ class Player
         if (m_TurnState == TurnState.End)
             return;
 
-        ResourceHand.UIDraw();
+        m_Status.HeldResources.UIDraw();
 
         ImGui.Separator();
 
@@ -331,8 +332,8 @@ class Player
         if (m_TurnState == TurnState.Pregame2)
         {
             Trade trade = new Trade(m_GameBoard);
-            trade.To = this;
-            trade.From = null;
+            trade.To = m_Status.HeldResources;
+            trade.From = m_GameBoard.ResourceBank;
 
             for (int i = 0; i < 3; i++)
                 if (m_SelectedNode.Tiles[i] != null)
@@ -350,8 +351,8 @@ class Player
             Roll();
         
         int knightIndex = -1;
-        for (int i = 0; i < m_DevCards.Count; i++)
-            if (m_DevCards[i] is Knight && m_DevCards[i].Playable)
+        for (int i = 0; i < m_Status.DevelopmentCards.Count; i++)
+            if (m_Status.DevelopmentCards[i] is Knight && m_Status.DevelopmentCards[i].Playable)
                 knightIndex = i;
 
         if (knightIndex != -1)
@@ -394,22 +395,22 @@ class Player
                 ImGui.EndTabItem();
             }
 
-            if (m_DevCards.Count > 0)
+            if (m_Status.DevelopmentCards.Count > 0)
                 if (ImGui.BeginTabItem("Dev Cards"))
                 {
-                    string[] cards = new string[m_DevCards.Count];
+                    string[] cards = new string[m_Status.DevelopmentCards.Count];
 
-                    for (int i = 0; i < m_DevCards.Count; i++)
-                        cards[i] = m_DevCards[i].Name;
+                    for (int i = 0; i < m_Status.DevelopmentCards.Count; i++)
+                        cards[i] = m_Status.DevelopmentCards[i].Name;
 
                     ImGui.ListBox("Development Cards", ref m_SelectedCard, cards, cards.Length);
 
-                    if (!m_DevCards[m_SelectedCard].Playable)
+                    if (!m_Status.DevelopmentCards[m_SelectedCard].Playable)
                         ImGui.Text("Unplayable");
 
                     else if (ImGui.Button("Use"))
                     {
-                        m_DevCards[m_SelectedCard].Activate(this);
+                        m_Status.DevelopmentCards[m_SelectedCard].Activate(this);
                     }
 
                     ImGui.EndTabItem();
@@ -425,17 +426,17 @@ class Player
 
     private void PlayCard(int pos)
     {
-        if (pos >= m_DevCards.Count)
+        if (pos >= m_Status.DevelopmentCards.Count)
             return;
         
-        else if (!m_DevCards[pos].Playable)
+        else if (!m_Status.DevelopmentCards[pos].Playable)
             return;
         
-        m_DevCards[pos].Activate(this);
-        m_DevCards.RemoveAt(pos);
+        m_Status.DevelopmentCards[pos].Activate(this);
+        m_Status.DevelopmentCards.RemoveAt(pos);
 
-        for (int i = 0; i < m_DevCards.Count; i++)
-            m_DevCards[i].Playable = false;
+        for (int i = 0; i < m_Status.DevelopmentCards.Count; i++)
+            m_Status.DevelopmentCards[i].Playable = false;
     }
 
     private void OfferTradeUI()
@@ -443,12 +444,12 @@ class Player
         bool bank = m_CurrentTrade.To == null;
 
         if (ImGui.Checkbox("Bank Trade", ref bank))
-            m_CurrentTrade.To = bank ? null : this;
+            m_CurrentTrade.To = bank ? m_GameBoard.ResourceBank : null;
 
         if (bank)
         {
             ImGui.Text("Exchange rate");
-            m_ExchangeRate.UIDraw();
+            m_Status.ExchangeRate.UIDraw();
         }
         ImGui.Separator();
         
@@ -458,12 +459,12 @@ class Player
 
         if (ImGui.Button("Trade"))
         {
-            m_CurrentTrade.From = this;
+            m_CurrentTrade.From = m_Status.HeldResources;
 
             if (bank)
             {
                 for (Resources.Type i = 0; (int)i < 5; i++)
-                    if (m_CurrentTrade.Giving.GetType(i) % m_ExchangeRate.GetType(i) != 0)
+                    if (m_CurrentTrade.Giving.GetType(i) % m_Status.ExchangeRate.GetType(i) != 0)
                         return;
 
                 if (m_CurrentTrade.Giving.GetTotal() / 4 == m_CurrentTrade.Receiving.GetTotal())
@@ -483,7 +484,7 @@ class Player
 
         if (ImGui.Button("Accept"))
         {
-            m_CurrentTrade.To = this;
+            m_CurrentTrade.To = m_Status.HeldResources;
             m_CurrentTrade.TryExecute();
             EndTurn();
         }
@@ -501,8 +502,8 @@ class Player
 
         if (ImGui.Button("Discard") && m_CurrentTrade.Giving.GetTotal() == discardTarget)
         {
-            m_CurrentTrade.To = null;
-            m_CurrentTrade.From = this;
+            m_CurrentTrade.To = m_GameBoard.ResourceBank;
+            m_CurrentTrade.From = m_Status.HeldResources;
 
             if (m_CurrentTrade.TryExecute())
             {
@@ -578,8 +579,8 @@ class Player
 
         if (ImGui.Button("Take") && m_CurrentTrade.Giving.GetTotal() == 2)
         {
-            m_CurrentTrade.From = null;
-            m_CurrentTrade.To = this;
+            m_CurrentTrade.From = m_GameBoard.ResourceBank;
+            m_CurrentTrade.To = m_Status.HeldResources;
 
             if (m_CurrentTrade.TryExecute())
                 SetState(TurnState.Main);
@@ -612,11 +613,11 @@ class Player
         if (targetNode == null)
             return false;
         
-        else if (targetNode.IsAvailable(purchased ? null : this) && m_Pieces.Settlements > 0)
+        else if (targetNode.IsAvailable(purchased ? null : this) && m_Status.UnbuiltSettlements > 0)
         {
             Trade trade = new Trade(m_GameBoard);
-            trade.From = this;
-            trade.To = null;
+            trade.From = m_Status.HeldResources;
+            trade.To = m_GameBoard.ResourceBank;
             trade.Giving = SETTLEMENT_COST;
 
             if (!purchased)
@@ -636,8 +637,8 @@ class Player
                 }
 
                 targetNode.Owner = this;
-                m_Pieces.Settlements--;
-                m_VictoryPoints++;
+                m_Status.UnbuiltSettlements--;
+                m_Status.VictoryPoints++;
                 UpdateExchange(targetNode.PortType);
                 m_GameBoard.CheckLongestRoad(true);
                 return true;
@@ -658,12 +659,12 @@ class Player
         else if (port == Port.TradeType.Versatile)
         {
             for (Resources.Type i = 0; (int)i < 5; i++)
-                if (m_ExchangeRate.GetType(i) > 3)
-                    m_ExchangeRate.SetType(i, 3);
+                if (m_Status.ExchangeRate.GetType(i) > 3)
+                    m_Status.ExchangeRate.SetType(i, 3);
         }
         
         else
-            m_ExchangeRate.SetType((Resources.Type)port, 2);
+            m_Status.ExchangeRate.SetType((Resources.Type)port, 2);
     }
     
     /// <summary>
@@ -678,11 +679,11 @@ class Player
         if (targetEdge == null)
             return false;
         
-        if (targetEdge.IsAvailable(this) && m_Pieces.Roads > 0)
+        if (targetEdge.IsAvailable(this) && m_Status.UnbuiltRoads > 0)
         {
             Trade trade = new Trade(m_GameBoard);
-            trade.From = this;
-            trade.To = null;
+            trade.From = m_Status.HeldResources;
+            trade.To = m_GameBoard.ResourceBank;
             trade.Giving = ROAD_COST;
 
             if (!purchased)
@@ -691,7 +692,7 @@ class Player
             if (purchased)
             {
                 targetEdge.Owner = this;
-                m_Pieces.Roads--;
+                m_Status.UnbuiltRoads--;
 
                 NodeContainer.LinkNewEdge(targetEdge, ref m_ControlledNodes, ref m_OwnedEdges);
 
@@ -712,19 +713,19 @@ class Player
         if (m_SelectedNode == null)
             return false;
         
-        if (m_SelectedNode.Owner == this && m_SelectedNode.IsCity == false && m_Pieces.Cities > 0)
+        if (m_SelectedNode.Owner == this && m_SelectedNode.IsCity == false && m_Status.UnbuiltCities > 0)
         {
             Trade trade = new Trade(m_GameBoard);
-            trade.From = this;
-            trade.To = null;
+            trade.From = m_Status.HeldResources;
+            trade.To = m_GameBoard.ResourceBank;
             trade.Giving = CITY_COST;
 
             if (trade.TryExecute())
             {
                 m_SelectedNode.IsCity = true;
-                m_Pieces.Settlements++;
-                m_Pieces.Cities--;
-                m_VictoryPoints++;
+                m_Status.UnbuiltSettlements++;
+                m_Status.UnbuiltCities--;
+                m_Status.VictoryPoints++;
                 return true;
             }
         }
@@ -741,13 +742,13 @@ class Player
             return false;
 
         Trade trade = new Trade(m_GameBoard);
-        trade.From = this;
+        trade.From = m_Status.HeldResources;
         trade.To = null;
         trade.Giving = DEVELOPMENT_CARD_COST;
 
         if (trade.TryExecute())
         {
-            m_DevCards.Add(m_GameBoard.DevelopmentCards.Dequeue());
+            m_Status.DevelopmentCards.Add(m_GameBoard.DevelopmentCards.Dequeue());
             return true;
         }
 
@@ -820,25 +821,14 @@ class Player
     protected TurnState m_TurnState;
 
     /// <summary>
-    /// Owned resource cards
-    /// </summary>
-    public Resources ResourceHand;
-
-    /// <summary>
     /// Stores trade whilst being created
     /// </summary>
     private Trade m_CurrentTrade;
 
     /// <summary>
-    /// Exchange rate with bank
-    /// Starts at 4,4,4,4,4 & varies based on ports
-    /// </summary>
-    private Resources m_ExchangeRate;
-
-    /// <summary>
     /// Reference to the game board
     /// </summary>
-    protected Board m_GameBoard { get; private set; }
+    protected Catan m_GameBoard { get; private set; }
 
     // Actively selected elements by player
     // Cleared at end of turn
@@ -846,30 +836,7 @@ class Player
     protected Node m_SelectedNode;
     protected Edge m_SelectedEdge;
     protected Tile m_SelectedTile;
-
-    /// <summary>
-    /// Owned developments cards
-    /// </summary>
-    private List<DevelopmentCard> m_DevCards;
     private int m_SelectedCard;
-
-    private struct Pieces
-    {
-        public Pieces()
-        {
-            Settlements = 5;
-            Cities = 4;
-            Roads = 15;
-        }
-
-        public int Settlements;
-        public int Cities;
-        public int Roads;
-    }
-    /// <summary>
-    /// Limit for number of pieces the player can place
-    /// </summary>
-    private Pieces m_Pieces;
 
     protected class EdgeContainer
     {
@@ -1000,13 +967,63 @@ class Player
     protected List<NodeContainer> m_ControlledNodes;
 
     /// <summary>
-    /// Victory points owned by player
+    /// Container describing current player state
     /// </summary>
-    private int m_VictoryPoints;
+    public struct PlayerStatus : ICloneable
+    {
+        public PlayerStatus()
+        {
+            UnbuiltSettlements = 5;
+            UnbuiltCities = 4;
+            UnbuiltRoads = 15;
+
+            DevelopmentCards = new List<DevelopmentCard>();
+
+            VictoryPoints = 0;
+
+            HeldResources = new Resources();
+            ExchangeRate = new Resources(4, 4, 4, 4, 4);
+        }
+
+        public readonly object Clone()
+        {
+            PlayerStatus clone = new PlayerStatus();
+
+            clone.UnbuiltSettlements = UnbuiltSettlements;
+            clone.UnbuiltCities = UnbuiltCities;
+            clone.UnbuiltRoads = UnbuiltRoads;
+
+            clone.DevelopmentCards = new List<DevelopmentCard>(DevelopmentCards);
+
+            clone.VictoryPoints = VictoryPoints;
+
+            clone.HeldResources = (Resources)HeldResources.Clone();
+            clone.ExchangeRate = (Resources)ExchangeRate.Clone();
+
+            return clone;
+        }
+
+        public int UnbuiltSettlements;
+        public int UnbuiltCities;
+        public int UnbuiltRoads;
+
+        public List<DevelopmentCard> DevelopmentCards;
+
+        public int VictoryPoints;
+
+        public Resources HeldResources;
+        public Resources ExchangeRate;
+    }
+    protected PlayerStatus m_Status;
+
+    public PlayerStatus GetStatus()
+    {
+        return (PlayerStatus)m_Status.Clone();
+    }
 
     // Static variables showing costs for different elements
-    protected static readonly Resources ROAD_COST = new Resources(1, 1, 0, 0, 0);
-    protected static readonly Resources SETTLEMENT_COST = new Resources(1, 1, 1, 1, 0);
-    protected static readonly Resources CITY_COST = new Resources(0, 0, 2, 0, 3);
-    protected static readonly Resources DEVELOPMENT_CARD_COST = new Resources(0, 0, 1, 1, 1);
+    public static readonly Resources ROAD_COST = new Resources(1, 1, 0, 0, 0);
+    public static readonly Resources SETTLEMENT_COST = new Resources(1, 1, 1, 1, 0);
+    public static readonly Resources CITY_COST = new Resources(0, 0, 2, 0, 3);
+    public static readonly Resources DEVELOPMENT_CARD_COST = new Resources(0, 0, 1, 1, 1);
 }

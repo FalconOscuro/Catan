@@ -33,15 +33,15 @@ class Tile
 
         public bool Robber;
 
-        public bool TestCollision(Vector2 point, float scale)
+        public bool TestCollision(Vector2 point, Vector2 offset, float scale)
         {
             // Heavily simplified, using approximation of inner circle for collision
             // .75f is magic number, actual scale is .9f of input scale & shortest edge distane is ~= .87 of scale
             // .87 * .9f squared is then ~= to magic number .75f
-            return Vector2.DistanceSquared(point, Position) < scale * scale * .75f;
+            return Vector2.DistanceSquared(point, (Position * scale) + offset) < scale * scale * .75f;
         }
 
-        public List<Trade> Distribute(Board board)
+        public List<Trade> Distribute(Catan board)
         {
             List<Trade> trades = new List<Trade>();
 
@@ -53,7 +53,7 @@ class Tile
                     {
                         Trade trade = new Trade(board);
                         trade.Giving.AddType(Type, node.IsCity ? 2 : 1);
-                        trade.To = node.Owner;
+                        trade.To = node.Owner.GetHand();
 
                         trades.Add(trade);
                     }
@@ -61,13 +61,13 @@ class Tile
             return trades;
         }
 
-        public void ShapeDraw(ShapeBatcher shapeBatcher, float scale)
+        public void ShapeDraw(ShapeBatcher shapeBatcher, Vector2 offset, float scale)
         {
             // Hexagon is basically a 6 sided circle ¯\_(ツ)_/¯
-            shapeBatcher.DrawFilledCircle(Position, (scale + (Selected ? 2f : 0f)) * .9f, 6, Resources.GetResourceColour(Type));
+            shapeBatcher.DrawFilledCircle((Position * scale) + offset, (scale + (Selected ? 2f : 0f)) * .9f, 6, Resources.GetResourceColour(Type));
         }
 
-        public void SpriteDraw(SpriteBatch spriteBatch, SpriteFont font, float windowHeight, int active)
+        public void SpriteDraw(SpriteBatch spriteBatch, Vector2 offset, float scale, SpriteFont font, float windowHeight, int active)
         {
             string text;
             if (Robber)
@@ -92,7 +92,7 @@ class Tile
             else
                 colour = Color.Black;
 
-            spriteBatch.DrawString(font, text, Position.FlipY(windowHeight), colour);
+            spriteBatch.DrawString(font, text, ((Position * scale) + offset).FlipY(windowHeight), colour);
         }
 
         public int GetProbability()

@@ -6,7 +6,7 @@ using ImGuiNET;
 
 namespace Catan;
 
-class Resources
+class Resources : ICloneable
 {
     public Resources()
     {}
@@ -18,6 +18,11 @@ class Resources
         Grain = grain;
         Wool = wool;
         Ore = ore;
+    }
+
+    public object Clone()
+    {
+        return new Resources(Lumber, Brick, Grain, Wool, Ore);
     }
 
     public int Lumber;

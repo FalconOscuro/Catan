@@ -19,7 +19,7 @@ public class Game1 : Game
     private ShapeBatcher m_ShapeBatcher;
     private ImGuiRenderer m_GuiRenderer;
 
-    private Board m_Board;
+    private Catan m_Board;
 
     private static readonly int HIST_LEN = 600;
     private float[] m_FrameTimes;
@@ -51,7 +51,7 @@ public class Game1 : Game
     {
         m_SpriteBatch = new SpriteBatch(GraphicsDevice);
 
-        m_Board = new Board(GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height, Content.Load<SpriteFont>("FontDefault"));
+        m_Board = new Catan(GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height, Content.Load<SpriteFont>("FontDefault"));
 
         // TODO: use this.Content to load your game content here
     }

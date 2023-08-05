@@ -13,7 +13,7 @@ namespace Catan;
 /// </summary>
 class PlayerAgent : Player
 {
-    public PlayerAgent(Board board, Color colour):
+    public PlayerAgent(Catan board, Color colour):
         base(board, colour)
     {
         m_ResourceRarity = null;
@@ -39,12 +39,13 @@ class PlayerAgent : Player
 
     public override void OnTradeComplete(Trade trade)
     {
+        /*
         base.OnTradeComplete(trade);
 
         if (!m_Behaviour.TrackResources)
             return;
 
-        if (trade.From != this && trade.From != null)
+        if (trade.From != m_Status.HeldResources && trade.From != null)
         {
             Resources prediction = m_Predictions[trade.From];
             prediction = (prediction + trade.Receiving) - trade.Giving;
@@ -59,6 +60,7 @@ class PlayerAgent : Player
 
             m_Predictions[trade.To] = prediction;
         }
+        */
     }
 
     public override void Update()
@@ -132,10 +134,10 @@ class PlayerAgent : Player
 
         for (int i = 0; i < 19; i++)
         {
-            Tile tile = m_GameBoard.Tiles[i];
-
-            if (tile.Robber)
+            if (i == m_GameBoard.Board.RobberPos)
                 continue;
+
+            Tile tile = m_GameBoard.Board.Tiles[i];
 
             float weight = GetTileWeight(m_ResourceRarity, m_Behaviour, TOTAL_WEIGHT, tile);
             float maxNodeWeight = 0f;
@@ -180,7 +182,7 @@ class PlayerAgent : Player
             if (m_RobberWeights[i] > maxWeight)
             {
                 maxWeight = m_RobberWeights[i];
-                targetTile = m_GameBoard.Tiles[i];
+                targetTile = m_GameBoard.Board.Tiles[i];
                 targetNode = maxNode;
             }
         }
@@ -197,7 +199,7 @@ class PlayerAgent : Player
         // Simple method, get rid of most numerous cards
         for (int i = 0; i < GetHandSize() / 2; i++)
         {
-            Resources remaining = ResourceHand - removing;
+            Resources remaining = m_Status.HeldResources - removing;
 
             int max = 0;
             Resources.Type type = Resources.Type.Empty;
@@ -216,8 +218,8 @@ class PlayerAgent : Player
         }
 
         Trade trade = new Trade(m_GameBoard);
-        trade.From = this;
-        trade.To = null;
+        trade.From = m_Status.HeldResources;
+        trade.To = m_GameBoard.ResourceBank;
         trade.Giving = removing;
         trade.TryExecute();
 
@@ -231,7 +233,7 @@ class PlayerAgent : Player
             for (int i = 0; i < 19; i++)
                 spriteBatch.DrawString(
                     font, String.Format("{0:0.00}", m_RobberWeights[i] * 10),
-                    m_GameBoard.Tiles[i].Position.FlipY(windowHeight),
+                    m_GameBoard.Board.Tiles[i].Position.FlipY(windowHeight),
                     Color.Yellow
                 );
         }
@@ -262,7 +264,7 @@ class PlayerAgent : Player
 
                 spriteBatch.DrawString(
                     font, String.Format("{0:0.00}", weight * 10), 
-                    m_GameBoard.Nodes[i].Position.FlipY(windowHeight),
+                    m_GameBoard.Board.Nodes[i].Position.FlipY(windowHeight),
                     Color.Yellow
                     );
             }
@@ -344,7 +346,7 @@ class PlayerAgent : Player
     private void GetNodeWeights()
     {
         for (int i = 0; i < 54; i++)
-            m_NodeWeights[i] = GetWeight(m_ResourceRarity, m_Behaviour, m_ResourceWeights, m_GameBoard.Nodes[i]);
+            m_NodeWeights[i] = GetWeight(m_ResourceRarity, m_Behaviour, m_ResourceWeights, m_GameBoard.Board.Nodes[i]);
         
         m_NeighbourWeights = new float[54];
         if (!m_Behaviour.CheckNeighbours)
@@ -357,7 +359,7 @@ class PlayerAgent : Player
 
         for (int i = 0; i < 54; i++)
         {
-            Node rootNode = m_GameBoard.Nodes[i];
+            Node rootNode = m_GameBoard.Board.Nodes[i];
             for (int j = 0; j < 3; j++)
                 for (int k = 0; k < 3; k++)
                 {
@@ -570,7 +572,7 @@ class PlayerAgent : Player
         if (value < step - (step / 2))
             return;
 
-        Node node = m_GameBoard.Nodes[index];
+        Node node = m_GameBoard.Board.Nodes[index];
         for (int i = 0; i < 3; i++)
         {
             Node neighbour = node.GetNeighbourNode(i);
@@ -585,7 +587,7 @@ class PlayerAgent : Player
     {
         m_ResourceRarity = new Resources();
 
-        foreach(Tile tile in m_GameBoard.Tiles)
+        foreach(Tile tile in m_GameBoard.Board.Tiles)
             m_ResourceRarity.AddType(tile.Type, tile.GetProbability());
     }
 
@@ -614,7 +616,7 @@ class PlayerAgent : Player
         if (m_NodeWeights[index] == 0f)
             return null;
 
-        return m_GameBoard.Nodes[index];
+        return m_GameBoard.Board.Nodes[index];
     }
 
     private bool IsSetup()
