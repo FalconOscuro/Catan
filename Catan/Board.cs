@@ -277,6 +277,8 @@ class Board
         Ports[8] = new Port(Nodes[50], Nodes[51], Port.TradeType.Versatile);
     }
 
+    public Log GameLog { get; private set; }
+
     public Tile[] Tiles = new Tile[19];
     public int RobberPos;
 

@@ -8,6 +8,16 @@ using ImGuiNET;
 
 namespace Catan;
 
+// TODO:
+// Bank Trading
+// Player Trading
+// Port weighting
+// Same tile/No weighting
+// Cities
+// Development cards
+// Longest road prioritization
+
+
 /// <summary>
 /// Autonomus player
 /// </summary>
@@ -16,7 +26,7 @@ class PlayerAgent : Player
     public PlayerAgent(Catan board, Color colour):
         base(board, colour)
     {
-        m_ResourceRarity = null;
+        m_ResourceRarity = new Resources();
         m_Predictions = new Dictionary<Player, Resources>();
         m_Behaviour = new Behaviour();
     }
@@ -110,7 +120,7 @@ class PlayerAgent : Player
     {
         Node targetNode = GetHighestValueNode();
 
-        if (targetNode != null)
+        if (targetNode != null && m_Status.UnbuiltSettlements > 0)
         {
             if (TryBuildSettlement(targetNode))
                 return;
@@ -121,6 +131,24 @@ class PlayerAgent : Player
                     if (TryBuildRoad(expandPath[expandPath.Count - 1]))
                         return;
         }
+
+        Node cityTarget = GetHighestValueCity();
+        if (cityTarget != null)
+        {
+            if (TryBuildCity(cityTarget))
+                return;
+        }
+
+        /*
+        Need to weight options
+
+        In theory all potential goals end with gaining VP
+        Potential Goals:
+        - Longest road: Building Roads, Connecting routes, Interrupting networks (Also involves further settlement wieghting)
+        - Settlements/Cities (Account for weighting changes)
+        - Largest Army
+        - Buying VP
+        */
 
         EndTurn();
     }
@@ -346,7 +374,7 @@ class PlayerAgent : Player
     private void GetNodeWeights()
     {
         for (int i = 0; i < 54; i++)
-            m_NodeWeights[i] = GetWeight(m_ResourceRarity, m_Behaviour, m_ResourceWeights, m_GameBoard.Board.Nodes[i]);
+            m_NodeWeights[i] = GetNodeWeight(m_ResourceRarity, m_Behaviour, m_ResourceWeights, m_GameBoard.Board.Nodes[i]);
         
         m_NeighbourWeights = new float[54];
         if (!m_Behaviour.CheckNeighbours)
@@ -370,7 +398,7 @@ class PlayerAgent : Player
                     float weight;
 
                     if (reCalc)
-                        weight = GetWeight(m_ResourceRarity, m_Behaviour, SECONDARY_RESOURCES, leafNode);
+                        weight = GetNodeWeight(m_ResourceRarity, m_Behaviour, SECONDARY_RESOURCES, leafNode);
 
                     else
                         weight = m_NodeWeights[leafNode.ID];
@@ -386,9 +414,9 @@ class PlayerAgent : Player
         }
     }
 
-    private static float GetWeight(Resources resourceRarity, Behaviour behaviour, ResourceWeights resourceWeights, Node node)
+    private static float GetNodeWeight(Resources resourceRarity, Behaviour behaviour, ResourceWeights resourceWeights, Node node, bool ignoreOwned = false)
     {
-        if (!node.IsAvailable())
+        if (!node.IsAvailable() && !ignoreOwned)
             return 0f;
 
         float weight = 0f;
@@ -449,6 +477,30 @@ class PlayerAgent : Player
             weight *= resourceWeights.GetResourceWeight(tile.Type) * behaviour.ResourceWeighting;
 
         return weight;
+    }
+
+    private void GetCityWeights()
+    {
+        ResourceWeights weights = new ResourceWeights();
+
+        if (m_Behaviour.UseResourceWeights)
+        {
+            if (m_Behaviour.AdvancedResourceWeights)
+            {
+                weights = CITY_RESOURCES;
+            }
+        }
+
+        foreach (NodeContainer node in m_ControlledNodes)
+        {
+            if (node.RefNode.IsCity == true || node.RefNode.Owner != this)
+            {
+                m_CityWeights[node.RefNode.ID] = 0f;
+                continue;
+            }
+
+            m_CityWeights[node.RefNode.ID] = GetNodeWeight(m_ResourceRarity, m_Behaviour, weights, node.RefNode);
+        }
     }
 
     private void GetDistances()
@@ -619,6 +671,28 @@ class PlayerAgent : Player
         return m_GameBoard.Board.Nodes[index];
     }
 
+    private Node GetHighestValueCity()
+    {
+        float maxWeight = 0f;
+        Node target = null;
+
+        foreach (NodeContainer node in m_ControlledNodes)
+        {
+            if (node.RefNode.Owner != this || node.RefNode.IsCity)
+                continue;
+
+            float weight = GetNodeWeight(m_ResourceRarity, m_Behaviour, CITY_RESOURCES, node.RefNode, true);
+
+            if (weight > maxWeight)
+            {
+                maxWeight = weight;
+                target = node.RefNode;
+            }
+        }
+
+        return target;
+    }
+
     private bool IsSetup()
     {
         return m_TurnState == TurnState.PreGame1 || m_TurnState == TurnState.Pregame2;
@@ -627,6 +701,7 @@ class PlayerAgent : Player
     private float[] m_NodeWeights = new float[54];
     private float[] m_NeighbourWeights = new float[54];
     private float[] m_DistanceMap = new float[54];
+    private float[] m_CityWeights = new float[54];
     private float[] m_RobberWeights = new float[19];
 
     private struct Behaviour
@@ -759,6 +834,8 @@ class PlayerAgent : Player
     /// Weights for all other settlements
     /// </summary>
     private static readonly ResourceWeights SECONDARY_RESOURCES = new ResourceWeights(1.3100f, 1.2467f, 1.3525f, 1.2275f, 1.3433f);
+
+    private static readonly ResourceWeights CITY_RESOURCES = new ResourceWeights(1.2650f, 1.3233f, 1.4700f, 1.3525f, 1.4800f); 
 
     /// <summary>
     /// Weighted by overall value instead of in a single instance

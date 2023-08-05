@@ -380,7 +380,7 @@ class Player
                 ImGui.SameLine();
 
                 if (ImGui.Button("City"))
-                    TryBuildCity();
+                    TryBuildCity(m_SelectedNode);
 
                 ImGui.SameLine();
                 if (ImGui.Button("Development Card"))
@@ -708,12 +708,12 @@ class Player
     /// <summary>
     /// Attempt to build a city
     /// </summary>
-    protected bool TryBuildCity()
+    protected bool TryBuildCity(Node target)
     {
-        if (m_SelectedNode == null)
+        if (target == null)
             return false;
         
-        if (m_SelectedNode.Owner == this && m_SelectedNode.IsCity == false && m_Status.UnbuiltCities > 0)
+        if (target.Owner == this && target.IsCity == false && m_Status.UnbuiltCities > 0)
         {
             Trade trade = new Trade(m_GameBoard);
             trade.From = m_Status.HeldResources;
@@ -722,7 +722,7 @@ class Player
 
             if (trade.TryExecute())
             {
-                m_SelectedNode.IsCity = true;
+                target.IsCity = true;
                 m_Status.UnbuiltSettlements++;
                 m_Status.UnbuiltCities--;
                 m_Status.VictoryPoints++;
@@ -905,6 +905,7 @@ class Player
                         
                         if (++edgeCount > 2)
                             return;
+                        
                         break;
                     }
                 }
@@ -951,10 +952,12 @@ class Player
             bool[] existingNodes = new bool[]{ false, false };
 
             index = 0;
-            while (!existingNodes[0] && !existingNodes[1] && index < edges.Count)
+            while ((!existingNodes[0] || !existingNodes[1]) && index < nodes.Count)
             {
-                existingNodes[0] |= nodes[index].RefNode == newEdge.Nodes[0];
-                existingNodes[1] |= nodes[index++].RefNode == newEdge.Nodes[1];
+                existingNodes[0] = existingNodes[0] || (nodes[index].RefNode == newEdge.Nodes[0]);
+                existingNodes[1] = existingNodes[1] || (nodes[index].RefNode == newEdge.Nodes[1]);
+
+                index++;
             }
 
             for (int i = 0; i < 2; i++)

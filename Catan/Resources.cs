@@ -306,6 +306,29 @@ class Resources : ICloneable
         return Color.Black;
     }
 
+    /*public override string ToString()
+    {
+        string asString = "[";
+
+        if (Lumber != 0)
+            asString += string.Format("L:{0},", Lumber);
+        
+        if (Brick != 0)
+            asString += string.Format("B:{0},", Brick);
+        
+        if (Grain != 0)
+            asString += string.Format("G:{0},", Grain);
+        
+        if (Wool != 0)
+            asString += string.Format("W:{0},", Wool);
+        
+        if (Ore != 0)
+            asString += string.Format("O:{0},", Ore);
+        
+
+        return asString.TrimEnd(',') + "]";
+    }*/
+
     public enum Type
     {
         Empty = -1,
