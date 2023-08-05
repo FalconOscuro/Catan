@@ -25,16 +25,11 @@ class Catan
         // Use scale for smallest axis to prevent overspill
         m_Scale = MathHelper.Min(scaleX, scaleY);
 
-        // x^2 + (.5x)^2 = x^2 + .25x^2 = 1.25x^2
-        m_EdgeDist = MathF.Sqrt((m_Scale * m_Scale) * 1.25f);
-
         Board = new Board();
         Board.Init();
         
-        Players[0] = new PlayerAgent(this, Color.Red);
-        Players[1] = new PlayerAgent(this, Color.Orange);
-        Players[2] = new PlayerAgent(this, Color.White);
-        Players[3] = new PlayerAgent(this, Color.Blue);
+        for (int i = 0; i < 4; i++)
+            Players[i] = new PlayerAgent(this, i);
 
         Players[0].SetState(Player.TurnState.PreGame1);
         m_State = GameState.Setup;
@@ -63,7 +58,7 @@ class Catan
         tempArray[23] = new RoadBuilding();
         tempArray[24] = new RoadBuilding();
 
-        Random rand = new Random();
+        Random rand = new();
 
         rand.ShuffleArray(tempArray, 2);
         DevelopmentCards = new Queue<DevelopmentCard>(tempArray);
@@ -77,8 +72,10 @@ class Catan
     /// <param name="useDefault">Use default layout or randomize</param>
     public void GenerateBoard(bool useDefault = true)
     {
-        m_DensityMap = new List<List<Tile>>();
-        m_DensityMap.Capacity = 10;
+        m_DensityMap = new List<List<Tile>>
+        {
+            Capacity = 10
+        };
         for (int i = 0; i < 10; i++)
             m_DensityMap.Add(new List<Tile>());
 
@@ -87,7 +84,7 @@ class Catan
 
         if (!useDefault)
         {
-            Random rand = new Random();
+            Random rand = new();
             rand.ShuffleArray(resourceSpread, 2);
             rand.ShuffleArray(numSpread, 2);
         }
@@ -113,44 +110,46 @@ class Catan
 
     private void QuickStart()
     {
-        Board.Nodes[10].Owner = Players[0];
-        Board.Nodes[10].Edges[2].Owner = Players[0];
+        Board.Nodes[10].OwnerID = 0;
+        Board.Nodes[10].GetEdge(2).OwnerID = 0;
         //Players[0].RegisterNode(Nodes[10]);
 
-        Board.Nodes[13].Owner = Players[1];
-        Board.Nodes[13].Edges[0].Owner = Players[1];
+        Board.Nodes[13].OwnerID = 1;
+        Board.Nodes[13].GetEdge(0).OwnerID = 1;
         //Players[1].RegisterNode(Nodes[13]);
 
-        Board.Nodes[19].Owner = Players[2];
-        Board.Nodes[19].Edges[1].Owner = Players[2];
+        Board.Nodes[19].OwnerID = 2;
+        Board.Nodes[19].GetEdge(1).OwnerID = 2;
         //Players[2].RegisterNode(Nodes[19]);
 
-        Board.Nodes[29].Owner = Players[0];
-        Board.Nodes[29].Edges[2].Owner = Players[0];
+        Board.Nodes[29].OwnerID = 0;
+        Board.Nodes[29].GetEdge(2).OwnerID = 0;
         //Players[0].RegisterNode(Nodes[29]);
 
-        Board.Nodes[35].Owner = Players[2];
-        Board.Nodes[35].Edges[0].Owner = Players[2];
+        Board.Nodes[35].OwnerID = 2;
+        Board.Nodes[35].GetEdge(0).OwnerID = 2;
         //Players[2].RegisterNode(Nodes[35]);
 
-        Board.Nodes[40].Owner = Players[3];
-        Board.Nodes[40].Edges[2].Owner = Players[3];
+        Board.Nodes[40].OwnerID = 3;
+        Board.Nodes[40].GetEdge(2).OwnerID = 3;
         //Players[3].RegisterNode(Nodes[40]);
 
-        Board.Nodes[42].Owner = Players[1];
-        Board.Nodes[42].Edges[2].Owner = Players[1];
+        Board.Nodes[42].OwnerID = 1;
+        Board.Nodes[42].GetEdge(2).OwnerID = 1;
         //Players[1].RegisterNode(Nodes[42]);
 
-        Board.Nodes[44].Owner = Players[3];
-        Board.Nodes[44].Edges[0].Owner = Players[3];
+        Board.Nodes[44].OwnerID = 3;
+        Board.Nodes[44].GetEdge(0).OwnerID = 3;
         //Players[3].RegisterNode(Nodes[44]);
 
 
-        Trade trade = new Trade(this);
-        trade.From = null;
+        Trade trade = new(this)
+        {
+            From = null,
 
-        trade.Giving = new Resources(2, 0, 1, 0, 0);
-        trade.To = Players[0].GetHand();
+            Giving = new Resources(2, 0, 1, 0, 0),
+            To = Players[0].GetHand()
+        };
         trade.TryExecute();
 
         trade.Giving = new Resources(0, 0, 2, 0, 1);
@@ -190,7 +189,7 @@ class Catan
 
     public void RollDice()
     {
-        Random rand = new Random();
+        Random rand = new();
 
         m_LastRoll = rand.Next(6) + 2 + rand.Next(6);
 
@@ -212,15 +211,15 @@ class Catan
 
     private void DistributeResources()
     {
-        List<Trade> trades = new List<Trade>();
+        List<Trade> trades = new();
         foreach (Tile tile in m_DensityMap[RollToArrayPos(m_LastRoll)])
             trades.AddRange(tile.Distribute(this));
 
-        Resources requested = new Resources();
+        Resources requested = new();
         foreach (Trade trade in trades)
-            requested = requested + trade.Giving;
+            requested += trade.Giving;
         
-        Resources mask = new Resources(1, 1, 1, 1, 1);
+        Resources mask = new(1, 1, 1, 1, 1);
         for (Resources.Type i = 0; (int)i < 5; i++)
             if (ResourceBank.GetType(i) < requested.GetType(i))
                 mask.SetType(i, 0);
@@ -392,10 +391,12 @@ class Catan
 
     public void Monopoly(Resources.Type type)
     {
-        Trade trade = new Trade(this);
-        trade.To = Players[m_CurrentPlayer].GetHand();
+        Trade trade = new(this)
+        {
+            To = Players[m_CurrentPlayer].GetHand()
+        };
 
-        Resources mask = new Resources();
+        Resources mask = new();
         mask.SetType(type, 1);
 
         for (int i = 0; i < 4; i++)
@@ -535,12 +536,10 @@ class Catan
     private int m_CurrentPlayer = 0;
     private int m_TargetPlayerOffset = 0;
 
-    private float m_Scale;
+    private readonly float m_Scale;
     private Vector2 m_Offset;
 
-    private float m_EdgeDist;
-
-    private SpriteFont m_Font;
+    private readonly SpriteFont m_Font;
 
     private int m_LastRoll;
 

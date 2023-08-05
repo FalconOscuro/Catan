@@ -23,8 +23,8 @@ namespace Catan;
 /// </summary>
 class PlayerAgent : Player
 {
-    public PlayerAgent(Catan board, Color colour):
-        base(board, colour)
+    public PlayerAgent(Catan board, int ID):
+        base(board, ID)
     {
         m_ResourceRarity = new Resources();
         m_Predictions = new Dictionary<Player, Resources>();
@@ -36,7 +36,7 @@ class PlayerAgent : Player
         m_Predictions = new Dictionary<Player, Resources>();
         base.StartGame();
 
-        foreach (Player player in m_GameBoard.Players)
+        foreach (Player player in GameBoard.Players)
         {
             if (player == this)
                 continue;
@@ -128,7 +128,7 @@ class PlayerAgent : Player
             List<Edge> expandPath = AStar(targetNode);
             if (expandPath != null)
                 if (expandPath.Count > 0)
-                    if (TryBuildRoad(expandPath[expandPath.Count - 1]))
+                    if (TryBuildRoad(expandPath[^1]))
                         return;
         }
 
@@ -155,44 +155,48 @@ class PlayerAgent : Player
 
     private void Robber()
     {
-        m_RobberWeights = new float[19];
         Node targetNode = null;
         Tile targetTile = null;
         float maxWeight = 0f;
 
         for (int i = 0; i < 19; i++)
         {
-            if (i == m_GameBoard.Board.RobberPos)
+            m_RobberWeights[i] = 0f;
+
+            if (i == GameBoard.Board.RobberPos)
                 continue;
 
-            Tile tile = m_GameBoard.Board.Tiles[i];
+            Tile tile = GameBoard.Board.Tiles[i];
 
             float weight = GetTileWeight(m_ResourceRarity, m_Behaviour, TOTAL_WEIGHT, tile);
             float maxNodeWeight = 0f;
             Node maxNode = null;
 
-            foreach (Node node in tile.Nodes)
+            for (int j = 0; j < 6; j++)
             {
+                Node node = tile.GetNode(j);
+
                 float deltaWeight = weight;
 
-                if (node.Owner == null)
+                if (node.OwnerID == -1)
                     continue;
                 
-                else if (node.Owner == this)
+                else if (node.OwnerID == m_Status.PlayerID)
                     deltaWeight *= -m_Behaviour.RobberAvoidance;
                 
                 else
                 {
                     deltaWeight *= m_Behaviour.RobberAggression;
 
+                    /*
                     if (m_Behaviour.EvaluateGain && m_Behaviour.TrackResources)
                     {
                         deltaWeight += 
-                            (m_ResourceWeights.GetResourcesWeight(m_Predictions[node.Owner]) / node.Owner.GetHandSize()) * m_Behaviour.RobberThievery;
+                            m_ResourceWeights.GetResourcesWeight(m_Predictions[node.Owner]) / node.Owner.GetHandSize() * m_Behaviour.RobberThievery;
                     }
+                    */
 
-                    else
-                        deltaWeight += (node.Owner.GetHandSize() / 7 * m_Behaviour.RobberThievery);
+                   deltaWeight += GameBoard.Players[node.OwnerID].GetHandSize() / 7 * m_Behaviour.RobberThievery;
                 }
 
                 if (node.IsCity)
@@ -210,7 +214,7 @@ class PlayerAgent : Player
             if (m_RobberWeights[i] > maxWeight)
             {
                 maxWeight = m_RobberWeights[i];
-                targetTile = m_GameBoard.Board.Tiles[i];
+                targetTile = GameBoard.Board.Tiles[i];
                 targetNode = maxNode;
             }
         }
@@ -222,7 +226,7 @@ class PlayerAgent : Player
 
     private void Discard()
     {
-        Resources removing = new Resources();
+        Resources removing = new();
 
         // Simple method, get rid of most numerous cards
         for (int i = 0; i < GetHandSize() / 2; i++)
@@ -245,10 +249,12 @@ class PlayerAgent : Player
             removing.AddType(type, 1);
         }
 
-        Trade trade = new Trade(m_GameBoard);
-        trade.From = m_Status.HeldResources;
-        trade.To = m_GameBoard.ResourceBank;
-        trade.Giving = removing;
+        Trade trade = new(GameBoard)
+        {
+            From = m_Status.HeldResources,
+            To = GameBoard.ResourceBank,
+            Giving = removing
+        };
         trade.TryExecute();
 
         EndTurn();
@@ -261,7 +267,7 @@ class PlayerAgent : Player
             for (int i = 0; i < 19; i++)
                 spriteBatch.DrawString(
                     font, String.Format("{0:0.00}", m_RobberWeights[i] * 10),
-                    m_GameBoard.Board.Tiles[i].Position.FlipY(windowHeight),
+                    GameBoard.Board.Tiles[i].Position.FlipY(windowHeight),
                     Color.Yellow
                 );
         }
@@ -292,7 +298,7 @@ class PlayerAgent : Player
 
                 spriteBatch.DrawString(
                     font, String.Format("{0:0.00}", weight * 10), 
-                    m_GameBoard.Board.Nodes[i].Position.FlipY(windowHeight),
+                    GameBoard.Board.Nodes[i].Position.FlipY(windowHeight),
                     Color.Yellow
                     );
             }
@@ -374,9 +380,8 @@ class PlayerAgent : Player
     private void GetNodeWeights()
     {
         for (int i = 0; i < 54; i++)
-            m_NodeWeights[i] = GetNodeWeight(m_ResourceRarity, m_Behaviour, m_ResourceWeights, m_GameBoard.Board.Nodes[i]);
-        
-        m_NeighbourWeights = new float[54];
+            m_NodeWeights[i] = GetNodeWeight(m_ResourceRarity, m_Behaviour, m_ResourceWeights, GameBoard.Board.Nodes[i]);
+
         if (!m_Behaviour.CheckNeighbours)
             return;
         
@@ -387,7 +392,9 @@ class PlayerAgent : Player
 
         for (int i = 0; i < 54; i++)
         {
-            Node rootNode = m_GameBoard.Board.Nodes[i];
+            Node rootNode = GameBoard.Board.Nodes[i];
+            m_NeighbourWeights[i] = 0f;
+
             for (int j = 0; j < 3; j++)
                 for (int k = 0; k < 3; k++)
                 {
@@ -421,8 +428,10 @@ class PlayerAgent : Player
 
         float weight = 0f;
 
-        foreach(Tile tile in node.Tiles)
+       for (int i = 0; i < 3; i++)
         {
+            Tile tile = node.GetTile(i);
+
             if (tile == null)
                 continue;
 
@@ -479,30 +488,6 @@ class PlayerAgent : Player
         return weight;
     }
 
-    private void GetCityWeights()
-    {
-        ResourceWeights weights = new ResourceWeights();
-
-        if (m_Behaviour.UseResourceWeights)
-        {
-            if (m_Behaviour.AdvancedResourceWeights)
-            {
-                weights = CITY_RESOURCES;
-            }
-        }
-
-        foreach (NodeContainer node in m_ControlledNodes)
-        {
-            if (node.RefNode.IsCity == true || node.RefNode.Owner != this)
-            {
-                m_CityWeights[node.RefNode.ID] = 0f;
-                continue;
-            }
-
-            m_CityWeights[node.RefNode.ID] = GetNodeWeight(m_ResourceRarity, m_Behaviour, weights, node.RefNode);
-        }
-    }
-
     private void GetDistances()
     {
         float step = 1f / (m_Behaviour.SearchDepth + 1);
@@ -520,24 +505,24 @@ class PlayerAgent : Player
         for (int i = 0; i < 3; i++)
         {
             float weight = 0f;
-            Edge edge = node.Edges[i];
+            Edge edge = node.GetEdge(i);
             if (edge == null)
                 continue;
 
-            else if (edge.Owner != null)
+            else if (edge.OwnerID != -1)
                 continue;
 
             Node neighbour = node.GetNeighbourNode(i);
             
             for (int j = 0; j < 3; j++)
             {
-                Edge edge1 = neighbour.Edges[j];
+                Edge edge1 = neighbour.GetEdge(j);
 
                 if (edge1 == null)
                     continue;
                 
                 Node search = neighbour.GetNeighbourNode(j);
-                if (edge1.Owner != null || search.Owner != null || search == node)
+                if (edge1.OwnerID != -1 || search.OwnerID != -1 || search == node)
                     continue;
                 
                 weight += m_NodeWeights[search.ID]; 
@@ -556,28 +541,28 @@ class PlayerAgent : Player
 
     private List<Edge> AStar(Node node, List<Edge> path = null)
     {
-        if (node.Owner == this)
+        if (node.OwnerID == m_Status.PlayerID)
             return path;
 
-        else if (node.Owner != null)
+        else if (node.OwnerID != -1)
             return null;
 
-        if (path == null)
-            path = new List<Edge>();
+        else path ??= new List<Edge>();
 
-        List<Tuple<Node, int>> neighbours = new List<Tuple<Node, int>>();
+        List<Tuple<Node, int>> neighbours = new();
 
         for (int i = 0; i < 3; i++)
         {
             Node neighbour = node.GetNeighbourNode(i);
+            Edge edge = node.GetEdge(i);
 
-            if (neighbour == null || path.Contains(node.Edges[i]))
+            if (neighbour == null || path.Contains(edge))
                 continue;
 
-            else if (node.Edges[i].Owner == this)
+            else if (edge.OwnerID == m_Status.PlayerID)
                 return path;
             
-            else if (node.Edges[i].Owner != null || m_DistanceMap[neighbour.ID] == 0f)
+            else if (edge.OwnerID != -1 || m_DistanceMap[neighbour.ID] == 0f)
                 continue;
             
             int index = 0;
@@ -592,8 +577,10 @@ class PlayerAgent : Player
 
         foreach (Tuple<Node, int> neighbour in neighbours)
         {
-            List<Edge> current = new List<Edge>(path);
-            current.Add(node.Edges[neighbour.Item2]);
+            List<Edge> current = new(path)
+            {
+                node.GetEdge(neighbour.Item2)
+            };
 
             current = AStar(neighbour.Item1, current);
 
@@ -624,7 +611,7 @@ class PlayerAgent : Player
         if (value < step - (step / 2))
             return;
 
-        Node node = m_GameBoard.Board.Nodes[index];
+        Node node = GameBoard.Board.Nodes[index];
         for (int i = 0; i < 3; i++)
         {
             Node neighbour = node.GetNeighbourNode(i);
@@ -639,7 +626,7 @@ class PlayerAgent : Player
     {
         m_ResourceRarity = new Resources();
 
-        foreach(Tile tile in m_GameBoard.Board.Tiles)
+        foreach(Tile tile in GameBoard.Board.Tiles)
             m_ResourceRarity.AddType(tile.Type, tile.GetProbability());
     }
 
@@ -668,7 +655,7 @@ class PlayerAgent : Player
         if (m_NodeWeights[index] == 0f)
             return null;
 
-        return m_GameBoard.Board.Nodes[index];
+        return GameBoard.Board.Nodes[index];
     }
 
     private Node GetHighestValueCity()
@@ -678,7 +665,7 @@ class PlayerAgent : Player
 
         foreach (NodeContainer node in m_ControlledNodes)
         {
-            if (node.RefNode.Owner != this || node.RefNode.IsCity)
+            if (node.RefNode.OwnerID != m_Status.PlayerID || node.RefNode.IsCity)
                 continue;
 
             float weight = GetNodeWeight(m_ResourceRarity, m_Behaviour, CITY_RESOURCES, node.RefNode, true);
@@ -698,11 +685,10 @@ class PlayerAgent : Player
         return m_TurnState == TurnState.PreGame1 || m_TurnState == TurnState.Pregame2;
     }
 
-    private float[] m_NodeWeights = new float[54];
-    private float[] m_NeighbourWeights = new float[54];
-    private float[] m_DistanceMap = new float[54];
-    private float[] m_CityWeights = new float[54];
-    private float[] m_RobberWeights = new float[19];
+    private readonly float[] m_NodeWeights = new float[54];
+    private readonly float[] m_NeighbourWeights = new float[54];
+    private readonly float[] m_DistanceMap = new float[54];
+    private readonly float[] m_RobberWeights = new float[19];
 
     private struct Behaviour
     {
@@ -769,7 +755,7 @@ class PlayerAgent : Player
 
         private void Shuffle()
         {
-            Random rand = new Random();
+            Random rand = new();
 
             MaxCards = rand.NextFloat(2f);
             Abundance = rand.NextFloat(2f);
@@ -828,17 +814,17 @@ class PlayerAgent : Player
     /// <summary>
     /// Weights when placing starting settlements
     /// </summary>
-    private static readonly ResourceWeights PRIMARY_RESOURCES = new ResourceWeights(1.2950f, 1.3233f, 1.3675f, 1.3100f, 1.3233f);
+    private static readonly ResourceWeights PRIMARY_RESOURCES = new(1.2950f, 1.3233f, 1.3675f, 1.3100f, 1.3233f);
 
     /// <summary>
     /// Weights for all other settlements
     /// </summary>
-    private static readonly ResourceWeights SECONDARY_RESOURCES = new ResourceWeights(1.3100f, 1.2467f, 1.3525f, 1.2275f, 1.3433f);
+    private static readonly ResourceWeights SECONDARY_RESOURCES = new(1.3100f, 1.2467f, 1.3525f, 1.2275f, 1.3433f);
 
-    private static readonly ResourceWeights CITY_RESOURCES = new ResourceWeights(1.2650f, 1.3233f, 1.4700f, 1.3525f, 1.4800f); 
+    private static readonly ResourceWeights CITY_RESOURCES = new(1.2650f, 1.3233f, 1.4700f, 1.3525f, 1.4800f); 
 
     /// <summary>
     /// Weighted by overall value instead of in a single instance
     /// </summary>
-    private static readonly ResourceWeights TOTAL_WEIGHT = new ResourceWeights(1.63f, 0.6933f, 1.79f, 1.09f, 1.5466f);
+    private static readonly ResourceWeights TOTAL_WEIGHT = new(1.63f, 0.6933f, 1.79f, 1.09f, 1.5466f);
 }

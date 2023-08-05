@@ -53,7 +53,7 @@ class Trade
     public Resources Giving;
     public Resources Receiving;
 
-    private Catan m_Board;
+    private readonly Catan m_Board;
 
     public bool Complete { get; private set; }
 }

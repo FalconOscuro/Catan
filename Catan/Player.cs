@@ -10,28 +10,27 @@ namespace Catan;
 
 class Player
 {
-    public Player(Catan board, Color colour)
+    public Player(Catan board, int ID)
     {
-        m_GameBoard = board;
+        GameBoard = board;
         m_TurnState = TurnState.End;
         m_SelectedNode = null;
         m_SelectedEdge = null;
         m_SelectedTile = null;
-        Colour = colour;
 
         m_SelectedCard = 0;
 
         RoadLength = 0;
         ArmySize = 0;
 
-        m_Status = new PlayerStatus();
+        m_Status = new PlayerStatus(ID);
         m_Road = new List<Edge>();
         m_Highlighted = false;
 
         m_ControlledNodes = new List<NodeContainer>();
         m_OwnedEdges = new List<EdgeContainer>();
 
-        m_CurrentTrade = new Trade(m_GameBoard);
+        m_CurrentTrade = new Trade(GameBoard);
     }
 
     public virtual void StartGame()
@@ -61,7 +60,7 @@ class Player
             state = TurnState.PreRollRobber;
 
         if (state != TurnState.Trade)
-            m_CurrentTrade = new Trade(m_GameBoard);
+            m_CurrentTrade = new Trade(GameBoard);
 
         m_TurnState = state;
     }
@@ -84,7 +83,7 @@ class Player
         if (m_TurnState != TurnState.Start)
             return;
 
-        m_GameBoard.RollDice();
+        GameBoard.RollDice();
         SetState(TurnState.Main);
     }
 
@@ -93,7 +92,7 @@ class Player
         FindLongestRoad();
 
         m_TurnState = TurnState.End;
-        m_CurrentTrade = new Trade(m_GameBoard);
+        m_CurrentTrade = new Trade(GameBoard);
 
         DeselectNode();
         DeselectEdge();
@@ -220,7 +219,7 @@ class Player
             while (m_OwnedEdges[i].Traversed)
                 i++;
 
-            List<Edge> road = m_OwnedEdges[i].TraverseLongest(this);
+            List<Edge> road = m_OwnedEdges[i].TraverseLongest(m_Status.PlayerID);
 
             if (road.Count > RoadLength)
             {
@@ -323,26 +322,11 @@ class Player
             return;
             
         else if (!m_SelectedNode.IsAvailable() || !m_SelectedEdge.IsAvailable()
-            || (m_SelectedEdge.Nodes[0] != m_SelectedNode && m_SelectedEdge.Nodes[1] != m_SelectedNode))
+            || (m_SelectedEdge.GetNode(0) != m_SelectedNode && m_SelectedEdge.GetNode(1) != m_SelectedNode))
             return;
 
-        m_SelectedNode.Owner = this;
-        m_SelectedEdge.Owner = this;
-
-        if (m_TurnState == TurnState.Pregame2)
-        {
-            Trade trade = new Trade(m_GameBoard);
-            trade.To = m_Status.HeldResources;
-            trade.From = m_GameBoard.ResourceBank;
-
-            for (int i = 0; i < 3; i++)
-                if (m_SelectedNode.Tiles[i] != null)
-                    trade.Giving.AddType(m_SelectedNode.Tiles[i].Type, 1);
-            
-            trade.TryExecute();
-        }
-
-        EndTurn();
+        else if (TryBuildSettlement(m_SelectedNode) && TryBuildRoad(m_SelectedEdge))
+            EndTurn();
     }
 
     private void TurnStartUI()
@@ -444,7 +428,7 @@ class Player
         bool bank = m_CurrentTrade.To == null;
 
         if (ImGui.Checkbox("Bank Trade", ref bank))
-            m_CurrentTrade.To = bank ? m_GameBoard.ResourceBank : null;
+            m_CurrentTrade.To = bank ? GameBoard.ResourceBank : null;
 
         if (bank)
         {
@@ -472,7 +456,7 @@ class Player
             }
 
             else
-                m_GameBoard.PostTrade(m_CurrentTrade);
+                GameBoard.PostTrade(m_CurrentTrade);
         }
     }
 
@@ -502,7 +486,7 @@ class Player
 
         if (ImGui.Button("Discard") && m_CurrentTrade.Giving.GetTotal() == discardTarget)
         {
-            m_CurrentTrade.To = m_GameBoard.ResourceBank;
+            m_CurrentTrade.To = GameBoard.ResourceBank;
             m_CurrentTrade.From = m_Status.HeldResources;
 
             if (m_CurrentTrade.TryExecute())
@@ -533,30 +517,32 @@ class Player
             return false;
         
         bool targetablePlayer = false;
-        foreach (Node node in targetTile.Nodes)
-            if (node.Owner != null && node.Owner != this)
-                targetablePlayer = true;
+        for (int i = 0; i < 6; i++)
+        {
+            Node node = targetTile.GetNode(i);
+            targetablePlayer |= node.OwnerID != -1 && node.OwnerID != m_Status.PlayerID;
+        }
         
         if (targetablePlayer)
         {
             if (targetNode == null)
                 return false;
             
-            else if (targetNode.Owner == null || targetNode.Owner == this)
+            else if (targetNode.OwnerID == -1 || targetNode.OwnerID == m_Status.PlayerID)
                 return false;
 
             bool adjacent = false;
-            foreach (Node node in targetTile.Nodes)
-                if (node == targetNode)
+            for (int i = 0; i < 6; i++)
+                if (targetTile.GetNode(i) == targetNode)
                     adjacent = true;
             
             if (!adjacent)
                 return false;
             
-            GiveResource(targetNode.Owner.StealResource());
+            GiveResource(GameBoard.Players[targetNode.OwnerID].StealResource());
         }
 
-        m_GameBoard.MoveRobber(targetTile);
+        GameBoard.MoveRobber(targetTile);
         return true;
     }
 
@@ -579,7 +565,7 @@ class Player
 
         if (ImGui.Button("Take") && m_CurrentTrade.Giving.GetTotal() == 2)
         {
-            m_CurrentTrade.From = m_GameBoard.ResourceBank;
+            m_CurrentTrade.From = GameBoard.ResourceBank;
             m_CurrentTrade.To = m_Status.HeldResources;
 
             if (m_CurrentTrade.TryExecute())
@@ -596,7 +582,7 @@ class Player
 
                 if (ImGui.Button(i.ToString()))
                 {
-                    m_GameBoard.Monopoly(i);
+                    GameBoard.Monopoly(i);
                     SetState(TurnState.Main);
                 }
             }
@@ -613,12 +599,14 @@ class Player
         if (targetNode == null)
             return false;
         
-        else if (targetNode.IsAvailable(purchased ? null : this) && m_Status.UnbuiltSettlements > 0)
+        else if (targetNode.IsAvailable(purchased ? -1 : m_Status.PlayerID) && m_Status.UnbuiltSettlements > 0)
         {
-            Trade trade = new Trade(m_GameBoard);
-            trade.From = m_Status.HeldResources;
-            trade.To = m_GameBoard.ResourceBank;
-            trade.Giving = SETTLEMENT_COST;
+            Trade trade = new(GameBoard)
+            {
+                From = m_Status.HeldResources,
+                To = GameBoard.ResourceBank,
+                Giving = SETTLEMENT_COST
+            };
 
             if (!purchased)
                 purchased = trade.TryExecute();
@@ -629,18 +617,22 @@ class Player
                 {
                     trade.Giving = new Resources();
 
-                    foreach (Tile tile in targetNode.Tiles)
+                    for (int i = 0; i < 3; i++)
+                    {
+                        Tile tile = targetNode.GetTile(i);
+
                         if (tile != null)
                             trade.Receiving.AddType(tile.Type, 1);
+                    }
                     
                     trade.TryExecute();
                 }
 
-                targetNode.Owner = this;
+                targetNode.OwnerID = m_Status.PlayerID;
                 m_Status.UnbuiltSettlements--;
                 m_Status.VictoryPoints++;
                 UpdateExchange(targetNode.PortType);
-                m_GameBoard.CheckLongestRoad(true);
+                GameBoard.CheckLongestRoad(true);
                 return true;
             }
         }
@@ -679,25 +671,27 @@ class Player
         if (targetEdge == null)
             return false;
         
-        if (targetEdge.IsAvailable(this) && m_Status.UnbuiltRoads > 0)
+        if (targetEdge.IsAvailable(m_Status.PlayerID) && m_Status.UnbuiltRoads > 0)
         {
-            Trade trade = new Trade(m_GameBoard);
-            trade.From = m_Status.HeldResources;
-            trade.To = m_GameBoard.ResourceBank;
-            trade.Giving = ROAD_COST;
+            Trade trade = new(GameBoard)
+            {
+                From = m_Status.HeldResources,
+                To = GameBoard.ResourceBank,
+                Giving = ROAD_COST
+            };
 
             if (!purchased)
                 purchased = trade.TryExecute();
 
             if (purchased)
             {
-                targetEdge.Owner = this;
+                targetEdge.OwnerID = m_Status.PlayerID;
                 m_Status.UnbuiltRoads--;
 
                 NodeContainer.LinkNewEdge(targetEdge, ref m_ControlledNodes, ref m_OwnedEdges);
 
                 FindLongestRoad();
-                m_GameBoard.CheckLongestRoad(false);
+                GameBoard.CheckLongestRoad(false);
                 return true;
             }
         }
@@ -713,12 +707,14 @@ class Player
         if (target == null)
             return false;
         
-        if (target.Owner == this && target.IsCity == false && m_Status.UnbuiltCities > 0)
+        if (target.OwnerID == m_Status.PlayerID && target.IsCity == false && m_Status.UnbuiltCities > 0)
         {
-            Trade trade = new Trade(m_GameBoard);
-            trade.From = m_Status.HeldResources;
-            trade.To = m_GameBoard.ResourceBank;
-            trade.Giving = CITY_COST;
+            Trade trade = new(GameBoard)
+            {
+                From = m_Status.HeldResources,
+                To = GameBoard.ResourceBank,
+                Giving = CITY_COST
+            };
 
             if (trade.TryExecute())
             {
@@ -738,17 +734,19 @@ class Player
     /// </summary>
     protected bool TryGetDevCard()
     {
-        if (m_GameBoard.DevelopmentCards.Count < 0)
+        if (GameBoard.DevelopmentCards.Count < 0)
             return false;
 
-        Trade trade = new Trade(m_GameBoard);
-        trade.From = m_Status.HeldResources;
-        trade.To = null;
-        trade.Giving = DEVELOPMENT_CARD_COST;
+        Trade trade = new(GameBoard)
+        {
+            From = m_Status.HeldResources,
+            To = null,
+            Giving = DEVELOPMENT_CARD_COST
+        };
 
         if (trade.TryExecute())
         {
-            m_Status.DevelopmentCards.Add(m_GameBoard.DevelopmentCards.Dequeue());
+            m_Status.DevelopmentCards.Add(GameBoard.DevelopmentCards.Dequeue());
             return true;
         }
 
@@ -774,18 +772,11 @@ class Player
         End
     }
 
-    /// <summary>
-    /// Display player colour
-    /// </summary>
-    /// <value></value>
-    public Color Colour { get; private set; }
-
     // Largest Army
 
     /// <summary>
     /// Played knight cards
     /// </summary>
-    /// <value></value>
     public int ArmySize { get; set; }
 
     /// <summary>
@@ -828,7 +819,7 @@ class Player
     /// <summary>
     /// Reference to the game board
     /// </summary>
-    protected Catan m_GameBoard { get; private set; }
+    protected Catan GameBoard { get; private set; }
 
     // Actively selected elements by player
     // Cleared at end of turn
@@ -850,7 +841,7 @@ class Player
             {
                 for (int i = 0; i < 2; i++)
                 {
-                    if (node.RefNode == RefEdge.Nodes[i])
+                    if (node.RefNode == RefEdge.GetNode(i))
                     {
                         node.ConnectedEdges.Add(this);
                         ConnectedNodes.Add(node);
@@ -864,17 +855,17 @@ class Player
             }
         }
 
-        public List<Edge> TraverseLongest(in Player player)
+        public List<Edge> TraverseLongest(in int playerID)
         {
             if (Traversed)
                 return new List<Edge>();
             
             Traversed = true;
 
-            List<Edge> longest = new List<Edge>();
+            List<Edge> longest = new();
 
             foreach (NodeContainer node in ConnectedNodes)
-                longest.AddRange(node.TraverseLongest(player));
+                longest.AddRange(node.TraverseLongest(playerID));
 
             longest.Add(RefEdge);
             return longest;
@@ -898,7 +889,7 @@ class Player
             {
                 for (int i = 0; i < 3; i++)
                 {
-                    if (edge.RefEdge == RefNode.Edges[i])
+                    if (edge.RefEdge == RefNode.GetEdge(i))
                     {
                         edge.ConnectedNodes.Add(this);
                         ConnectedEdges.Add(edge);
@@ -912,18 +903,18 @@ class Player
             }
         }
 
-        public List<Edge> TraverseLongest(in Player player)
+        public List<Edge> TraverseLongest(in int playerID)
         {
-            if (Traversed || (RefNode.Owner != player && RefNode.Owner != null))
+            if (Traversed || (RefNode.OwnerID != playerID && RefNode.OwnerID != -1))
                 return new List<Edge>();
 
             Traversed = true;
 
-            List<Edge> longest = new List<Edge>();
+            List<Edge> longest = new();
 
             foreach(EdgeContainer edge in ConnectedEdges)
             {
-                List<Edge> current = edge.TraverseLongest(player);
+                List<Edge> current = edge.TraverseLongest(playerID);
 
                 if (current.Count > longest.Count)
                     longest = current;
@@ -954,15 +945,15 @@ class Player
             index = 0;
             while ((!existingNodes[0] || !existingNodes[1]) && index < nodes.Count)
             {
-                existingNodes[0] = existingNodes[0] || (nodes[index].RefNode == newEdge.Nodes[0]);
-                existingNodes[1] = existingNodes[1] || (nodes[index].RefNode == newEdge.Nodes[1]);
+                existingNodes[0] = existingNodes[0] || (nodes[index].RefNode == newEdge.GetNode(0));
+                existingNodes[1] = existingNodes[1] || (nodes[index].RefNode == newEdge.GetNode(1));
 
                 index++;
             }
 
             for (int i = 0; i < 2; i++)
                 if (!existingNodes[i])
-                    nodes.Add(new NodeContainer(newEdge.Nodes[i], ref edges));
+                    nodes.Add(new NodeContainer(newEdge.GetNode(i), ref edges));
             
             edges.Add(new EdgeContainer(newEdge, ref nodes));
         }
@@ -974,8 +965,10 @@ class Player
     /// </summary>
     public struct PlayerStatus : ICloneable
     {
-        public PlayerStatus()
+        public PlayerStatus(int playerID)
         {
+            PlayerID = playerID;
+
             UnbuiltSettlements = 5;
             UnbuiltCities = 4;
             UnbuiltRoads = 15;
@@ -990,21 +983,27 @@ class Player
 
         public readonly object Clone()
         {
-            PlayerStatus clone = new PlayerStatus();
+            PlayerStatus clone = new()
+            {
+                UnbuiltSettlements = UnbuiltSettlements,
+                UnbuiltCities = UnbuiltCities,
+                UnbuiltRoads = UnbuiltRoads,
 
-            clone.UnbuiltSettlements = UnbuiltSettlements;
-            clone.UnbuiltCities = UnbuiltCities;
-            clone.UnbuiltRoads = UnbuiltRoads;
+                DevelopmentCards = new List<DevelopmentCard>(DevelopmentCards),
 
-            clone.DevelopmentCards = new List<DevelopmentCard>(DevelopmentCards);
+                VictoryPoints = VictoryPoints,
 
-            clone.VictoryPoints = VictoryPoints;
-
-            clone.HeldResources = (Resources)HeldResources.Clone();
-            clone.ExchangeRate = (Resources)ExchangeRate.Clone();
+                HeldResources = (Resources)HeldResources.Clone(),
+                ExchangeRate = (Resources)ExchangeRate.Clone()
+            };
 
             return clone;
         }
+
+        /// <summary>
+        /// Unique Player ID
+        /// </summary>
+        public int PlayerID { get; private set; }
 
         public int UnbuiltSettlements;
         public int UnbuiltCities;
@@ -1025,8 +1024,20 @@ class Player
     }
 
     // Static variables showing costs for different elements
-    public static readonly Resources ROAD_COST = new Resources(1, 1, 0, 0, 0);
-    public static readonly Resources SETTLEMENT_COST = new Resources(1, 1, 1, 1, 0);
-    public static readonly Resources CITY_COST = new Resources(0, 0, 2, 0, 3);
-    public static readonly Resources DEVELOPMENT_CARD_COST = new Resources(0, 0, 1, 1, 1);
+    public static readonly Resources ROAD_COST = new(1, 1, 0, 0, 0);
+    public static readonly Resources SETTLEMENT_COST = new(1, 1, 1, 1, 0);
+    public static readonly Resources CITY_COST = new(0, 0, 2, 0, 3);
+    public static readonly Resources DEVELOPMENT_CARD_COST = new(0, 0, 1, 1, 1);
+
+    public static Color GetColourFromID(int playerID)
+    {
+        return playerID switch
+        {
+            0 => Color.Red,
+            1 => Color.Blue,
+            2 => Color.Yellow,
+            3 => Color.Green,
+            _ => Color.Black,
+        };
+    }
 }

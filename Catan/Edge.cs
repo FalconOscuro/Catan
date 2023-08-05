@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 using Microsoft.Xna.Framework;
@@ -7,31 +8,88 @@ namespace Catan;
 
 class Edge
 {
-    public Edge()
+    public Edge(int id, Board board)
     {
+        ID = id;
+
         Start = Vector2.Zero;
         End = Vector2.Zero;
-        Owner = null;
+        OwnerID = -1;
 
         m_Hovered = false;
         Selected = false;
+
+        m_Board = board;
+    }
+
+    public Edge(Edge edge, Board board)
+    {
+        ID = edge.ID;
+
+        Start = edge.Start;
+        End = edge.End;
+        OwnerID = edge.OwnerID;
+
+        m_Hovered = false;
+        Selected = false;
+
+        Array.Copy(edge.m_Nodes, m_Nodes, 2);
+
+        m_Board = board;
     }
 
     public void CalculatePosition()
     {
-        Vector2 centre = (Nodes[0].Position + Nodes[1].Position) / 2;
+        Vector2 pos1;
+        {
+            Node node = GetNode(0);
+            if (node == null)
+                return;
 
-        Start = ((Nodes[0].Position - centre) * .8f) + centre;
-        End = ((Nodes[1].Position - centre) * .8f) + centre;
+            pos1 = node.Position;
+        }
+        Vector2 pos2;
+        {
+            Node node = GetNode(1);
+            if (node == null)
+                return;
+
+            pos2 = node.Position;
+        }
+
+        Vector2 centre = (pos1 + pos2) / 2;
+        Start = ((pos1 - centre) * .8f) + centre;
+        End = ((pos2 - centre) * .8f) + centre;
     }
+
+    public Node GetNode(int index)
+    {
+        if (index < 0 || index > 1 || m_Board == null)
+            return null;
+        
+        int nodeID = m_Nodes[index];
+        return nodeID == -1 ? null : m_Board.Nodes[nodeID];
+    }
+
+    public void SetNodeID(int index, int nodeID)
+    {
+        if (index < 0 || index > 1 || nodeID < -1 || nodeID > 53)
+            return;
+        
+        m_Nodes[index] = nodeID;
+    }
+
+    public int ID { get; private set; }
 
     // Connections ordered N->S & E->W
     public Vector2 Start;
     public Vector2 End;
 
-    public Player Owner;
+    public int OwnerID;
 
-    public Node[] Nodes = new Node[2];
+    private readonly int[] m_Nodes = new int[]{-1, -1};
+
+    private readonly Board m_Board;
 
     public bool Selected;
 
@@ -39,26 +97,35 @@ class Edge
 
     public bool IsAvailable()
     {
-        return Owner == null;
+        return OwnerID == -1;
     }
 
-    public bool IsAvailable(Player player)
+    public bool IsAvailable(int playerID)
     {
         if (!IsAvailable())
             return false;
 
-        foreach (Node node in Nodes)
+        for (int i = 0; i < 2; i++)
         {
-            if (node.Owner == player)
-                return true;
-                
-            if (node.Owner != null)
+            Node node = GetNode(i);
+
+            if (node == null)
                 continue;
 
-            foreach (Edge edge in node.Edges)
+            else if (node.OwnerID == playerID)
+                return true;
+                
+            else if (node.OwnerID != -1)
+                continue;
+
+            for (int j = 0; j < 3; j++)
+            {
+                Edge edge = node.GetEdge(j);
+
                 if (edge != null && edge != this)
-                    if (edge.Owner == player)
+                    if (edge.OwnerID == playerID)
                         return true;
+            }
         }
 
         return false;
@@ -82,7 +149,10 @@ class Edge
 
     public void Draw(ShapeBatcher shapeBatcher, Vector2 offset, float scale)
     {
-        shapeBatcher.DrawLine((Start * scale) + offset, (End * scale) + offset, LINE_WIDTH + ((m_Hovered || Selected) ? LINE_WIDTH * 2.5f : 0f), Owner != null ? Owner.Colour : Color.Black);
+        shapeBatcher.DrawLine(
+            (Start * scale) + offset, (End * scale) + offset, 
+            LINE_WIDTH + ((m_Hovered || Selected) ? LINE_WIDTH * 2.5f : 0f), 
+            Player.GetColourFromID(OwnerID));
         m_Hovered = false;
     }
 

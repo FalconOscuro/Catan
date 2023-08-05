@@ -62,7 +62,7 @@ class TradeEvent : TargetedEvent
 
     public override string FormatMessage()
     {
-        string message = string.Format("{0} gave {1} to {3}", 1, Give, 2);
+        string message = string.Format("{0} gave {1} to {2}", 1, Give, 2);
 
         if (Recieve.GetTotal() != 0)
             message += string.Format(" in exchange for {0}", Recieve);

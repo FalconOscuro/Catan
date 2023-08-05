@@ -13,7 +13,7 @@ public class Game1 : Game
 {
     public static Vector2 WindowDimensions { get; private set; }
 
-    private GraphicsDeviceManager m_Graphics;
+    private readonly GraphicsDeviceManager m_Graphics;
     private SpriteBatch m_SpriteBatch;
 
     private ShapeBatcher m_ShapeBatcher;
@@ -22,7 +22,7 @@ public class Game1 : Game
     private Catan m_Board;
 
     private static readonly int HIST_LEN = 600;
-    private float[] m_FrameTimes;
+    private readonly float[] m_FrameTimes;
     private int m_FrameIndex;
     private float m_TimeTotal;
 

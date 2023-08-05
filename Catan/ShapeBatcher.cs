@@ -18,12 +18,12 @@ namespace Catan;
 
 internal class ShapeBatcher
 {
-    private Game1 m_Game;
+    private readonly Game1 m_Game;
 
     private bool m_Disposed;
-    private BasicEffect m_Effect;
-    private VertexPositionColor[] m_Vertices;
-    private int[] m_Indices;
+    private readonly BasicEffect m_Effect;
+    private readonly VertexPositionColor[] m_Vertices;
+    private readonly int[] m_Indices;
 
     private int m_ShapeCount = 0;
     private int m_VertexCount = 0;
@@ -40,14 +40,16 @@ internal class ShapeBatcher
     {
         m_Game = game ?? throw new ArgumentNullException(nameof(game));
         m_Disposed = false;
-        m_Effect = new BasicEffect(m_Game.GraphicsDevice);
-        m_Effect.TextureEnabled = false;
-        m_Effect.FogEnabled = false;
-        m_Effect.LightingEnabled = false;
-        m_Effect.VertexColorEnabled = true;
-        m_Effect.World = Matrix.Identity;
-        m_Effect.View = Matrix.Identity;
-        m_Effect.Projection = Matrix.Identity;
+        m_Effect = new BasicEffect(m_Game.GraphicsDevice)
+        {
+            TextureEnabled = false,
+            FogEnabled = false,
+            LightingEnabled = false,
+            VertexColorEnabled = true,
+            World = Matrix.Identity,
+            View = Matrix.Identity,
+            Projection = Matrix.Identity
+        };
 
         const int MAX_VERTEX_COUNT = 1024;
         const int MAX_INDEX_COUNT = MAX_VERTEX_COUNT * 3;
@@ -213,7 +215,7 @@ internal class ShapeBatcher
 
         float deltaAngle = MathHelper.TwoPi / numVertices;
         float angle = 0f;
-        Vector3 centerV3 = new Vector3(center.X, center.Y, 0f);
+        Vector3 centerV3 = new(center.X, center.Y, 0f);
 
         // Arrange indices
         for (int i = 0; i < numVertices - 1; i++)
@@ -230,7 +232,7 @@ internal class ShapeBatcher
         m_Vertices[m_VertexCount++] = new VertexPositionColor(centerV3, colour);
         for (int i = 0; i < numVertices; i++)
         {
-            Vector3 pos = new Vector3(MathF.Sin(angle), MathF.Cos(angle), 0);
+            Vector3 pos = new(MathF.Sin(angle), MathF.Cos(angle), 0);
             pos = (pos * radius) + centerV3;
             m_Vertices[m_VertexCount++] = new VertexPositionColor(pos, colour);
 
@@ -243,7 +245,7 @@ internal class ShapeBatcher
         Vector2 lineEnd = start + vector;
 
         Vector2 u = vector * (1f / vector.Length());
-        Vector2 v = new Vector2(-u.Y, u.X);
+        Vector2 v = new(-u.Y, u.X);
 
         Vector2 arrowHead1 = lineEnd - arrowSize * u + arrowSize * v;
         Vector2 arrowHead2 = lineEnd - arrowSize * u - arrowSize * v;

@@ -1,12 +1,35 @@
+using System;
+
 using Microsoft.Xna.Framework;
 
 namespace Catan;
 
-class Board
+class Board : ICloneable
 {
     public Board()
     {
         RobberPos = 0;
+    }
+
+    public object Clone()
+    {
+        Board clone = new()
+        {
+            RobberPos = RobberPos
+        };
+
+        for (int i = 0; i < 19; i++)
+            clone.Tiles[i] = new Tile(Tiles[i], clone);
+        
+        for (int i = 0; i < 54; i++)
+            clone.Nodes[i] = new Node(Nodes[i], clone);
+
+        for (int i = 0; i < 72; i++)
+            clone.Edges[i] = new Edge(Edges[i], clone);
+
+        Array.Copy(Ports, clone.Ports, 9);
+
+        return clone;
     }
 
     public void Init()
@@ -22,12 +45,12 @@ class Board
     private void InitTiles()
     {
         for (int i = 0; i < 19; i++)
-            Tiles[i] = new Tile(i);
+            Tiles[i] = new Tile(i, this);
 
-        Vector2 hexDistTL = new Vector2(-ShapeBatcher.SIN_60, 1.5f);
+        Vector2 hexDistTL = new(-ShapeBatcher.SIN_60, 1.5f);
         Vector2 hexDistTL2 = hexDistTL * 2;
 
-        Vector2 hexDistTR = new Vector2(-hexDistTL.X, hexDistTL.Y);
+        Vector2 hexDistTR = new(-hexDistTL.X, hexDistTL.Y);
         Vector2 hexDistTR2 = hexDistTR * 2;
 
         Tiles[0].Position = hexDistTL2;
@@ -54,11 +77,11 @@ class Board
     private void InitNodes()
     {
         for (int i = 0; i < 54; i++)
-            Nodes[i] = new Node(i);
+            Nodes[i] = new Node(i, this);
 
-        Vector2 up = new Vector2(0, 1);
-        Vector2 pointDistTL = new Vector2(-ShapeBatcher.SIN_60, .5f);
-        Vector2 pointDistTR = new Vector2(-pointDistTL.X, pointDistTL.Y);
+        Vector2 up = new(0, 1);
+        Vector2 pointDistTL = new(-ShapeBatcher.SIN_60, .5f);
+        Vector2 pointDistTR = new(-pointDistTL.X, pointDistTL.Y);
 
         for (int i = 0; i < 3; i++)
         {
@@ -147,118 +170,122 @@ class Board
 
     private void MapAboveTile(int tileIndex, int nodeIndex)
     {
-        Nodes[nodeIndex].Tiles[1] = Tiles[tileIndex];
-        Tiles[tileIndex].Nodes[0] = Nodes[nodeIndex++];
+        Nodes[nodeIndex].SetTileID(1, tileIndex);
+        Tiles[tileIndex].SetNodeID(0, nodeIndex++);
 
-        Nodes[nodeIndex].Tiles[2] = Tiles[tileIndex];
-        Tiles[tileIndex].Nodes[1] = Nodes[nodeIndex++];
+        Nodes[nodeIndex].SetTileID(2, tileIndex);
+        Tiles[tileIndex].SetNodeID(1, nodeIndex++);
 
-        Nodes[nodeIndex].Tiles[2] = Tiles[tileIndex];
-        Tiles[tileIndex].Nodes[2] = Nodes[nodeIndex++];
+        Nodes[nodeIndex].SetTileID(2, tileIndex);
+        Tiles[tileIndex].SetNodeID(2, nodeIndex++);
     }
 
     private void MapBelowTile(int tileIndex, int nodeIndex)
     {
-        Nodes[nodeIndex].Tiles[1] = Tiles[tileIndex];
-        Tiles[tileIndex].Nodes[3] = Nodes[nodeIndex++];
+        Nodes[nodeIndex].SetTileID(1, tileIndex);
+        Tiles[tileIndex].SetNodeID(3, nodeIndex++);
 
-        Nodes[nodeIndex].Tiles[0] = Tiles[tileIndex];
-        Tiles[tileIndex].Nodes[4] = Nodes[nodeIndex++];
+        Nodes[nodeIndex].SetTileID(0, tileIndex);
+        Tiles[tileIndex].SetNodeID(4, nodeIndex++);
 
-        Nodes[nodeIndex].Tiles[0] = Tiles[tileIndex];
-        Tiles[tileIndex].Nodes[5] = Nodes[nodeIndex++];
+        Nodes[nodeIndex].SetTileID(0, tileIndex);
+        Tiles[tileIndex].SetNodeID(5, nodeIndex++);
     }
 
     private void MapEdges()
     {
         for (int i = 0; i < 72; i++)
-            Edges[i] = new Edge();
+            Edges[i] = new Edge(i, this);
 
         // Row 1
         for (int i = 0; i < 6; i++)
         {
-            Edges[i].Nodes[0] = Nodes[i];
-            Edges[i].Nodes[1] = Nodes[i + 1];
+            Edges[i].SetNodeID(0, i);
+            Edges[i].SetNodeID(1, i + 1);
         }
 
         // Row 2
         for (int i = 6; i < 10; i++)
         {
-            Edges[i].Nodes[0] = Nodes[(i - 6) * 2];
-            Edges[i].Nodes[1] = Nodes[((i - 2) * 2)];
+            Edges[i].SetNodeID(0, (i - 6) * 2);
+            Edges[i].SetNodeID(1, (i - 2) * 2);
         }
 
         // Row 3
         for (int i = 10; i < 18; i++)
         {
-            Edges[i].Nodes[0] = Nodes[i - 3];
-            Edges[i].Nodes[1] = Nodes[i - 2];
+            Edges[i].SetNodeID(0, i - 3);
+            Edges[i].SetNodeID(1, i - 2);
         }
 
         // Row 4
         for (int i = 18; i < 23; i++)
         {
-            Edges[i].Nodes[0] = Nodes[((i - 15) * 2) + 1];
-            Edges[i].Nodes[1] = Nodes[((i - 10) * 2) + 1];
+            Edges[i].SetNodeID(0, ((i - 15) * 2) + 1);
+            Edges[i].SetNodeID(1, ((i - 10) * 2) + 1);
         }
 
         // Row 5
         for (int i = 23; i < 33; i++)
         {
-            Edges[i].Nodes[0] = Nodes[i - 7];
-            Edges[i].Nodes[1] = Nodes[i - 6];
+            Edges[i].SetNodeID(0, i - 7);
+            Edges[i].SetNodeID(1, i - 6);
         }
 
         // Row 6
         for (int i = 33; i < 39; i++)
         {
-            Edges[i].Nodes[0] = Nodes[(i - 25) * 2];
-            Edges[i].Nodes[1] = Nodes[((i - 20) * 2) + 1];
+            Edges[i].SetNodeID(0, (i - 25) * 2);
+            Edges[i].SetNodeID(1, ((i - 20) * 2) + 1);
         }
 
         // Row 7
         for (int i = 39; i < 49; i++)
         {
-            Edges[i].Nodes[0] = Nodes[i - 12];
-            Edges[i].Nodes[1] = Nodes[i - 11];
+            Edges[i].SetNodeID(0, i - 12);
+            Edges[i].SetNodeID(1, i - 11);
         }
 
         // Row 8
         for (int i = 49; i < 54; i++)
         {
-            Edges[i].Nodes[0] = Nodes[(i - 35) * 2];
-            Edges[i].Nodes[1] = Nodes[(i - 30) * 2];
+            Edges[i].SetNodeID(0, (i - 35) * 2);
+            Edges[i].SetNodeID(1, (i - 30) * 2);
         }
 
         // Row 9
         for (int i = 54; i < 62; i++)
         {
-            Edges[i].Nodes[0] = Nodes[i - 16];
-            Edges[i].Nodes[1] = Nodes[i - 15];
+            Edges[i].SetNodeID(0, i - 16);
+            Edges[i].SetNodeID(1, i - 15);
         }
 
         // Row 10
         for (int i = 62; i < 66; i++)
         {
-            Edges[i].Nodes[0] = Nodes[((i - 43) * 2) + 1];
-            Edges[i].Nodes[1] = Nodes[((i - 39) * 2) + 1];
+            Edges[i].SetNodeID(0, ((i - 43) * 2) + 1);
+            Edges[i].SetNodeID(1, ((i - 39) * 2) + 1);
         }
 
         // Row 11
         for (int i = 66; i < 72; i++)
         {
-            Edges[i].Nodes[0] = Nodes[i - 19];
-            Edges[i].Nodes[1] = Nodes[i - 18];
+            Edges[i].SetNodeID(0, i - 19);
+            Edges[i].SetNodeID(1, i - 18);
         }
 
-        foreach (Edge edge in Edges)
-            for (int i = 0; i < 2; i++)
+        for (int i = 0; i < 72; i++)
+        {
+            Edge edge = Edges[i];
+
+            for (int j = 0; j < 2; j++)
             {
                 int n = -1;
-                while (edge.Nodes[i].Edges[++n] != null);
+                while (edge.GetNode(j).GetEdge(++n) != null);
 
-                edge.Nodes[i].Edges[n] = edge;
+                edge.GetNode(j).SetEdgeID(n, i);
             }
+        }
         
         for (int i = 0; i < 72; i++)
             Edges[i].CalculatePosition();
@@ -276,8 +303,6 @@ class Board
         Ports[7] = new Port(Nodes[47], Nodes[48], Port.TradeType.Versatile);
         Ports[8] = new Port(Nodes[50], Nodes[51], Port.TradeType.Versatile);
     }
-
-    public Log GameLog { get; private set; }
 
     public Tile[] Tiles = new Tile[19];
     public int RobberPos;

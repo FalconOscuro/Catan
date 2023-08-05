@@ -20,10 +20,10 @@ struct Port
         b.PortType = type;
     }
 
-    public void Draw(ShapeBatcher shapeBatcher, Vector2 offset, float scale)
+    public readonly void Draw(ShapeBatcher shapeBatcher, Vector2 offset, float scale)
     {
         Vector2 pos = ((Nodes[0].Position + Nodes[1].Position) * scale / 2) - (Nodes[0].Position * scale);
-        Vector2 portEnd = new Vector2(pos.Y, -pos.X);
+        Vector2 portEnd = new(pos.Y, -pos.X);
         
         pos += (Nodes[0].Position * scale) + offset + portEnd;
 

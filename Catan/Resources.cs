@@ -33,25 +33,15 @@ class Resources : ICloneable
 
     public int GetType(Type type)
     {
-        switch (type)
+        return type switch
         {
-        case Type.Lumber:
-            return Lumber;
-
-        case Type.Brick:
-            return Brick;
-
-        case Type.Grain:
-            return Grain;
-
-        case Type.Wool:
-            return Wool;
-
-        case Type.Ore:
-            return Ore;
-        }
-
-        return 0;
+            Type.Lumber => Lumber,
+            Type.Brick => Brick,
+            Type.Grain => Grain,
+            Type.Wool => Wool,
+            Type.Ore => Ore,
+            _ => 0,
+        };
     }
 
     public void SetType(Type type, int num)
@@ -112,7 +102,7 @@ class Resources : ICloneable
         if (total == 0)
             return Type.Empty;
         
-        Random rand = new Random();
+        Random rand = new();
         int target = rand.Next(total) + 1;
 
         if (FindTarget(ref Lumber, ref target))
@@ -282,28 +272,16 @@ class Resources : ICloneable
 
     public static Color GetResourceColour(Type resource)
     {
-        switch(resource)
+        return resource switch
         {
-            case Type.Empty:
-                return Color.Wheat;
-
-            case Type.Lumber:
-                return Color.DarkGreen;
-
-            case Type.Brick:
-                return Color.Brown;
-
-            case Type.Grain:
-                return Color.Goldenrod;
-            
-            case Type.Wool:
-                return Color.LightGreen;
-            
-            case Type.Ore:
-                return Color.Gray;
-        }
-
-        return Color.Black;
+            Type.Empty => Color.Wheat,
+            Type.Lumber => Color.DarkGreen,
+            Type.Brick => Color.Brown,
+            Type.Grain => Color.Goldenrod,
+            Type.Wool => Color.LightGreen,
+            Type.Ore => Color.Gray,
+            _ => Color.Black,
+        };
     }
 
     /*public override string ToString()
@@ -360,7 +338,7 @@ struct ResourceWeights
         Ore = ore;
     }
 
-    public float GetResourcesWeight(Resources resources)
+    public readonly float GetResourcesWeight(Resources resources)
     {
         return Lumber * resources.Lumber +
             Brick * resources.Brick +
@@ -369,22 +347,17 @@ struct ResourceWeights
             Ore * resources.Ore;
     }
 
-    public float GetResourceWeight(Resources.Type type)
+    public readonly float GetResourceWeight(Resources.Type type)
     {
-        switch (type)
+        return type switch
         {
-        case (Resources.Type.Lumber):
-            return Lumber;
-        case (Resources.Type.Brick):
-            return Brick;
-        case (Resources.Type.Grain):
-            return Grain;
-        case (Resources.Type.Wool):
-            return Wool;
-        case (Resources.Type.Ore):
-            return Ore;
-        }
-        return 1f;
+            (Resources.Type.Lumber) => Lumber,
+            (Resources.Type.Brick) => Brick,
+            (Resources.Type.Grain) => Grain,
+            (Resources.Type.Wool) => Wool,
+            (Resources.Type.Ore) => Ore,
+            _ => 1f,
+        };
     }
 
     public float Lumber;

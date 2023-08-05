@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 using Microsoft.Xna.Framework;
@@ -10,15 +11,74 @@ namespace Catan;
 /// </summary>
 class Node
 {
-    public Node(int id)
+    public Node(int id, Board board)
     {
         Position = Vector2.Zero;
-        Owner = null;
+        OwnerID = -1;
         IsCity = false;
         m_Hovered = false;
         Selected = false;
         PortType = Port.TradeType.Empty;
         ID = id;
+
+        m_Board = board;
+    }
+
+    /// <summary>
+    /// Copy constructor
+    /// </summary>
+    /// <param name="node">old node</param>
+    /// <param name="board">new board parent</param>
+    public Node(Node node, Board board)
+    {
+        Position = node.Position;
+        OwnerID = node.OwnerID;
+        IsCity = node.IsCity;
+
+        m_Hovered = false;
+        Selected = false;
+
+        PortType = node.PortType;
+        ID = node.ID;
+
+        Array.Copy(node.m_Edges, m_Edges, 3);
+        Array.Copy(node.m_Tiles, m_Tiles, 3);
+
+        m_Board = board;
+    }
+
+    public Tile GetTile(int index)
+    {
+        if (index < 0 || index > 2 || m_Board == null)
+            return null;
+        
+        int tileID = m_Tiles[index];
+        return tileID == -1 ? null : m_Board.Tiles[tileID];
+    }
+
+    public Edge GetEdge(int index)
+    {
+        if (index < 0 || index > 2 || m_Board == null)
+            return null;
+        
+        int edgeID = m_Edges[index];        
+        return edgeID == -1 ? null : m_Board.Edges[edgeID];
+    }
+
+    public void SetTileID(int index, int tileID)
+    {
+        if (index < 0 || index > 2 || tileID < -1 || tileID > 18)
+            return;
+        
+        m_Tiles[index] = tileID;
+    }
+
+    public void SetEdgeID(int index, int edgeID)
+    {
+        if (index < 0 || index > 2 || edgeID < -1 || edgeID > 71)
+            return;
+        
+        m_Edges[index] = edgeID;
     }
 
     /// <summary>
@@ -34,7 +94,7 @@ class Node
     /// <summary>
     /// Current owner, null if un-owned
     /// </summary>
-    public Player Owner;
+    public int OwnerID;
 
     public bool IsCity;
 
@@ -48,12 +108,14 @@ class Node
     /// <summary>
     /// Connected edges
     /// </summary>
-    public Edge[] Edges = new Edge[] {null, null, null};
+    private readonly int[] m_Edges = new int[] { -1, -1, -1 };
 
     /// <summary>
     /// Adjacent tiles
     /// </summary>
-    public Tile[] Tiles = new Tile[3];
+    private readonly int[] m_Tiles = new int[] { -1, -1, -1 };
+
+    private readonly Board m_Board;
 
     /// <summary>
     /// Similar to selected, set to active if collision is detected
@@ -73,18 +135,16 @@ class Node
     /// <returns>null if nonexistant edge</returns>
     public Node GetNeighbourNode(int index)
     {
-        // Out of range
-        if (index < 0 || index >= 3)
+        Edge edge = GetEdge(index);
+
+        if (edge == null)
             return null;
-        
-        else if (Edges[index] == null)
-            return null;
-        
-        int n = 0;
-        if (Edges[index].Nodes[n] == this)
-            n++;
-        
-        return Edges[index].Nodes[n];
+
+        Node node = edge.GetNode(0);
+        if (node == this)
+            node = edge.GetNode(1);
+
+        return node;
     }
 
     /// <summary>
@@ -98,39 +158,36 @@ class Node
 
         if (branchNode == null)
             return null;
-        
+
         Node leafNode = branchNode.GetNeighbourNode(y);
 
         if (leafNode == this)
             return null;
-        
+
         return leafNode;
     }
 
     /// <summary>
     /// Is this a valid position to build a settlement
     /// </summary>
-    public bool IsAvailable(Player player = null)
+    public bool IsAvailable(int playerID = -1)
     {
-        if (Owner != null)
+        if (OwnerID != -1)
             return false;
 
         bool available = false;
-        foreach (Edge edge in Edges)
+        for (int i = 0; i < 3; i++)
         {
-            if (edge == null)
+            Edge edge = GetEdge(i);
+            Node node = GetNeighbourNode(i);
+
+            if (edge == null || node == null)
                 continue;
-                
-            int n = 0;
-            // Avoid checking self
-            if (edge.Nodes[n] == this)
-                n++;
-                
-            if (edge.Nodes[n].Owner != null)
-                return false;
             
-            else if (edge.Owner == player || player == null)
-                available = true;
+            else if (node.OwnerID != -1)
+                return false;
+
+            available |= edge.OwnerID == playerID;
         }
 
         return available;
@@ -145,17 +202,17 @@ class Node
     public void Draw(ShapeBatcher shapeBatcher, Vector2 offset, float scale)
     {
         float radius = RADIUS + (m_Hovered || Selected ? 1f : 0f);
-        Color colour = Owner != null ? Owner.Colour : Color.Black;
+        Color colour = Player.GetColourFromID(OwnerID);
         const int VERTEX_NUM = 10;
 
         Vector2 drawPos = (Position * scale) + offset;
 
         if (IsCity)
             shapeBatcher.DrawFilledCircle(drawPos, radius, VERTEX_NUM, colour);
-        
+
         else
             shapeBatcher.DrawCircle(drawPos, radius, VERTEX_NUM, 1f, colour);
-        
+
         m_Hovered = false;
     }
 }
