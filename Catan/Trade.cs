@@ -2,36 +2,49 @@ using ImGuiNET;
 
 namespace Catan;
 
+/// <summary>
+/// A trade between two resource entities
+/// </summary>
 class Trade
 {
-    public Trade(Catan board)
+    public Trade(Catan board, bool hidden = false)
     {
-        From = null;
-        To = null;
         Giving = new Resources();
         Receiving = new Resources();
         m_Board = board;
 
         Complete = false;
+
+        Hidden = hidden;
     }
 
+    /// <summary>
+    /// Attempt to complete the trade
+    /// </summary>
+    /// <returns>Success state</returns>
     public bool TryExecute()
     {
-        if (Giving == null || Receiving == null || From == null || To == null)
+        if (FromID == ToID || FromID < -1 || FromID > 3 || ToID < -1 || ToID > 3)
             return false;
         
-        else if (Giving > From || Receiving > To)
-            return false;
-        
-        From.TryTake(Giving);
-        To.TryTake(Receiving);
+        ref Resources from = ref GetRefResource(FromID, m_Board);
+        ref Resources to = ref GetRefResource(ToID, m_Board);
 
-        From.Add(Receiving);
-        To.Add(Giving);
+        if (Giving > from || Receiving > to || Giving.GetTotal() + Receiving.GetTotal() == 0)
+            return false;
+        
+        from.TryTake(Giving);
+        to.TryTake(Receiving);
+
+        from.Add(Receiving);
+        to.Add(Giving);
 
         Complete = true;
 
         m_Board.OnCompleteTrade(this);
+
+        Event.Trade tradeEvent = new(FromID, ToID, Giving, Receiving, Hidden);
+        Event.Log.Singleton.PostEvent(tradeEvent);
 
         return true;
     }
@@ -47,11 +60,18 @@ class Trade
         Receiving.UIDraw(modify);
     }
 
-    public Resources From;
-    public Resources To;
+    private static ref Resources GetRefResource(int iD, Catan game)
+    {
+        return ref (iD == -1 ? ref game.GetBank() : ref game.Players[iD].GetHand());
+    }
+
+    public int FromID;
+    public int ToID;
 
     public Resources Giving;
     public Resources Receiving;
+
+    public bool Hidden;
 
     private readonly Catan m_Board;
 

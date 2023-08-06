@@ -251,8 +251,8 @@ class PlayerAgent : Player
 
         Trade trade = new(GameBoard)
         {
-            From = m_Status.HeldResources,
-            To = GameBoard.ResourceBank,
+            FromID = m_Status.PlayerID,
+            ToID = -1,
             Giving = removing
         };
         trade.TryExecute();

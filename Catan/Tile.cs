@@ -100,7 +100,7 @@ class Tile
             {
                 Trade trade = new(board);
                 trade.Giving.AddType(Type, node.IsCity ? 2 : 1);
-                trade.To = board.Players[node.OwnerID].GetHand();
+                trade.ToID = node.OwnerID;
 
                 trades.Add(trade);
             }

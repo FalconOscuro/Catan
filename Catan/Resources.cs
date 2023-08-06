@@ -6,7 +6,7 @@ using ImGuiNET;
 
 namespace Catan;
 
-class Resources : ICloneable
+struct Resources
 {
     public Resources()
     {}
@@ -20,18 +20,13 @@ class Resources : ICloneable
         Ore = ore;
     }
 
-    public object Clone()
-    {
-        return new Resources(Lumber, Brick, Grain, Wool, Ore);
-    }
+    public int Lumber = 0;
+    public int Brick = 0;
+    public int Grain = 0;
+    public int Wool = 0;
+    public int Ore = 0;
 
-    public int Lumber;
-    public int Brick;
-    public int Grain;
-    public int Wool;
-    public int Ore;
-
-    public int GetType(Type type)
+    public readonly int GetType(Type type)
     {
         return type switch
         {
@@ -137,9 +132,6 @@ class Resources : ICloneable
 
     public void Add(Resources resources)
     {
-        if (resources == null)
-            return;
-
         Lumber = MathHelper.Max(Lumber + resources.Lumber, 0);
         Brick = MathHelper.Max(Brick + resources.Brick, 0);
         Grain = MathHelper.Max(Grain + resources.Grain, 0);
@@ -160,7 +152,7 @@ class Resources : ICloneable
         return true;
     }
 
-    public int GetTotal()
+    public readonly int GetTotal()
     {
         return Lumber + Brick + Grain + Wool + Ore;
     }
@@ -284,7 +276,7 @@ class Resources : ICloneable
         };
     }
 
-    /*public override string ToString()
+    public override string ToString()
     {
         string asString = "[";
 
@@ -305,7 +297,7 @@ class Resources : ICloneable
         
 
         return asString.TrimEnd(',') + "]";
-    }*/
+    }
 
     public enum Type
     {

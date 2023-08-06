@@ -10,47 +10,55 @@ using ImGuiNET;
 
 namespace Catan;
 
+/// <summary>
+/// Base game class
+/// </summary>
 class Catan
 {
     //  Maximum board size as a percentage of an axis
     private static readonly float BOARD_SCREEN_FILL_PC = .9f;
 
+    /// <summary>
+    /// Construct using screen dimensions to determine asset scaling
+    /// </summary>
+    /// <param name="font">font used for text elements</param>
     public Catan(int screenWidth, int screenHeight, SpriteFont font)
     {
         m_Font = font;
 
-        float scaleY = (screenHeight * BOARD_SCREEN_FILL_PC) / 8f;
-        float scaleX = (screenWidth * BOARD_SCREEN_FILL_PC) / 10f;
+        float scaleY = screenHeight * BOARD_SCREEN_FILL_PC / 8f;
+        float scaleX = screenWidth * BOARD_SCREEN_FILL_PC / 10f;
 
         // Use scale for smallest axis to prevent overspill
         m_Scale = MathHelper.Min(scaleX, scaleY);
+        m_Offset = new Vector2(screenWidth, screenHeight) / 2f;
 
         Board = new Board();
         Board.Init();
-        
+
         for (int i = 0; i < 4; i++)
             Players[i] = new PlayerAgent(this, i);
 
         Players[0].SetState(Player.TurnState.PreGame1);
         m_State = GameState.Setup;
 
-        ResourceBank = new Resources(19, 19, 19, 19, 19);
-        m_Offset = new Vector2(screenWidth, screenHeight) / 2f;
-
         GenerateBoard();
         CreateDevCardDeck();
     }
 
+    /// <summary>
+    /// Create and shuffle development cards
+    /// </summary>
     private void CreateDevCardDeck()
     {
         DevelopmentCard[] tempArray = new DevelopmentCard[25];
 
         for (int i = 0; i < 14; i++)
             tempArray[i] = new Knight();
-        
+
         for (int i = 14; i < 19; i++)
             tempArray[i] = new VictoryPoint();
-        
+
         tempArray[19] = new Monopoly();
         tempArray[20] = new Monopoly();
         tempArray[21] = new YearOfPlenty();
@@ -63,8 +71,6 @@ class Catan
         rand.ShuffleArray(tempArray, 2);
         DevelopmentCards = new Queue<DevelopmentCard>(tempArray);
     }
-
-    
 
     /// <summary>
     /// Arrange resources and tokens
@@ -108,6 +114,10 @@ class Catan
         }
     }
 
+    /// <summary>
+    /// DEPRECATED
+    /// Initialize board using standard setup
+    /// </summary>
     private void QuickStart()
     {
         Board.Nodes[10].OwnerID = 0;
@@ -145,23 +155,23 @@ class Catan
 
         Trade trade = new(this)
         {
-            From = null,
+            FromID = -1,
 
             Giving = new Resources(2, 0, 1, 0, 0),
-            To = Players[0].GetHand()
+            ToID = 0
         };
         trade.TryExecute();
 
         trade.Giving = new Resources(0, 0, 2, 0, 1);
-        trade.To = Players[1].GetHand();
+        trade.ToID = 1;
         trade.TryExecute();
 
         trade.Giving = new Resources(1, 1, 1, 0, 0);
-        trade.To = Players[2].GetHand();
+        trade.ToID = 2;
         trade.TryExecute();
 
         trade.Giving = new Resources(1, 1, 0, 0, 1);
-        trade.To = Players[3].GetHand();
+        trade.ToID = 3;
         trade.TryExecute();
 
         Players[m_CurrentPlayer].SetState(Player.TurnState.End);
@@ -182,7 +192,7 @@ class Catan
     {
         if (Board.RobberPos != -1)
             Board.Tiles[Board.RobberPos].Robber = false;
-        
+
         Board.RobberPos = target.ID;
         target.Robber = true;
     }
@@ -191,7 +201,12 @@ class Catan
     {
         Random rand = new();
 
-        m_LastRoll = rand.Next(6) + 2 + rand.Next(6);
+        int roll1 = rand.Next(6) + 1;
+        int roll2 = rand.Next(6) + 1;
+
+        Event.Log.Singleton.PostEvent(new Event.DiceRollEvent(m_CurrentPlayer, roll1, roll2));
+
+        m_LastRoll = roll1 + roll2;
 
         if (m_LastRoll == 7)
         {
@@ -218,15 +233,15 @@ class Catan
         Resources requested = new();
         foreach (Trade trade in trades)
             requested += trade.Giving;
-        
+
         Resources mask = new(1, 1, 1, 1, 1);
         for (Resources.Type i = 0; (int)i < 5; i++)
-            if (ResourceBank.GetType(i) < requested.GetType(i))
+            if (Board.ResourceBank.GetType(i) < requested.GetType(i))
                 mask.SetType(i, 0);
-        
+
         for (int i = 0; i < trades.Count; i++)
         {
-            trades[i].From = ResourceBank;
+            trades[i].FromID = -1;
             trades[i].Giving = trades[i].Giving * mask;
 
             trades[i].TryExecute();
@@ -245,13 +260,13 @@ class Catan
         bool pressed = Mouse.GetState().LeftButton.HasFlag(ButtonState.Pressed);
         Vector2 mousePos = Mouse.GetState().Position.FlipY(Game1.WindowDimensions.Y);
         foreach (Node node in Board.Nodes)
-            if(node.TestCollision(mousePos, m_Offset, m_Scale))
+            if (node.TestCollision(mousePos, m_Offset, m_Scale))
             {
                 if (pressed)
                     Players[m_CurrentPlayer + m_TargetPlayerOffset].SelectNode(node);
                 return;
             }
-            
+
         foreach (Edge edge in Board.Edges)
             if (edge.TestCollision(mousePos, m_Offset, m_Scale))
             {
@@ -279,17 +294,17 @@ class Catan
         {
             if (Players[i].ArmySize > largestSize)
                 largestPlayer = Players[i];
-            
+
             if (Players[i].LargestArmy)
                 currentLargest = Players[i];
         }
 
         if (largestPlayer == null)
             return;
-        
+
         else if (currentLargest == largestPlayer)
             return;
-        
+
         else if (currentLargest == null)
             largestPlayer.LargestArmy = true;
 
@@ -304,58 +319,58 @@ class Catan
     {
         if (!Players[m_CurrentPlayer + m_TargetPlayerOffset].HasTurnEnded() || CheckVictory())
             return;
-        
+
         switch (m_State)
         {
-        case GameState.Main:
-            if (++m_CurrentPlayer > 3)
-                m_CurrentPlayer = 0;
-            CheckVictory();
-            break;
+            case GameState.Main:
+                if (++m_CurrentPlayer > 3)
+                    m_CurrentPlayer = 0;
+                CheckVictory();
+                break;
 
-        case GameState.Pregame1:
-            if (++m_CurrentPlayer > 3)
-            {
-                m_CurrentPlayer = 3;
-                m_State = GameState.Pregame2;
-            }
-            break;
-        
-        case GameState.Pregame2:
-            if(--m_CurrentPlayer < 0)
-            {
-                m_CurrentPlayer = 0;
-                m_State = GameState.Main;
-            }
-            break;
+            case GameState.Pregame1:
+                if (++m_CurrentPlayer > 3)
+                {
+                    m_CurrentPlayer = 3;
+                    m_State = GameState.Pregame2;
+                }
+                break;
 
-        case GameState.Robber:
-            if (m_TargetPlayerOffset == 0)
-            {
-                m_State = GameState.Main;
-                Players[m_CurrentPlayer].SetState(Player.TurnState.Robber);
-                return;
-            }
+            case GameState.Pregame2:
+                if (--m_CurrentPlayer < 0)
+                {
+                    m_CurrentPlayer = 0;
+                    m_State = GameState.Main;
+                }
+                break;
 
-            else if ((++m_TargetPlayerOffset) + m_CurrentPlayer > 3)
-                m_TargetPlayerOffset = 0 - m_CurrentPlayer;
-            
-            break;
+            case GameState.Robber:
+                if (m_TargetPlayerOffset == 0)
+                {
+                    m_State = GameState.Main;
+                    Players[m_CurrentPlayer].SetState(Player.TurnState.Robber);
+                    return;
+                }
 
-        case GameState.Trade:
-            if ((++m_TargetPlayerOffset) + m_CurrentPlayer > 3)
-                m_TargetPlayerOffset = 0 - m_CurrentPlayer;
+                else if ((++m_TargetPlayerOffset) + m_CurrentPlayer > 3)
+                    m_TargetPlayerOffset = 0 - m_CurrentPlayer;
 
-            if (m_TargetPlayerOffset == 0 || m_ActiveTrade.Complete)
-            {
-                m_State = GameState.Main;
-                m_TargetPlayerOffset = 0;
-                m_ActiveTrade = null;
-                return;
-            }
+                break;
 
-            Players[m_CurrentPlayer + m_TargetPlayerOffset].SetActiveTrade(m_ActiveTrade);
-            break;
+            case GameState.Trade:
+                if ((++m_TargetPlayerOffset) + m_CurrentPlayer > 3)
+                    m_TargetPlayerOffset = 0 - m_CurrentPlayer;
+
+                if (m_TargetPlayerOffset == 0 || m_ActiveTrade.Complete)
+                {
+                    m_State = GameState.Main;
+                    m_TargetPlayerOffset = 0;
+                    m_ActiveTrade = null;
+                    return;
+                }
+
+                Players[m_CurrentPlayer + m_TargetPlayerOffset].SetActiveTrade(m_ActiveTrade);
+                break;
         }
 
         Players[m_CurrentPlayer + m_TargetPlayerOffset].SetState((Player.TurnState)m_State);
@@ -367,6 +382,10 @@ class Catan
         {
             m_State = GameState.End;
             Players[m_CurrentPlayer].SetState(Player.TurnState.End);
+
+            Event.Log.Singleton.PostEvent(
+                new Event.Victory(m_CurrentPlayer));
+
             return true;
         }
 
@@ -377,7 +396,7 @@ class Catan
     {
         if (trade == null)
             return;
-        
+
         m_State = GameState.Trade;
         m_TargetPlayerOffset = 1;
 
@@ -393,7 +412,7 @@ class Catan
     {
         Trade trade = new(this)
         {
-            To = Players[m_CurrentPlayer].GetHand()
+            ToID = m_CurrentPlayer
         };
 
         Resources mask = new();
@@ -406,7 +425,7 @@ class Catan
 
             Resources targetHand = Players[i].GetHand();
             trade.Giving = targetHand * mask;
-            trade.From = targetHand;
+            trade.FromID = i;
             trade.TryExecute();
         }
     }
@@ -422,7 +441,7 @@ class Catan
         if (reCalc)
             foreach (Player player in Players)
                 player.FindLongestRoad();
-        
+
         Player current = Players[0];
         Player champ = null;
 
@@ -455,7 +474,7 @@ class Catan
 
         for (int i = 0; i < 19; i++)
             Board.Tiles[i].ShapeDraw(shapeBatcher, m_Offset, m_Scale);
-        
+
         for (int i = 0; i < 72; i++)
             Board.Edges[i].Draw(shapeBatcher, m_Offset, m_Scale);
 
@@ -467,7 +486,7 @@ class Catan
     {
         for (int i = 0; i < 19; i++)
             Board.Tiles[i].SpriteDraw(spriteBatch, m_Offset, m_Scale, m_Font, windowHeight, m_LastRoll);
-        
+
         for (int i = 0; i < 4; i++)
             Players[i].SpriteDraw(spriteBatch, m_Font, windowHeight);
     }
@@ -477,7 +496,7 @@ class Catan
         if (ImGui.CollapsingHeader("Resources"))
         {
             ImGui.Text("Bank");
-            ResourceBank.UIDraw(true);
+            Board.ResourceBank.UIDraw(true);
             ImGui.Separator();
         }
 
@@ -496,6 +515,11 @@ class Catan
 
                 ImGui.EndTabBar();
             }
+        }
+
+        if (ImGui.CollapsingHeader("Log"))
+        {
+            Event.Log.Singleton.DebugDrawUI();
         }
     }
 
@@ -528,6 +552,11 @@ class Catan
         }
     }
 
+    public ref Resources GetBank()
+    {
+        return ref Board.ResourceBank;
+    }
+
     public Board Board;
 
     private List<List<Tile>> m_DensityMap;
@@ -542,8 +571,6 @@ class Catan
     private readonly SpriteFont m_Font;
 
     private int m_LastRoll;
-
-    public Resources ResourceBank;
     public Queue<DevelopmentCard> DevelopmentCards;
 
     private Trade m_ActiveTrade;

@@ -40,6 +40,8 @@ class Board : ICloneable
         MapNodes();
         MapEdges();
         MapPorts();
+
+        ResourceBank = new Resources(19, 19, 19, 19, 19);
     }
 
     private void InitTiles()
@@ -312,4 +314,6 @@ class Board : ICloneable
     public Edge[] Edges = new Edge[72];
 
     public Port[] Ports = new Port[9];
+
+    public Resources ResourceBank;
 }

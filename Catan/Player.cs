@@ -36,16 +36,6 @@ class Player
     public virtual void StartGame()
     {}
 
-    public void GiveResource(Resources.Type resource, int num = 1)
-    {
-        m_Status.HeldResources.AddType(resource, num);
-    }
-
-    public Resources.Type StealResource()
-    {
-        return m_Status.HeldResources.Steal();
-    }
-
     public void StartTurn()
     {
         m_TurnState = TurnState.Start;
@@ -70,9 +60,9 @@ class Player
         m_CurrentTrade = trade;
     }
 
-    public Resources GetHand()
+    public ref Resources GetHand()
     {
-        return m_Status.HeldResources;
+        return ref m_Status.HeldResources;
     }
 
     public virtual void OnTradeComplete(Trade trade)
@@ -90,6 +80,9 @@ class Player
     protected void EndTurn()
     {
         FindLongestRoad();
+
+        Event.Log.Singleton.PostEvent(
+            new Event.EndTurn(m_Status.PlayerID));
 
         m_TurnState = TurnState.End;
         m_CurrentTrade = new Trade(GameBoard);
@@ -425,10 +418,10 @@ class Player
 
     private void OfferTradeUI()
     {
-        bool bank = m_CurrentTrade.To == null;
+        bool bank = m_CurrentTrade.ToID == -1;
 
         if (ImGui.Checkbox("Bank Trade", ref bank))
-            m_CurrentTrade.To = bank ? GameBoard.ResourceBank : null;
+            m_CurrentTrade.ToID = bank ? -1 : 0;
 
         if (bank)
         {
@@ -443,7 +436,7 @@ class Player
 
         if (ImGui.Button("Trade"))
         {
-            m_CurrentTrade.From = m_Status.HeldResources;
+            m_CurrentTrade.FromID = m_Status.PlayerID;
 
             if (bank)
             {
@@ -468,7 +461,7 @@ class Player
 
         if (ImGui.Button("Accept"))
         {
-            m_CurrentTrade.To = m_Status.HeldResources;
+            m_CurrentTrade.ToID = m_Status.PlayerID;
             m_CurrentTrade.TryExecute();
             EndTurn();
         }
@@ -486,8 +479,8 @@ class Player
 
         if (ImGui.Button("Discard") && m_CurrentTrade.Giving.GetTotal() == discardTarget)
         {
-            m_CurrentTrade.To = GameBoard.ResourceBank;
-            m_CurrentTrade.From = m_Status.HeldResources;
+            m_CurrentTrade.ToID = -1;
+            m_CurrentTrade.FromID = m_Status.PlayerID;
 
             if (m_CurrentTrade.TryExecute())
             {
@@ -522,13 +515,15 @@ class Player
             Node node = targetTile.GetNode(i);
             targetablePlayer |= node.OwnerID != -1 && node.OwnerID != m_Status.PlayerID;
         }
+
+        int targetPlayer = targetNode.OwnerID;
         
         if (targetablePlayer)
         {
             if (targetNode == null)
                 return false;
             
-            else if (targetNode.OwnerID == -1 || targetNode.OwnerID == m_Status.PlayerID)
+            else if (targetPlayer == -1 || targetPlayer == m_Status.PlayerID)
                 return false;
 
             bool adjacent = false;
@@ -538,9 +533,24 @@ class Player
             
             if (!adjacent)
                 return false;
-            
-            GiveResource(GameBoard.Players[targetNode.OwnerID].StealResource());
         }
+
+        Event.Log.Singleton.PostEvent(
+            new Event.Robber(m_Status.PlayerID, targetPlayer, targetTile.ID));
+
+        if (targetablePlayer)
+        {
+            Trade normalTrade = new(GameBoard, true)
+            {
+                FromID = targetPlayer,
+                ToID = m_Status.PlayerID
+            };
+            normalTrade.Giving.AddType(
+                GameBoard.Players[targetPlayer].GetHand().Steal(), 1);
+
+            normalTrade.TryExecute();
+        }
+
 
         GameBoard.MoveRobber(targetTile);
         return true;
@@ -565,8 +575,8 @@ class Player
 
         if (ImGui.Button("Take") && m_CurrentTrade.Giving.GetTotal() == 2)
         {
-            m_CurrentTrade.From = GameBoard.ResourceBank;
-            m_CurrentTrade.To = m_Status.HeldResources;
+            m_CurrentTrade.FromID = -1;
+            m_CurrentTrade.ToID = m_Status.PlayerID;
 
             if (m_CurrentTrade.TryExecute())
                 SetState(TurnState.Main);
@@ -603,8 +613,8 @@ class Player
         {
             Trade trade = new(GameBoard)
             {
-                From = m_Status.HeldResources,
-                To = GameBoard.ResourceBank,
+                FromID = m_Status.PlayerID,
+                ToID = -1,
                 Giving = SETTLEMENT_COST
             };
 
@@ -613,24 +623,33 @@ class Player
 
             if (purchased)
             {
+                // Recieve adjacent resources from pregame 2 state
                 if (freeResource)
                 {
-                    trade.Giving = new Resources();
+                    Trade startingTrade = new(GameBoard)
+                    {
+                        FromID = -1,
+                        ToID = m_Status.PlayerID
+                    };
 
                     for (int i = 0; i < 3; i++)
                     {
                         Tile tile = targetNode.GetTile(i);
 
                         if (tile != null)
-                            trade.Receiving.AddType(tile.Type, 1);
+                            startingTrade.Giving.AddType(tile.Type, 1);
                     }
                     
-                    trade.TryExecute();
+                    startingTrade.TryExecute();
                 }
 
                 targetNode.OwnerID = m_Status.PlayerID;
                 m_Status.UnbuiltSettlements--;
                 m_Status.VictoryPoints++;
+
+                Event.Log.Singleton.PostEvent(
+                    new Event.Settlement(m_Status.PlayerID, targetNode.ID));
+
                 UpdateExchange(targetNode.PortType);
                 GameBoard.CheckLongestRoad(true);
                 return true;
@@ -675,8 +694,8 @@ class Player
         {
             Trade trade = new(GameBoard)
             {
-                From = m_Status.HeldResources,
-                To = GameBoard.ResourceBank,
+                FromID = m_Status.PlayerID,
+                ToID = -1,
                 Giving = ROAD_COST
             };
 
@@ -687,8 +706,10 @@ class Player
             {
                 targetEdge.OwnerID = m_Status.PlayerID;
                 m_Status.UnbuiltRoads--;
-
                 NodeContainer.LinkNewEdge(targetEdge, ref m_ControlledNodes, ref m_OwnedEdges);
+
+                Event.Log.Singleton.PostEvent(
+                    new Event.Road(m_Status.PlayerID, targetEdge.ID));
 
                 FindLongestRoad();
                 GameBoard.CheckLongestRoad(false);
@@ -711,8 +732,8 @@ class Player
         {
             Trade trade = new(GameBoard)
             {
-                From = m_Status.HeldResources,
-                To = GameBoard.ResourceBank,
+                FromID = m_Status.PlayerID,
+                ToID = -1,
                 Giving = CITY_COST
             };
 
@@ -722,6 +743,10 @@ class Player
                 m_Status.UnbuiltSettlements++;
                 m_Status.UnbuiltCities--;
                 m_Status.VictoryPoints++;
+
+                Event.Log.Singleton.PostEvent(
+                    new Event.City(m_Status.PlayerID, target.ID));
+
                 return true;
             }
         }
@@ -739,14 +764,19 @@ class Player
 
         Trade trade = new(GameBoard)
         {
-            From = m_Status.HeldResources,
-            To = null,
+            FromID = m_Status.PlayerID,
+            ToID = -1,
             Giving = DEVELOPMENT_CARD_COST
         };
 
         if (trade.TryExecute())
         {
-            m_Status.DevelopmentCards.Add(GameBoard.DevelopmentCards.Dequeue());
+            DevelopmentCard drawn = GameBoard.DevelopmentCards.Dequeue();
+
+            Event.Log.Singleton.PostEvent(
+                new Event.DevCard(m_Status.PlayerID, drawn.Name));
+
+            m_Status.DevelopmentCards.Add(drawn);
             return true;
         }
 
@@ -993,8 +1023,8 @@ class Player
 
                 VictoryPoints = VictoryPoints,
 
-                HeldResources = (Resources)HeldResources.Clone(),
-                ExchangeRate = (Resources)ExchangeRate.Clone()
+                HeldResources = HeldResources,
+                ExchangeRate = ExchangeRate
             };
 
             return clone;
