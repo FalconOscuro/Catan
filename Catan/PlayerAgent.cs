@@ -163,10 +163,10 @@ class PlayerAgent : Player
         {
             m_RobberWeights[i] = 0f;
 
-            if (i == GameBoard.Board.RobberPos)
+            if (i == GameBoard.BoardState.RobberPos)
                 continue;
 
-            Tile tile = GameBoard.Board.Tiles[i];
+            Tile tile = GameBoard.BoardState.Tiles[i];
 
             float weight = GetTileWeight(m_ResourceRarity, m_Behaviour, TOTAL_WEIGHT, tile);
             float maxNodeWeight = 0f;
@@ -214,7 +214,7 @@ class PlayerAgent : Player
             if (m_RobberWeights[i] > maxWeight)
             {
                 maxWeight = m_RobberWeights[i];
-                targetTile = GameBoard.Board.Tiles[i];
+                targetTile = GameBoard.BoardState.Tiles[i];
                 targetNode = maxNode;
             }
         }
@@ -267,7 +267,7 @@ class PlayerAgent : Player
             for (int i = 0; i < 19; i++)
                 spriteBatch.DrawString(
                     font, String.Format("{0:0.00}", m_RobberWeights[i] * 10),
-                    GameBoard.Board.Tiles[i].Position.FlipY(windowHeight),
+                    GameBoard.BoardState.Tiles[i].Position.FlipY(windowHeight),
                     Color.Yellow
                 );
         }
@@ -298,7 +298,7 @@ class PlayerAgent : Player
 
                 spriteBatch.DrawString(
                     font, String.Format("{0:0.00}", weight * 10), 
-                    GameBoard.Board.Nodes[i].Position.FlipY(windowHeight),
+                    GameBoard.BoardState.Nodes[i].Position.FlipY(windowHeight),
                     Color.Yellow
                     );
             }
@@ -380,7 +380,7 @@ class PlayerAgent : Player
     private void GetNodeWeights()
     {
         for (int i = 0; i < 54; i++)
-            m_NodeWeights[i] = GetNodeWeight(m_ResourceRarity, m_Behaviour, m_ResourceWeights, GameBoard.Board.Nodes[i]);
+            m_NodeWeights[i] = GetNodeWeight(m_ResourceRarity, m_Behaviour, m_ResourceWeights, GameBoard.BoardState.Nodes[i]);
 
         if (!m_Behaviour.CheckNeighbours)
             return;
@@ -392,7 +392,7 @@ class PlayerAgent : Player
 
         for (int i = 0; i < 54; i++)
         {
-            Node rootNode = GameBoard.Board.Nodes[i];
+            Node rootNode = GameBoard.BoardState.Nodes[i];
             m_NeighbourWeights[i] = 0f;
 
             for (int j = 0; j < 3; j++)
@@ -611,7 +611,7 @@ class PlayerAgent : Player
         if (value < step - (step / 2))
             return;
 
-        Node node = GameBoard.Board.Nodes[index];
+        Node node = GameBoard.BoardState.Nodes[index];
         for (int i = 0; i < 3; i++)
         {
             Node neighbour = node.GetNeighbourNode(i);
@@ -626,7 +626,7 @@ class PlayerAgent : Player
     {
         m_ResourceRarity = new Resources();
 
-        foreach(Tile tile in GameBoard.Board.Tiles)
+        foreach(Tile tile in GameBoard.BoardState.Tiles)
             m_ResourceRarity.AddType(tile.Type, tile.GetProbability());
     }
 
@@ -655,7 +655,7 @@ class PlayerAgent : Player
         if (m_NodeWeights[index] == 0f)
             return null;
 
-        return GameBoard.Board.Nodes[index];
+        return GameBoard.BoardState.Nodes[index];
     }
 
     private Node GetHighestValueCity()

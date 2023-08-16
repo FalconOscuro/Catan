@@ -1047,6 +1047,7 @@ class Player
         public Resources ExchangeRate;
     }
     protected PlayerStatus m_Status;
+    public int PlayerID { get { return m_Status.PlayerID; } }
 
     public PlayerStatus GetStatus()
     {

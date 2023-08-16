@@ -9,13 +9,15 @@ class Board : ICloneable
     public Board()
     {
         RobberPos = 0;
+        ResourceBank = new Resources();
     }
 
     public object Clone()
     {
         Board clone = new()
         {
-            RobberPos = RobberPos
+            RobberPos = RobberPos,
+            ResourceBank = ResourceBank
         };
 
         for (int i = 0; i < 19; i++)

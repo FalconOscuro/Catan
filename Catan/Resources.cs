@@ -352,6 +352,39 @@ struct ResourceWeights
         };
     }
 
+    public void AddResourceType(Resources.Type type, float n)
+    {
+        switch (type)
+        {
+        case Resources.Type.Lumber:
+            Lumber += n;
+            break;
+        
+        case Resources.Type.Brick:
+            Brick += n;
+            break;
+
+        case Resources.Type.Grain:
+            Grain += n;
+            break;
+
+        case Resources.Type.Wool:
+            Wool += n;
+            break;
+        
+        case Resources.Type.Ore:
+            Ore += n;
+            break;
+        }
+    }
+
+    public readonly float Sum()
+    {
+        return Lumber + Brick + Grain + Wool + Ore;
+    }
+
+    public static readonly ResourceWeights Zero = new(0, 0, 0, 0, 0);
+
     public float Lumber;
     public float Brick;
     public float Grain;
