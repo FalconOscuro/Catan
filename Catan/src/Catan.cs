@@ -1,31 +1,40 @@
-﻿using Microsoft.Xna.Framework;
+﻿using ImGuiNET;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using MonoGame.ImGuiNet;
 
 namespace Catan;
 
+/// <summary>
+/// Core game logic
+/// </summary>
 public class Catan : Game
 {
-    private GraphicsDeviceManager _graphics;
-    private SpriteBatch _spriteBatch;
+    private GraphicsDeviceManager m_Graphics;
+    private SpriteBatch m_SpriteBatch;
+
+    private ImGuiRenderer m_GuiRenderer;
 
     public Catan()
     {
-        _graphics = new GraphicsDeviceManager(this);
+        m_Graphics = new GraphicsDeviceManager(this);
         Content.RootDirectory = "Content";
         IsMouseVisible = true;
     }
 
     protected override void Initialize()
     {
-        // TODO: Add your initialization logic here
+        m_GuiRenderer = new ImGuiRenderer(this);
 
         base.Initialize();
     }
 
     protected override void LoadContent()
     {
-        _spriteBatch = new SpriteBatch(GraphicsDevice);
+        m_SpriteBatch = new SpriteBatch(GraphicsDevice);
+
+        m_GuiRenderer.RebuildFontAtlas();
 
         // TODO: use this.Content to load your game content here
     }
@@ -47,5 +56,20 @@ public class Catan : Game
         // TODO: Add your drawing code here
 
         base.Draw(gameTime);
+
+        ImDraw(gameTime);
+    }
+
+    /// <summary>
+    /// Draw ImGUI window
+    /// </summary>
+    protected void ImDraw(GameTime gameTime)
+    {
+        m_GuiRenderer.BeginLayout(gameTime);
+
+        ImGui.Begin("Debug tools");
+        ImGui.End();
+
+        m_GuiRenderer.EndLayout();
     }
 }
