@@ -14,7 +14,7 @@ public class Board
 
     private readonly Game m_Game;
 
-    private static readonly float SCREEN_FILL_PERCENT = 0.8f;
+    private static readonly float SCREEN_FILL_PERCENT = 0.9f;
 
     public static readonly Resources.Collection RESOURCE_TILE_COUNT = new(){
         Brick = 3,
@@ -71,8 +71,23 @@ public class Board
         Resources.Type[] resourceSpread = new Resources.Type[19];
         Tile.DEFAULT_RESOURCE_SPREAD.CopyTo(resourceSpread, 0);
 
+        int[] valueSpread = new int[18];
+        Tile.DEFAULT_NUMBER_SPREAD.CopyTo(valueSpread, 0);
+        bool desertFound = false;
+
         for (int i = 0; i < 19; i++)
+        {
             m_Tiles[i].Resource = resourceSpread[i];
+
+            if (m_Tiles[i].Resource == Resources.Type.Empty)
+            {
+                desertFound = true;
+                m_Tiles[i].Robber = true;
+            }
+            
+            else
+                m_Tiles[i].Value = valueSpread[i - (desertFound ? 1 : 0)];
+        }
     }
 
     public void Draw()

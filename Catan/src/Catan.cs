@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.ImGuiNet;
+using System;
 
 namespace Catan;
 
@@ -12,12 +13,18 @@ namespace Catan;
 public class Catan : Game
 {
     private GraphicsDeviceManager m_Graphics;
-    private SpriteBatch m_SpriteBatch;
+    public static SpriteBatch s_SpriteBatch {get; private set;}
     public static ShapeBatcher s_ShapeBatcher {get; private set;}
-
     private ImGuiRenderer m_GuiRenderer;
 
+    private static readonly int HIST_LEN = 150;
+    private readonly float[] m_FrameTimes = new float[HIST_LEN];
+    private int m_FrameIndex;
+    private float m_TimeTotal;
+
     private Board m_Board;
+
+    public static SpriteFont s_Font {get; private set;}
 
     public Catan()
     {
@@ -35,10 +42,12 @@ public class Catan : Game
 
     protected override void LoadContent()
     {
-        m_SpriteBatch = new SpriteBatch(GraphicsDevice);
+        s_SpriteBatch = new SpriteBatch(GraphicsDevice);
 
         m_GuiRenderer.RebuildFontAtlas();
         s_ShapeBatcher = new(this);
+
+        s_Font = Content.Load<SpriteFont>("Default");
 
         m_Board = new(this);
     }
@@ -57,12 +66,13 @@ public class Catan : Game
     {
         GraphicsDevice.Clear(Color.CornflowerBlue);
 
+        s_SpriteBatch.Begin();
         s_ShapeBatcher.Begin();
-        m_Board.Draw();
-        s_ShapeBatcher.End();
 
-        m_SpriteBatch.Begin();
-        m_SpriteBatch.End();
+        m_Board.Draw();
+
+        s_ShapeBatcher.End();
+        s_SpriteBatch.End();
 
         base.Draw(gameTime);
 
@@ -76,7 +86,39 @@ public class Catan : Game
     {
         m_GuiRenderer.BeginLayout(gameTime);
 
-        ImGui.Begin("Debug tools");
+        ImGui.Begin("Debug Tools");
+
+        if (ImGui.CollapsingHeader("Performance"))
+        {
+            float frameTime = gameTime.ElapsedGameTime.Milliseconds;
+            float frameRate = 1000f / frameTime;
+
+            m_TimeTotal += frameTime - m_FrameTimes[m_FrameIndex];
+            m_FrameTimes[m_FrameIndex++] = frameTime;
+
+            ImGui.PlotLines("Frame Times", ref m_FrameTimes[0], HIST_LEN, m_FrameIndex);
+
+            if (m_FrameIndex >= HIST_LEN)
+                m_FrameIndex = 0;
+
+            float frameAvg = m_TimeTotal / HIST_LEN;
+            float fpsAvg = 1000f / frameAvg;
+
+            ImGui.Text(string.Format("FrameTime: {0} ms", frameTime));
+            ImGui.Text(string.Format("FrameRate: {0} fps", frameRate));
+
+            ImGui.Separator();
+
+            ImGui.Text(string.Format("FrameTimeAvg: {0} ms", frameAvg));
+            ImGui.Text(string.Format("FrameRateAvg: {0} fps", fpsAvg));
+
+            ImGui.Separator();
+
+            bool fixedTimeStep = IsFixedTimeStep;
+            if (ImGui.Checkbox("Use Fixed Timestep", ref fixedTimeStep))
+                IsFixedTimeStep = fixedTimeStep;
+        }
+
         ImGui.End();
 
         m_GuiRenderer.EndLayout();
