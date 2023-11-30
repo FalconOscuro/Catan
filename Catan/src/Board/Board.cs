@@ -16,6 +16,14 @@ public class Board
 
     private static readonly float SCREEN_FILL_PERCENT = 0.8f;
 
+    public static readonly Resources.Collection RESOURCE_TILE_COUNT = new(){
+        Brick = 3,
+        Grain = 4,
+        Lumber = 4,
+        Ore = 3,
+        Wool = 4
+    };
+
     public Board(Game game)
     {
         m_Game = game;
@@ -23,24 +31,35 @@ public class Board
         InitTiles();
     }
 
+    /// <summary>
+    /// Position and assign types to all tiles
+    /// </summary>
     private void InitTiles()
     {
         int tileCount = 0;
-        m_Tiles[tileCount++].Position = Vector2.Zero;
+
+        // Position central tile
+        m_Tiles[tileCount++].LocalPosition = Vector2.Zero;
         float deltaAngle = MathF.PI / 3;
 
+        // Depth = distance from central tile
         for (int depth = 1; depth < 3; depth++)
         {
+            // Angle from centre to current tile
             float angle = deltaAngle / 2;
+
+            // Angle from current tile to next tile on same side
             float sepAngle = angle + deltaAngle * 2;
+
             for (int side = 0; side < 6; side++)
             {
                 Vector2 pos = new Vector2(MathF.Sin(angle), MathF.Cos(angle)) * depth;
                 Vector2 separation = new(MathF.Sin(sepAngle), MathF.Cos(sepAngle));
 
+                // tiles per side = depth
                 for (int tile = 0; tile < depth; tile++)
                 {
-                    m_Tiles[tileCount++].Position = pos;
+                    m_Tiles[tileCount++].LocalPosition = pos;
                     pos += separation;
                 }
 
@@ -48,6 +67,12 @@ public class Board
                 sepAngle += deltaAngle;
             }
         }
+
+        Resources.Type[] resourceSpread = new Resources.Type[19];
+        Tile.DEFAULT_RESOURCE_SPREAD.CopyTo(resourceSpread, 0);
+
+        for (int i = 0; i < 19; i++)
+            m_Tiles[i].Resource = resourceSpread[i];
     }
 
     public void Draw()
