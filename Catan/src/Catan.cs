@@ -13,8 +13,11 @@ public class Catan : Game
 {
     private GraphicsDeviceManager m_Graphics;
     private SpriteBatch m_SpriteBatch;
+    public static ShapeBatcher s_ShapeBatcher {get; private set;}
 
     private ImGuiRenderer m_GuiRenderer;
+
+    private Board m_Board;
 
     public Catan()
     {
@@ -35,8 +38,9 @@ public class Catan : Game
         m_SpriteBatch = new SpriteBatch(GraphicsDevice);
 
         m_GuiRenderer.RebuildFontAtlas();
+        s_ShapeBatcher = new(this);
 
-        // TODO: use this.Content to load your game content here
+        m_Board = new(this);
     }
 
     protected override void Update(GameTime gameTime)
@@ -53,7 +57,12 @@ public class Catan : Game
     {
         GraphicsDevice.Clear(Color.CornflowerBlue);
 
-        // TODO: Add your drawing code here
+        s_ShapeBatcher.Begin();
+        m_Board.Draw();
+        s_ShapeBatcher.End();
+
+        m_SpriteBatch.Begin();
+        m_SpriteBatch.End();
 
         base.Draw(gameTime);
 
