@@ -1,4 +1,5 @@
-﻿using ImGuiNET;
+﻿using Grid.Hexagonal;
+using ImGuiNET;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -23,6 +24,7 @@ public class Catan : Game
     private float m_TimeTotal;
 
     private Board m_Board;
+    private HexGrid<Hex> m_HexGrid;
 
     public static SpriteFont s_Font {get; private set;}
 
@@ -49,7 +51,12 @@ public class Catan : Game
 
         s_Font = Content.Load<SpriteFont>("Default");
 
-        m_Board = new(this);
+        //m_Board = new(this);
+        m_HexGrid = new(s_ShapeBatcher, 50f);
+
+        for (int i = 0; i < 4; i++)
+            for (int j = 0; j < 4; j++)
+                m_HexGrid[i, j] = new();
     }
 
     protected override void Update(GameTime gameTime)
@@ -69,7 +76,8 @@ public class Catan : Game
         s_SpriteBatch.Begin();
         s_ShapeBatcher.Begin();
 
-        m_Board.Draw();
+        //m_Board.Draw();
+        m_HexGrid.Draw();
 
         s_ShapeBatcher.End();
         s_SpriteBatch.End();

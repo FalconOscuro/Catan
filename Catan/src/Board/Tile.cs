@@ -21,6 +21,8 @@ struct Tile
 
     public bool Robber;
 
+    public int ID;
+
     public readonly void Draw(Vector2 offset, float scale)
     {
         Vector2 globalPosition = (LocalPosition * scale) + offset;
@@ -28,12 +30,18 @@ struct Tile
         float hexScale = scale * HEX_SCALE;
         float centerScale = hexScale * CENTER_SCALE;
 
+        // Draw tile hex
         Catan.s_ShapeBatcher.DrawFilledCircle(globalPosition, hexScale, 6, Resources.GetColour(Resource));
-        Catan.s_ShapeBatcher.DrawFilledCircle(globalPosition, centerScale, 10, Robber ? Color.Black : Color.Orange);
+
+        // Draw circle in centre for text visibility
+        // Black if robber, defaults to desert color for blending
+        Catan.s_ShapeBatcher.DrawFilledCircle(globalPosition, centerScale, 10, Robber ? Color.Black : Resources.GetColour(Type.Empty));
 
         if (Resource != Type.Empty || Robber)
         {
-            string valueString = Value.ToString();
+            string valueString = ID.ToString();
+
+            // Flip local Y value then recalculate position as sprites use inverse Y position
             Vector2 textPos = (new Vector2(LocalPosition.X, -LocalPosition.Y) * scale) + offset - (Catan.s_Font.MeasureString(valueString) / 2);
 
             Catan.s_SpriteBatch.DrawString(Catan.s_Font, valueString, textPos, Color.Black);

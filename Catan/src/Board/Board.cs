@@ -11,6 +11,7 @@ namespace Catan;
 public class Board
 {
     private readonly Tile[] m_Tiles = new Tile[19];
+    private readonly Node[] m_Nodes = new Node[54];
 
     private readonly Game m_Game;
 
@@ -29,6 +30,7 @@ public class Board
         m_Game = game;
 
         InitTiles();
+        InitNodes();
     }
 
     /// <summary>
@@ -78,7 +80,9 @@ public class Board
         for (int i = 0; i < 19; i++)
         {
             m_Tiles[i].Resource = resourceSpread[i];
+            m_Tiles[i].ID = i;
 
+            // Account for desert tile starting with robber and having no value
             if (m_Tiles[i].Resource == Resources.Type.Empty)
             {
                 desertFound = true;
@@ -87,6 +91,16 @@ public class Board
             
             else
                 m_Tiles[i].Value = valueSpread[i - (desertFound ? 1 : 0)];
+        }
+    }
+
+    private void InitNodes()
+    {
+        int nodeCount = 0;
+
+        for (int depth = 1; depth < 2; depth++)
+        {
+            
         }
     }
 
@@ -103,5 +117,8 @@ public class Board
 
         for (int i = 0; i < 19; i++)
             m_Tiles[i].Draw(offset, scale);
+        
+        for (int i = 0; i < 54; i++)
+            m_Nodes[i].Draw(offset, scale);
     }
 }

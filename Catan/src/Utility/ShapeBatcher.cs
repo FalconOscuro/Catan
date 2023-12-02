@@ -255,4 +255,23 @@ public class ShapeBatcher
         DrawLine(lineEnd, arrowHead1, thickness, colour);
         DrawLine(lineEnd, arrowHead2, thickness, colour);
     }
+
+    public void DrawPrimitives(VertexPositionColor[] vertices, int[] indices)
+    {
+        EnsureStarted();
+
+        int numVertices = vertices.Length;
+        int numIndices = indices.Length;
+        EnsureSpace(numVertices, numIndices);
+
+        // Copy indices
+        Array.Copy(vertices, 0, m_Vertices, m_VertexCount, numVertices);
+
+        for (int i = 0; i < numIndices; i++)
+            m_Indices[m_IndexCount++] = indices[i] + m_VertexCount;
+
+        m_VertexCount += numVertices;
+
+        m_ShapeCount++;
+    }
 }
