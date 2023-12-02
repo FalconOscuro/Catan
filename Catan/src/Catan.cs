@@ -28,6 +28,8 @@ public class Catan : Game
 
     public static SpriteFont s_Font {get; private set;}
 
+    private (int, int)? m_LastKey = null;
+
     public Catan()
     {
         m_Graphics = new GraphicsDeviceManager(this);
@@ -75,6 +77,24 @@ public class Catan : Game
 
     protected override void Update(GameTime gameTime)
     {
+        Vector2 mousePos = Mouse.GetState().Position.ToVector2().FlipY(GraphicsDevice.Viewport.Height);
+
+        if (m_HexGrid.FindHex(mousePos, out int x, out int y))
+        {
+            if (m_LastKey.HasValue)
+                if (m_LastKey.Value != (x, y))
+                    m_HexGrid[m_LastKey.Value.Item1, m_LastKey.Value.Item2].Colour = Color.Black;
+
+            m_HexGrid[x, y].Colour = Color.Red;
+            m_LastKey = (x, y);
+        }
+
+        else if (m_LastKey.HasValue)
+        {
+            m_HexGrid[m_LastKey.Value.Item1, m_LastKey.Value.Item2].Colour = Color.Black;
+            m_LastKey = null;
+        }
+
         if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
             Exit();
 
@@ -140,6 +160,12 @@ public class Catan : Game
             if (ImGui.Checkbox("Use Fixed Timestep", ref fixedTimeStep))
                 IsFixedTimeStep = fixedTimeStep;
         }
+
+        string keyText = "Current Hex: ";
+        if (m_LastKey.HasValue)
+            keyText += string.Format("{0} {1}", m_LastKey.Value.Item1, m_LastKey.Value.Item2);
+        
+        ImGui.Text(keyText);
 
         ImGui.End();
 

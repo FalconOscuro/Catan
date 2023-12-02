@@ -60,12 +60,16 @@ static class Utility
         return rand.NextSingle() < fraction;
     }
 
-    public static Vector3 PreComputedRotate(this Vector2 vector, float sinT, float cosT)
+    public static Vector2 PreComputedRotate(this Vector2 vector, float sinT, float cosT)
     {
-        return new Vector3(
+        return new Vector2(
             vector.X * cosT - vector.Y * sinT,
-            vector.X * sinT + vector.Y * cosT,
-            0f
+            vector.X * sinT + vector.Y * cosT
         );
+    }
+
+    public static Vector3 ToVec3(this Vector2 vector)
+    {
+        return new(vector.X, vector.Y, 0f);
     }
 }
