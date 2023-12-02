@@ -11,14 +11,14 @@ internal class Utility
     /// <summary>
     /// Local vertex positions for a centered hexagon where height = 1
     /// </summary>
-    public static readonly ReadOnlyCollection<Vector3> UNSCALED_HEX_VERTICES = new(new Vector3[]{
-        new(0f, 0f, 0f),
-        new(-INVERSE_SQRT_3, 0f, 0f),
-        new(-HALF_INVERSE_SQRT_3, 0.5f, 0f),
-        new(HALF_INVERSE_SQRT_3, 0.5f, 0f),
-        new(INVERSE_SQRT_3, 0f, 0f),
-        new(HALF_INVERSE_SQRT_3, -0.5f, 0f),
-        new(-HALF_INVERSE_SQRT_3, -0.5f, 0f),
+    public static readonly ReadOnlyCollection<Vector2> UNSCALED_HEX_VERTICES = new(new Vector2[]{
+        new(0f, 0f),
+        new(-INVERSE_SQRT_3, 0f),
+        new(-HALF_INVERSE_SQRT_3, 0.5f),
+        new(HALF_INVERSE_SQRT_3, 0.5f),
+        new(INVERSE_SQRT_3, 0f),
+        new(HALF_INVERSE_SQRT_3, -0.5f),
+        new(-HALF_INVERSE_SQRT_3, -0.5f),
     });
 
     public static readonly ReadOnlyCollection<int> HEX_INDICES = new(new int[]{

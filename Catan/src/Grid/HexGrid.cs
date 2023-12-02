@@ -14,6 +14,7 @@ public class HexGrid<T> where T : Hex
 {
     /// <summary>
     /// Backing field for height property
+    /// Do not modify directly, use the height setter
     /// </summary>
     private float m_Height;
 
@@ -34,6 +35,39 @@ public class HexGrid<T> where T : Hex
     /// </summary>
     public float Width { get; private set;}
 
+    public Vector2 Offset { get; set; }
+
+    /// <summary>
+    /// Backing field for rotation property
+    /// Do not modify directly use Rotation setter
+    /// </summary>
+    private float m_Rotation;
+
+    /// <summary>
+    /// Pre-computed cosine of rotation
+    /// controlled via setter, do not modify
+    /// </summary>
+    private float m_CosRot;
+
+    /// <summary>
+    /// Pre-computer sine of rotation
+    /// controlled via setter, do not modify
+    /// </summary>
+    private float m_SinRot;
+
+    /// <summary>
+    /// Grid rotation in radians
+    /// </summary>
+    public float Rotation { 
+        get { return m_Rotation; }
+        set {
+            m_Rotation = value;
+
+            m_CosRot = MathF.Cos(m_Rotation);
+            m_SinRot = MathF.Sin(m_Rotation);
+        } 
+    }
+
     /// <summary>
     /// Hexagonal tiles keyed by their position
     /// </summary>
@@ -43,11 +77,12 @@ public class HexGrid<T> where T : Hex
 
     private static readonly float DRAWN_HEX_SCALE = 0.9f;
 
-    public HexGrid(ShapeBatcher shapeBatcher, float height)
+    public HexGrid(ShapeBatcher shapeBatcher)
     {
-        Height = height;
         m_Tiles = new Dictionary<(int, int), T>();
         m_ShapeBatcher = shapeBatcher;
+
+        Rotation = 0f;
     }
 
     public T this[int x, int y]
@@ -79,17 +114,14 @@ public class HexGrid<T> where T : Hex
 
         T hex = hexKeyPair.Value;
 
-        Vector3 pos = new()
-        {
-            Y = y * Height + (x % 2 == 1 ? Height * 0.5f : 0f),
-            X = x * Width * 0.75f,
-            Z = 0f
-        };
+        Vector3 pos = new Vector2(x * Width * 0.75f, (y * Height) + (Math.Abs(x % 2) == 1 ? Height * 0.5f : 0f)).PreComputedRotate(m_SinRot, m_CosRot);
+        pos.X += Offset.X;
+        pos.Y += Offset.Y;
 
         float hexScale = Height * DRAWN_HEX_SCALE;
 
         for (int i = 0; i < 7; i++)
-            vertices[i + copyIndex] = new VertexPositionColor((UNSCALED_HEX_VERTICES[i] * hexScale) + pos, hex.Colour);
+            vertices[i + copyIndex] = new VertexPositionColor((UNSCALED_HEX_VERTICES[i].PreComputedRotate(m_SinRot, m_CosRot) * hexScale) + pos, hex.Colour);
     }
 
     private static void GetHexIndices(int[] indices, int index)

@@ -51,12 +51,26 @@ public class Catan : Game
 
         s_Font = Content.Load<SpriteFont>("Default");
 
-        //m_Board = new(this);
-        m_HexGrid = new(s_ShapeBatcher, 50f);
+        Vector2 viewSize = new(Window.ClientBounds.Width, Window.ClientBounds.Height);
+        Vector2 offset = viewSize / 2;
+        float height = viewSize.Y / 6;
 
-        for (int i = 0; i < 4; i++)
-            for (int j = 0; j < 4; j++)
-                m_HexGrid[i, j] = new();
+        //m_Board = new(this);
+        m_HexGrid = new(s_ShapeBatcher)
+        {
+            Height = height,
+            Offset = offset,
+            Rotation = MathF.PI / 2
+        };
+
+        for (int row = -2; row < 3; row++)
+        {
+            int colCount = 5 - Math.Abs(row);
+            int colStart = -colCount / 2;
+
+            for (int col = colStart; col < colStart + colCount; col++)
+                m_HexGrid[row, col] = new();
+        }
     }
 
     protected override void Update(GameTime gameTime)

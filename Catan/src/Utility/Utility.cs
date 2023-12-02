@@ -59,4 +59,13 @@ static class Utility
     {
         return rand.NextSingle() < fraction;
     }
+
+    public static Vector3 PreComputedRotate(this Vector2 vector, float sinT, float cosT)
+    {
+        return new Vector3(
+            vector.X * cosT - vector.Y * sinT,
+            vector.X * sinT + vector.Y * cosT,
+            0f
+        );
+    }
 }
