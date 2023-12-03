@@ -18,17 +18,17 @@ public class Catan : Game
     public static ShapeBatcher s_ShapeBatcher {get; private set;}
     private ImGuiRenderer m_GuiRenderer;
 
-    private static readonly int HIST_LEN = 150;
+    private static readonly int HIST_LEN = 500;
     private readonly float[] m_FrameTimes = new float[HIST_LEN];
     private int m_FrameIndex;
     private float m_TimeTotal;
 
-    private Board m_Board;
-    private HexGrid<Hex> m_HexGrid;
+    //private Board m_Board;
+    private HexGrid m_HexGrid;
 
     public static SpriteFont s_Font {get; private set;}
 
-    private (int, int)? m_LastKey = null;
+    private Hex m_LastHex = null;
 
     public Catan()
     {
@@ -57,21 +57,27 @@ public class Catan : Game
         Vector2 offset = viewSize / 2;
         float height = viewSize.Y / 6;
 
+        HexGrid.Builder builder = new(s_ShapeBatcher);
+
         //m_Board = new(this);
-        m_HexGrid = new(s_ShapeBatcher)
-        {
-            Height = height,
-            Offset = offset,
-            Rotation = MathF.PI / 2
-        };
+        m_HexGrid = builder.BuildHexGrid();
 
-        for (int row = -2; row < 3; row++)
-        {
-            int colCount = 5 - Math.Abs(row);
-            int colStart = -colCount / 2;
+        m_HexGrid.Height = height;
+        m_HexGrid.Offset = offset;
+        m_HexGrid.Rotation = 0;
 
-            for (int col = colStart; col < colStart + colCount; col++)
-                m_HexGrid[row, col] = new();
+        int size = 5;
+
+        int qStart = - size / 2;
+        int qEnd = qStart + size;
+
+        for (Axial pos = new(){q = qStart}; pos.q < qEnd; pos.q++)
+        {
+            int rStart = Math.Max(qStart, qStart - pos.q);
+            int rEnd = rStart + size - Math.Abs(pos.q);
+
+            for (pos.r = rStart; pos.r < rEnd; pos.r++)
+                m_HexGrid.CreateHex(pos);
         }
     }
 
@@ -79,20 +85,28 @@ public class Catan : Game
     {
         Vector2 mousePos = Mouse.GetState().Position.ToVector2().FlipY(GraphicsDevice.Viewport.Height);
 
-        if (m_HexGrid.FindHex(mousePos, out int x, out int y))
+        if (m_HexGrid.FindHex(mousePos, out Axial pos))
         {
-            if (m_LastKey.HasValue)
-                if (m_LastKey.Value != (x, y))
-                    m_HexGrid[m_LastKey.Value.Item1, m_LastKey.Value.Item2].Colour = Color.Black;
+            if (m_LastHex != null)
+                if (m_LastHex.Position != pos)
+                {
+                    m_LastHex.Colour = Color.Black;
+                }
 
-            m_HexGrid[x, y].Colour = Color.Red;
-            m_LastKey = (x, y);
+            if (m_HexGrid.TryGetHex(pos, out Hex hex))
+            {
+                hex.Colour = Color.Red;
+                m_LastHex = hex;
+            }
+
+            else
+                m_LastHex = null;
         }
 
-        else if (m_LastKey.HasValue)
+        else if (m_LastHex != null)
         {
-            m_HexGrid[m_LastKey.Value.Item1, m_LastKey.Value.Item2].Colour = Color.Black;
-            m_LastKey = null;
+            m_LastHex.Colour = Color.Black;
+            m_LastHex = null;
         }
 
         if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
@@ -162,8 +176,8 @@ public class Catan : Game
         }
 
         string keyText = "Current Hex: ";
-        if (m_LastKey.HasValue)
-            keyText += string.Format("{0} {1}", m_LastKey.Value.Item1, m_LastKey.Value.Item2);
+        if (m_LastHex != null)
+            keyText += string.Format("{0} {1}", m_LastHex.Position.q, m_LastHex.Position.r);
         
         ImGui.Text(keyText);
 

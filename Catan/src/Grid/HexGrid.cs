@@ -1,4 +1,5 @@
 using Catan;
+using Microsoft.VisualBasic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -11,7 +12,7 @@ using static Utility;
 /// <summary>
 /// Hexagonal Grid
 /// </summary>
-public class HexGrid<T> where T : Hex
+public class HexGrid
 {
     /// <summary>
     /// Backing field for height property
@@ -69,37 +70,127 @@ public class HexGrid<T> where T : Hex
         } 
     }
 
-    /// <summary>
-    /// Hexagonal tiles keyed by their position
-    /// </summary>
-    private readonly Dictionary<(int, int), T> m_Tiles;
+    private readonly HexFactory m_HexFactory;
+    private readonly EdgeFactory m_EdgeFactory;
+    private readonly CornerFactory m_CornerFactory;
+
+    private readonly Dictionary<Axial, HexContainer> m_Hexes;
+
+    // Store tiles
+    // Store edges
 
     private readonly ShapeBatcher m_ShapeBatcher;
 
     private static readonly float DRAWN_HEX_SCALE = 0.9f;
 
-    public HexGrid(ShapeBatcher shapeBatcher)
+    internal HexGrid(ShapeBatcher shapeBatcher, HexFactory hexFactory, EdgeFactory edgeFactory, CornerFactory cornerFactory)
     {
-        m_Tiles = new Dictionary<(int, int), T>();
+        m_Hexes = new();
+
+        m_HexFactory = hexFactory;
+        m_EdgeFactory = edgeFactory;
+        m_CornerFactory = cornerFactory;
+
         m_ShapeBatcher = shapeBatcher;
 
         Rotation = 0f;
     }
 
-    public T this[int x, int y]
+    public bool TryGetHex(Axial pos, out Hex hex)
     {
-        get
-        {
-            if (m_Tiles.TryGetValue((x, y), out T found))
-                return found;
+        hex = null;
+        if (m_Hexes.TryGetValue(pos, out var container))
+            hex = container.Hex;
+        
+        return hex != null;
+    }
 
-            return null;
+    public Hex CreateHex(Axial pos)
+    {
+        if (m_Hexes.TryGetValue(pos, out var container))
+        {
+            if (container.Hex != null)
+                return container.Hex;
+        }
+            
+        else
+            m_Hexes[pos] = new HexContainer();
+        
+        Hex newHex = m_HexFactory.CreateHex(pos);
+        m_Hexes[pos].Hex = newHex;
+
+        for (Edge.Key edge = new(){Position = pos}; 
+            edge.Side < Edge.Side.SW; edge.Side++)
+            CreateEdge(edge);
+
+        for (Corner.Key corner = new(){Position = pos};
+            corner.Side < Corner.Side.NW; corner.Side++)
+            CreateCorner(corner);
+
+        return newHex;
+    }
+
+    public bool TryGetEdge(Edge.Key key, out Edge edge)
+    {
+        key.Align();
+
+        edge = null;
+        if (m_Hexes.TryGetValue(key.Position, out var container))
+            edge = container.GetEdge(key.Side);
+
+        return edge != null;
+    }
+
+    public Edge CreateEdge(Edge.Key key)
+    {
+        key.Align();
+
+        if (m_Hexes.TryGetValue(key.Position, out var container))
+        {
+            Edge edge = container.GetEdge(key.Side);
+
+            if (edge != null)
+                return edge;
         }
 
-        set
+        else
+            m_Hexes[key.Position] = new HexContainer();
+        
+        Edge newEdge = m_EdgeFactory.CreateEdge(key);
+        m_Hexes[key.Position].SetEdge(key.Side, newEdge);
+
+        return newEdge;
+    }
+
+    public bool TryGetCorner(Corner.Key key, out Corner corner)
+    {
+        key.Align();
+
+        corner = null;
+        if (m_Hexes.TryGetValue(key.Position, out var container))
+            corner = container.GetCorner(key.Side);
+        
+        return corner != null;
+    }
+
+    public Corner CreateCorner(Corner.Key key)
+    {
+        key.Align();
+
+        if (m_Hexes.TryGetValue(key.Position, out var container))
         {
-            m_Tiles[(x, y)] = value;
+            Corner corner = container.GetCorner(key.Side);
+            if (corner != null)
+                return corner;
         }
+
+        else
+            m_Hexes[key.Position] = new HexContainer();
+
+        Corner newCorner = m_CornerFactory.CreateCorner(key);
+        m_Hexes[key.Position].SetCorner(key.Side, newCorner);
+
+        return newCorner;
     }
 
     /// <summary>
@@ -108,17 +199,14 @@ public class HexGrid<T> where T : Hex
     /// <param name="hexKeyPair">The hexagon and its position</param>
     /// <param name="vertices">vertex array to write to</param>
     /// <param name="copyIndex">Index at which to place vertices in array</param>
-    private void GetHexVertices(KeyValuePair<(int, int), T> hexKeyPair, VertexPositionColor[] vertices, int copyIndex)
+    private void GetHexVertices(Axial axialPos, Hex hex, VertexPositionColor[] vertices, int copyIndex)
     {
-        int x = hexKeyPair.Key.Item1;
-        int y = hexKeyPair.Key.Item2;
+        Vector2 localPos = new(){
+            X = Width * axialPos.q * 0.75f,
+            Y = Height * (axialPos.r + axialPos.q * 0.5f)
+        };
 
-        T hex = hexKeyPair.Value;
-
-        Vector3 pos = new Vector2(
-            x * Width * 0.75f, 
-            (y * Height) + (Math.Abs(x % 2) == 1 ? Height * 0.5f : 0f)
-                ).PreComputedRotate(m_SinRot, m_CosRot).ToVec3();
+        Vector3 pos = localPos.PreComputedRotate(m_SinRot, m_CosRot).ToVec3();
 
         pos.X += Offset.X;
         pos.Y += Offset.Y;
@@ -143,64 +231,38 @@ public class HexGrid<T> where T : Hex
     /// Convert a point to a position within the hex grid
     /// </summary>
     /// <returns>Whether hex at x/y exists</returns>
-    public bool FindHex(Vector2 pos, out int x, out int y)
+    public bool FindHex(Vector2 pos, out Axial axialPos)
     {
+        int s;
+
         // Adjust pos to match transform
         pos -= Offset;
-
         pos = pos.PreComputedRotate(-m_SinRot, m_CosRot);
-        pos.X += Width * 0.5f;
-        pos.Y += Height * 0.5f;
 
-        // Get test rectangle pos
-        x = (int)MathF.Floor(pos.X / (Width * 0.75f));
+        float qFrac = pos.X * 4 / (Width * 3);
+        float rFrac = (pos.Y - (pos.X * INVERSE_SQRT_3)) / Height;
+        float sFrac = -qFrac-rFrac;
 
-        bool odd = Math.Abs(x) % 2 == 1;
+        axialPos.q = (int)MathF.Round(qFrac);
+        axialPos.r = (int)MathF.Round(rFrac);
+        s = (int)MathF.Round(sFrac);
 
-        // Offset by half on odd columns
-        y = (int)MathF.Floor((pos.Y / Height) - (odd ? 0.5f : 0));
+        float qDiff = Math.Abs(qFrac - axialPos.q);
+        float rDiff = Math.Abs(rFrac - axialPos.r);
+        float sDiff = Math.Abs(sFrac - s);
 
-        Vector2 rectPos = new(){
-            X = x * Width * .75f,
-            Y = (y + (odd ? 1f : 0.5f)) * Height
-        };
+        if (qDiff > rDiff && qDiff > sDiff)
+            axialPos.q = -axialPos.r-s;
+        
+        else if (rDiff > sDiff)
+            axialPos.r = -axialPos.q-s;
 
-        // Position relative to test rect
-        Vector2 testPos = pos - rectPos;
-
-        bool isAbove = false, isBelow = false;
-
-        // If point is in left quarter of rectangle 
-        // rectangle pos may not equal hex pos
-        if (testPos.X * 4 < Width)
-        {
-            if (testPos.Y > 0f)
-                isAbove = testPos.Y * INVERSE_SQRT_3 > testPos.X;
-
-            else if (testPos.Y < 0f)
-                isBelow = -testPos.Y * INVERSE_SQRT_3 > testPos.X;
-        }
-
-        if (isAbove)
-        {
-            if (odd)
-                y++;
-            x--;
-        }
-
-        else if (isBelow)
-        {
-            if (!odd)
-                y--;
-            x--;
-        }
-
-        return m_Tiles.ContainsKey((x, y));
+        return m_Hexes.ContainsKey(axialPos);
     }
 
     public void Draw()
     {
-        int hexCount = m_Tiles.Count;
+        int hexCount = m_Hexes.Count;
 
         /// <summary>
         /// Allocate space for vertices and indices
@@ -212,12 +274,35 @@ public class HexGrid<T> where T : Hex
         /// Loop through all hexes
         /// </summary>
         int index = 0;
-        foreach (var hexKeyPair in m_Tiles)
+        foreach (var hexKeyPair in m_Hexes)
         {
-            GetHexVertices(hexKeyPair, vertices, index * 7);
-            GetHexIndices(indices, index++);
+            if (hexKeyPair.Value.Hex != null)
+            {
+                GetHexVertices(hexKeyPair.Key, hexKeyPair.Value.Hex, vertices, index * 7);
+                GetHexIndices(indices, index++);
+            }
         }
 
         m_ShapeBatcher.DrawPrimitives(vertices, indices);
+    }
+
+    public class Builder {
+        public Builder(ShapeBatcher shapeBatcher) {
+            pShapeBatcher = shapeBatcher;
+        }
+
+        public ShapeBatcher pShapeBatcher;
+        public HexFactory pHexFactory = null;
+        public EdgeFactory pEdgeFactory = null;
+        public CornerFactory pCornerFactory = null;
+
+        public HexGrid BuildHexGrid()
+        {
+            pHexFactory ??= new DefaultHexFactory();
+            pEdgeFactory ??= new DefaultEdgeFactory();
+            pCornerFactory ??= new DefaultCornerFactory();
+
+            return new HexGrid(pShapeBatcher, pHexFactory, pEdgeFactory, pCornerFactory);
+        }
     }
 }
