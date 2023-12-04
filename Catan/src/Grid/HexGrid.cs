@@ -120,11 +120,11 @@ public class HexGrid
         m_Hexes[pos].Hex = newHex;
 
         for (Edge.Key edge = new(){Position = pos}; 
-            edge.Side < Edge.Side.SW; edge.Side++)
+            edge.Side < Edge.Side.SW + 1; edge.Side++)
             CreateEdge(edge);
 
         for (Corner.Key corner = new(){Position = pos};
-            corner.Side < Corner.Side.NW; corner.Side++)
+            corner.Side < Corner.Side.SW + 1; corner.Side++)
             CreateCorner(corner);
 
         return newHex;
@@ -136,7 +136,7 @@ public class HexGrid
 
         edge = null;
         if (m_Hexes.TryGetValue(key.Position, out var container))
-            edge = container.GetEdge(key.Side);
+            edge = container.Edges[(int)key.Side];
 
         return edge != null;
     }
@@ -147,7 +147,7 @@ public class HexGrid
 
         if (m_Hexes.TryGetValue(key.Position, out var container))
         {
-            Edge edge = container.GetEdge(key.Side);
+            Edge edge = container.Edges[(int)key.Side];
 
             if (edge != null)
                 return edge;
@@ -157,7 +157,7 @@ public class HexGrid
             m_Hexes[key.Position] = new HexContainer();
         
         Edge newEdge = m_EdgeFactory.CreateEdge(key);
-        m_Hexes[key.Position].SetEdge(key.Side, newEdge);
+        m_Hexes[key.Position].Edges[(int)key.Side] = newEdge;
 
         return newEdge;
     }
@@ -168,7 +168,7 @@ public class HexGrid
 
         corner = null;
         if (m_Hexes.TryGetValue(key.Position, out var container))
-            corner = container.GetCorner(key.Side);
+            corner = container.Corners[(int)key.Side];
         
         return corner != null;
     }
@@ -179,7 +179,7 @@ public class HexGrid
 
         if (m_Hexes.TryGetValue(key.Position, out var container))
         {
-            Corner corner = container.GetCorner(key.Side);
+            Corner corner = container.Corners[(int)key.Side];
             if (corner != null)
                 return corner;
         }
@@ -188,7 +188,7 @@ public class HexGrid
             m_Hexes[key.Position] = new HexContainer();
 
         Corner newCorner = m_CornerFactory.CreateCorner(key);
-        m_Hexes[key.Position].SetCorner(key.Side, newCorner);
+        m_Hexes[key.Position].Corners[(int)key.Side] = newCorner;
 
         return newCorner;
     }
@@ -206,7 +206,7 @@ public class HexGrid
             Y = Height * (axialPos.r + axialPos.q * 0.5f)
         };
 
-        Vector3 pos = localPos.PreComputedRotate(m_SinRot, m_CosRot).ToVec3();
+        Vector3 pos = localPos.PreComputedRotate(m_SinRot, m_CosRot).ToVector3();
 
         pos.X += Offset.X;
         pos.Y += Offset.Y;
@@ -214,7 +214,7 @@ public class HexGrid
         float hexScale = Height * DRAWN_HEX_SCALE;
 
         for (int i = 0; i < 7; i++)
-            vertices[i + copyIndex] = new VertexPositionColor((UNSCALED_HEX_VERTICES[i].PreComputedRotate(m_SinRot, m_CosRot).ToVec3() * hexScale) + pos, hex.Colour);
+            vertices[i + copyIndex] = new VertexPositionColor((UNSCALED_HEX_VERTICES[i].PreComputedRotate(m_SinRot, m_CosRot).ToVector3() * hexScale) + pos, hex.Colour);
     }
 
     private static void GetHexIndices(int[] indices, int index)
@@ -262,28 +262,12 @@ public class HexGrid
 
     public void Draw()
     {
-        int hexCount = m_Hexes.Count;
-
-        /// <summary>
-        /// Allocate space for vertices and indices
-        /// </summary>
-        int[] indices = new int[18 * hexCount];
-        VertexPositionColor[] vertices = new VertexPositionColor[7 * hexCount];
-
         /// <summary>
         /// Loop through all hexes
         /// </summary>
         int index = 0;
         foreach (var hexKeyPair in m_Hexes)
-        {
-            if (hexKeyPair.Value.Hex != null)
-            {
-                GetHexVertices(hexKeyPair.Key, hexKeyPair.Value.Hex, vertices, index * 7);
-                GetHexIndices(indices, index++);
-            }
-        }
-
-        m_ShapeBatcher.DrawPrimitives(vertices, indices);
+            hexKeyPair.Value.Draw(Height, Rotation, Offset, m_ShapeBatcher);
     }
 
     public class Builder {

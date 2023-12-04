@@ -1,8 +1,12 @@
+using System;
 using System.Security.AccessControl;
+using Catan;
+using Microsoft.Xna.Framework;
 
 namespace Grid.Hexagonal;
+using static Utility;
 
-public class Edge
+public class Edge : Tileable
 {
     private Key m_Position;
 
@@ -15,12 +19,48 @@ public class Edge
         return m_Position;
     }
 
+    public override void Draw(float shapeScale, float scale, float rotation, Vector2 translation, ShapeBatcher shapeBatcher)
+    {
+        Vector2 localPos = new(){
+            X = shapeScale * INVERSE_SQRT_3 * m_Position.Position.q * 1.5f,
+            Y = shapeScale * (m_Position.Position.r + m_Position.Position.q * 0.5f)
+        };
+
+        Vector2 start = new(){
+            X = shapeScale * scale * INVERSE_SQRT_3 * 0.5f
+        };
+
+        Vector2 end = new(){
+            X = -start.X
+        };
+
+        Vector2 offset = new(){
+            Y = shapeScale * 0.5f
+        };
+
+        start += offset;
+        end += offset;
+
+        float edgeRot = -(((int)m_Position.Side) - 1) * MathF.PI / 3f;
+        
+        start = start.Rotate(edgeRot);
+        end = end.Rotate(edgeRot);
+
+        start += localPos;
+        end += localPos;
+
+        start = start.Rotate(rotation) + translation;
+        end = end.Rotate(rotation) + translation;
+
+        shapeBatcher.DrawLine(start, end, shapeScale * scale, Color.Yellow);
+    }
+
     public enum Side {
-        W,
         NW,
+        N,
         NE,
-        E,
         SE,
+        S,
         SW
     }
 
@@ -32,18 +72,18 @@ public class Edge
         {
             switch (Side)
             {
-            case Side.E:
-                Position.q++;
-                Side = Side.W;
-                return;
-
             case Side.SE:
+                Position.q++;
                 Position.r--;
                 Side = Side.NW;
                 return;
 
-            case Side.SW:
+            case Side.S:
                 Position.r--;
+                Side = Side.N;
+                return;
+
+            case Side.SW:
                 Position.q--;
                 Side = Side.NE;
                 return;

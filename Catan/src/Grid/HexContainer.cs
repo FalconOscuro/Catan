@@ -1,77 +1,28 @@
+using Catan;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+
 namespace Grid.Hexagonal;
 
 internal class HexContainer
 {
-    public HexContainer(){
-        Hex = null;
+    public HexContainer()
+    {}
 
-        W_Edge = null;
-        NW_Edge = null;
-        NE_Edge = null;
+    public Hex Hex = null;
 
-        N_Corner = null;
-        S_Corner = null;
-    }
+    public readonly Edge[] Edges = new Edge[3];
 
-    public Hex Hex;
+    public readonly Corner[] Corners = new Corner[2];
 
-    public Edge W_Edge;
-    public Edge NW_Edge;
-    public Edge NE_Edge;
-
-    public Corner N_Corner;
-    public Corner S_Corner;
-
-    public Edge GetEdge(Edge.Side side)
+    public void Draw(float scale, float rotation, Vector2 translation, ShapeBatcher shapeBatcher)
     {
-        return side switch
-        {
-            Edge.Side.W => W_Edge,
-            Edge.Side.NW => NW_Edge,
-            Edge.Side.NE => NE_Edge,
-            _ => null,
-        };
-    }
+        Hex?.Draw(scale, 0.9f, rotation, translation, shapeBatcher);
 
-    public void SetEdge(Edge.Side side, Edge edge)
-    {
-        switch (side)
-        {
-        case Edge.Side.W:
-            W_Edge = edge;
-            break;
+        foreach (Corner corner in Corners)
+            corner?.Draw(scale, 0.05f, rotation, translation, shapeBatcher);
 
-        case Edge.Side.NW:
-            NW_Edge = edge;
-            break;
-
-        case Edge.Side.NE:
-            NE_Edge = edge;
-            break;
-        }
-    }
-
-    public Corner GetCorner(Corner.Side side)
-    {
-        return side switch
-        {
-            Corner.Side.N => N_Corner,
-            Corner.Side.S => S_Corner,
-            _ => null,
-        };
-    }
-
-    public void SetCorner(Corner.Side side, Corner corner)
-    {
-        switch (side)
-        {
-        case Corner.Side.N:
-            N_Corner = corner;
-            break;
-
-        case Corner.Side.S:
-            S_Corner = corner;
-            break;
-        }
+        foreach (Edge edge in Edges)
+            edge?.Draw(scale, 0.5f, rotation, translation, shapeBatcher);
     }
 }

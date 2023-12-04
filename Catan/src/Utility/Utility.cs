@@ -68,7 +68,18 @@ static class Utility
         );
     }
 
-    public static Vector3 ToVec3(this Vector2 vector)
+    public static Vector2 Rotate(this Vector2 vector, float r)
+    {
+        float sin = MathF.Sin(r);
+        float cos = MathF.Cos(r);
+
+        return new Vector2(
+            vector.X * cos - vector.Y * sin,
+            vector.X * sin + vector.Y * cos
+        );
+    }
+
+    public static Vector3 ToVector3(this Vector2 vector)
     {
         return new(vector.X, vector.Y, 0f);
     }
