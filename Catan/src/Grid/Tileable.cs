@@ -6,5 +6,5 @@ namespace Grid;
 
 public abstract class Tileable
 {
-    public abstract void Draw(float shapeScale, float scale, float rotation, Vector2 translation, ShapeBatcher shapeBatcher);
+    public abstract void Draw(Transform transform, Canvas canvas);
 }

@@ -16,27 +16,17 @@ public class Hex : Tileable
 
     public Axial Position { get; private set; }
 
-    public override void Draw(float shapeScale, float scale, float rotation, Vector2 translation, ShapeBatcher shapeBatcher)
+    public override void Draw(Transform transform, Canvas canvas)
     {
         int[] indices = new int[18];
         HEX_INDICES.CopyTo(indices, 0);
 
         VertexPositionColor[] vertices = new VertexPositionColor[7];
 
-        Vector2 localPos = new(){
-            X = shapeScale * INVERSE_SQRT_3 * Position.q * 1.5f,
-            Y = shapeScale * (Position.r + Position.q * 0.5f)
-        };
-
-        Vector3 pos = localPos.Rotate(rotation).ToVector3();
-
-        pos.X += translation.X;
-        pos.Y += translation.Y;
-
         for (int i = 0; i < 7; i++)
-            vertices[i] = new VertexPositionColor((UNSCALED_HEX_VERTICES[i].Rotate(rotation).ToVector3() * scale * shapeScale) + pos, Colour);
+            vertices[i] = new VertexPositionColor(transform.Apply(UNSCALED_HEX_VERTICES[i]).ToVector3(), Colour);
 
-        shapeBatcher.DrawPrimitives(vertices, indices);
+        canvas.shapeBatcher.DrawPrimitives(vertices, indices);
     }
 }
 

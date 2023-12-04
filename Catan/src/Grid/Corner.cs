@@ -20,39 +20,20 @@ public class Corner : Tileable
 
     public bool DrawFilled = true;
 
-    public override void Draw(float shapeScale, float scale, float rotation, Vector2 translation, ShapeBatcher shapeBatcher)
+    public override void Draw(Transform transform, Canvas canvas)
     {
-        Vector2 localPos = new(){
-            X = shapeScale * INVERSE_SQRT_3 * m_Position.Position.q * 1.5f,
-            Y = shapeScale * (m_Position.Position.r + m_Position.Position.q * 0.5f)
-        };
-
-        Vector2 offset = new(){
-            X = -shapeScale * INVERSE_SQRT_3
-        };
-
-        if (m_Position.Side == Side.NW)
-        {
-            offset.Y += shapeScale;
-            offset *= 0.5f;
-        }
-
-        localPos += offset;
-
-        Vector2 pos = localPos.Rotate(rotation) + translation;
-
         if (DrawFilled)
-            shapeBatcher.DrawFilledCircle(pos, shapeScale * scale, 10, Color.Green);
+            canvas.shapeBatcher.DrawFilledCircle(transform.Translation, transform.Scale, 10, Color.Black);
 
         else
-            shapeBatcher.DrawCircle(pos, shapeScale * scale, 10, scale, Color.Green);
+            canvas.shapeBatcher.DrawCircle(transform.Translation, transform.Scale, 10, transform.Scale * 0.1f, Color.Black);
     }
 
     public enum Side {
         W,
+        E,
         NW,
         NE,
-        E,
         SE,
         SW
     }
@@ -66,15 +47,15 @@ public class Corner : Tileable
         {
             switch (Side)
             {
+            case Side.NW:
+                Position.q--;
+                Position.r++;
+                Side = Side.E;
+                break;
+
             case Side.NE:
                 Position.q++;
                 Side = Side.W;
-                break;
-
-            case Side.E:
-                Position.q++;
-                Position.r--;
-                Side = Side.NW;
                 break;
 
             case Side.SE:
@@ -84,8 +65,8 @@ public class Corner : Tileable
                 break;
 
             case Side.SW:
-                Position.r--;
-                Side = Side.NW;
+                Position.q--;
+                Side = Side.E;
                 break;
             }
         }

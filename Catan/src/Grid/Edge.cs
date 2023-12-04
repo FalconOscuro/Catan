@@ -19,40 +19,20 @@ public class Edge : Tileable
         return m_Position;
     }
 
-    public override void Draw(float shapeScale, float scale, float rotation, Vector2 translation, ShapeBatcher shapeBatcher)
+    public override void Draw(Transform transform, Canvas canvas)
     {
-        Vector2 localPos = new(){
-            X = shapeScale * INVERSE_SQRT_3 * m_Position.Position.q * 1.5f,
-            Y = shapeScale * (m_Position.Position.r + m_Position.Position.q * 0.5f)
-        };
-
         Vector2 start = new(){
-            X = shapeScale * scale * INVERSE_SQRT_3 * 0.5f
+            X = -1
         };
 
         Vector2 end = new(){
-            X = -start.X
+            X = 1
         };
 
-        Vector2 offset = new(){
-            Y = shapeScale * 0.5f
-        };
+        start = transform.Apply(start);
+        end = transform.Apply(end);
 
-        start += offset;
-        end += offset;
-
-        float edgeRot = -(((int)m_Position.Side) - 1) * MathF.PI / 3f;
-        
-        start = start.Rotate(edgeRot);
-        end = end.Rotate(edgeRot);
-
-        start += localPos;
-        end += localPos;
-
-        start = start.Rotate(rotation) + translation;
-        end = end.Rotate(rotation) + translation;
-
-        shapeBatcher.DrawLine(start, end, shapeScale * scale, Color.Yellow);
+        canvas.shapeBatcher.DrawLine(start, end, transform.Scale * 0.1f, Color.Black);
     }
 
     public enum Side {

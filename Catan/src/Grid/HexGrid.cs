@@ -76,22 +76,15 @@ public class HexGrid
 
     private readonly Dictionary<Axial, HexContainer> m_Hexes;
 
-    // Store tiles
-    // Store edges
-
-    private readonly ShapeBatcher m_ShapeBatcher;
-
     private static readonly float DRAWN_HEX_SCALE = 0.9f;
 
-    internal HexGrid(ShapeBatcher shapeBatcher, HexFactory hexFactory, EdgeFactory edgeFactory, CornerFactory cornerFactory)
+    internal HexGrid(HexFactory hexFactory, EdgeFactory edgeFactory, CornerFactory cornerFactory)
     {
         m_Hexes = new();
 
         m_HexFactory = hexFactory;
         m_EdgeFactory = edgeFactory;
         m_CornerFactory = cornerFactory;
-
-        m_ShapeBatcher = shapeBatcher;
 
         Rotation = 0f;
     }
@@ -114,7 +107,7 @@ public class HexGrid
         }
             
         else
-            m_Hexes[pos] = new HexContainer();
+            m_Hexes[pos] = new HexContainer(pos);
         
         Hex newHex = m_HexFactory.CreateHex(pos);
         m_Hexes[pos].Hex = newHex;
@@ -154,7 +147,7 @@ public class HexGrid
         }
 
         else
-            m_Hexes[key.Position] = new HexContainer();
+            m_Hexes[key.Position] = new HexContainer(key.Position);
         
         Edge newEdge = m_EdgeFactory.CreateEdge(key);
         m_Hexes[key.Position].Edges[(int)key.Side] = newEdge;
@@ -185,46 +178,12 @@ public class HexGrid
         }
 
         else
-            m_Hexes[key.Position] = new HexContainer();
+            m_Hexes[key.Position] = new HexContainer(key.Position);
 
         Corner newCorner = m_CornerFactory.CreateCorner(key);
         m_Hexes[key.Position].Corners[(int)key.Side] = newCorner;
 
         return newCorner;
-    }
-
-    /// <summary>
-    /// Get vertices for drawing a single hexagon
-    /// </summary>
-    /// <param name="hexKeyPair">The hexagon and its position</param>
-    /// <param name="vertices">vertex array to write to</param>
-    /// <param name="copyIndex">Index at which to place vertices in array</param>
-    private void GetHexVertices(Axial axialPos, Hex hex, VertexPositionColor[] vertices, int copyIndex)
-    {
-        Vector2 localPos = new(){
-            X = Width * axialPos.q * 0.75f,
-            Y = Height * (axialPos.r + axialPos.q * 0.5f)
-        };
-
-        Vector3 pos = localPos.PreComputedRotate(m_SinRot, m_CosRot).ToVector3();
-
-        pos.X += Offset.X;
-        pos.Y += Offset.Y;
-
-        float hexScale = Height * DRAWN_HEX_SCALE;
-
-        for (int i = 0; i < 7; i++)
-            vertices[i + copyIndex] = new VertexPositionColor((UNSCALED_HEX_VERTICES[i].PreComputedRotate(m_SinRot, m_CosRot).ToVector3() * hexScale) + pos, hex.Colour);
-    }
-
-    private static void GetHexIndices(int[] indices, int index)
-    {
-        int vertexOffset = index * 7;
-        int copyIndex = index * 18;
-
-        // Offset to match current vertex count
-        for (int i = 0; i < 18; i++)
-            indices[i + copyIndex] = HEX_INDICES[i] + vertexOffset;
     }
 
     /// <summary>
@@ -260,22 +219,25 @@ public class HexGrid
         return m_Hexes.ContainsKey(axialPos);
     }
 
-    public void Draw()
+    public void Draw(Canvas canvas)
     {
+        Transform transform = new(){
+            Scale = Height,
+            Rotation = Rotation,
+            Translation = Offset
+        };
+
         /// <summary>
         /// Loop through all hexes
         /// </summary>
-        int index = 0;
         foreach (var hexKeyPair in m_Hexes)
-            hexKeyPair.Value.Draw(Height, Rotation, Offset, m_ShapeBatcher);
+            hexKeyPair.Value.Draw(transform, canvas);
     }
 
     public class Builder {
-        public Builder(ShapeBatcher shapeBatcher) {
-            pShapeBatcher = shapeBatcher;
-        }
+        public Builder() 
+        {}
 
-        public ShapeBatcher pShapeBatcher;
         public HexFactory pHexFactory = null;
         public EdgeFactory pEdgeFactory = null;
         public CornerFactory pCornerFactory = null;
@@ -286,7 +248,7 @@ public class HexGrid
             pEdgeFactory ??= new DefaultEdgeFactory();
             pCornerFactory ??= new DefaultCornerFactory();
 
-            return new HexGrid(pShapeBatcher, pHexFactory, pEdgeFactory, pCornerFactory);
+            return new HexGrid(pHexFactory, pEdgeFactory, pCornerFactory);
         }
     }
 }

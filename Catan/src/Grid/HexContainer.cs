@@ -1,13 +1,19 @@
+using System;
 using Catan;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace Grid.Hexagonal;
+using static Utility;
 
 internal class HexContainer
 {
-    public HexContainer()
-    {}
+    public HexContainer(Axial axial)
+    {
+        Position = axial;
+    }
+
+    public Axial Position;
 
     public Hex Hex = null;
 
@@ -15,14 +21,69 @@ internal class HexContainer
 
     public readonly Corner[] Corners = new Corner[2];
 
-    public void Draw(float scale, float rotation, Vector2 translation, ShapeBatcher shapeBatcher)
+    public void Draw(Transform transform, Canvas canvas)
     {
-        Hex?.Draw(scale, 0.9f, rotation, translation, shapeBatcher);
+        Vector2 realPos = Position.GetRealPos();
 
-        foreach (Corner corner in Corners)
-            corner?.Draw(scale, 0.05f, rotation, translation, shapeBatcher);
+        DrawHex(realPos, transform, canvas);
+        DrawEdges(realPos, transform, canvas);
+        DrawCorners(realPos, transform, canvas);
+    }
+
+    private void DrawHex(Vector2 realPos, Transform transform, Canvas canvas)
+    {
+        if (Hex != null)
+        {
+            Transform hexTransform = new(){
+                Rotation = transform.Rotation,
+                Scale = transform.Scale * 0.9f,
+                Translation = transform.Apply(realPos)
+            };
+
+            Hex.Draw(hexTransform, canvas);
+        }
+    }
+
+    private void DrawEdges(Vector2 realPos, Transform transform, Canvas canvas)
+    {
+        Vector2 offset = new(0, 0.5f);
+        float deltaRot = -MathF.PI / 3f;
+
+        Transform edgeTransform = new(){
+                Scale = transform.Scale * INVERSE_SQRT_3 * 0.4f,
+                Rotation = -deltaRot + transform.Rotation,
+                };
 
         foreach (Edge edge in Edges)
-            edge?.Draw(scale, 0.5f, rotation, translation, shapeBatcher);
+        {
+            if (edge != null)
+            {
+                edgeTransform.Translation = transform.Apply(realPos + 
+                    offset.Rotate(edgeTransform.Rotation - transform.Rotation));
+                
+                edge.Draw(edgeTransform, canvas);
+            }
+
+            edgeTransform.Rotation += deltaRot;
+        }
+    }
+
+    private void DrawCorners(Vector2 realPos, Transform transform, Canvas canvas)
+    {
+        Vector2 offset = new(-INVERSE_SQRT_3, 0);
+        foreach (Corner corner in Corners)
+        {
+            if (corner != null)
+            {
+                Transform cornerTransform = new(){
+                    Scale = transform.Scale * 0.05f,
+                    Translation = transform.Apply(realPos + offset)
+                };
+
+                corner.Draw(cornerTransform, canvas);
+            }
+
+            offset.X = -offset.X;
+        }
     }
 }

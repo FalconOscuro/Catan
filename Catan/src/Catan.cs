@@ -5,6 +5,8 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.ImGuiNet;
 using System;
+using System.Collections.ObjectModel;
+using Type = Catan.Resources.Type;
 
 namespace Catan;
 
@@ -14,8 +16,7 @@ namespace Catan;
 public class Catan : Game
 {
     private GraphicsDeviceManager m_Graphics;
-    public static SpriteBatch s_SpriteBatch {get; private set;}
-    public static ShapeBatcher s_ShapeBatcher {get; private set;}
+    private Canvas m_Canvas;
     private ImGuiRenderer m_GuiRenderer;
 
     private static readonly int HIST_LEN = 500;
@@ -28,7 +29,25 @@ public class Catan : Game
 
     public static SpriteFont s_Font {get; private set;}
 
-    private Hex m_LastHex = null;
+    private Axial m_HexPos;
+
+    private readonly int GRID_SIZE = 5;
+
+    public static readonly ReadOnlyCollection<Type> DEFAULT_RESOURCE_SPREAD = new(new Type[]
+        {Type.Wool, Type.Grain, Type.Brick,
+            Type.Wool, Type.Grain, Type.Ore, Type.Lumber,
+                Type.Ore, Type.Lumber, Type.Empty, Type.Lumber, Type.Grain,
+                    Type.Brick, Type.Wool, Type.Brick, Type.Grain,
+                        Type.Lumber, Type.Wool, Type.Ore
+    });
+
+    public static readonly ReadOnlyCollection<int> DEFAULT_NUMBER_SPREAD = new(new int[]
+        {11, 6, 5, 
+            5, 4, 3, 8, 
+                8, 3, 11, 9, 
+                    10, 4, 6, 12, 
+                        9, 2, 10}
+    );
 
     public Catan()
     {
@@ -46,38 +65,70 @@ public class Catan : Game
 
     protected override void LoadContent()
     {
-        s_SpriteBatch = new SpriteBatch(GraphicsDevice);
+        m_Canvas.spriteBatch = new SpriteBatch(GraphicsDevice);
 
         m_GuiRenderer.RebuildFontAtlas();
-        s_ShapeBatcher = new(this);
+        m_Canvas.shapeBatcher = new(this);
 
         s_Font = Content.Load<SpriteFont>("Default");
 
+        CreateGrid();
+    }
+
+    private void CreateGrid()
+    {
         Vector2 viewSize = new(Window.ClientBounds.Width, Window.ClientBounds.Height);
         Vector2 offset = viewSize / 2;
         float height = viewSize.Y / 6;
 
-        HexGrid.Builder builder = new(s_ShapeBatcher);
+        HexGrid.Builder builder = new();
+        builder.pHexFactory = new TileFactory();
 
-        //m_Board = new(this);
         m_HexGrid = builder.BuildHexGrid();
 
         m_HexGrid.Height = height;
         m_HexGrid.Offset = offset;
-        m_HexGrid.Rotation = 0;
+        m_HexGrid.Rotation = MathF.PI * 0.5f;
 
-        int size = 5;
 
-        int qStart = - size / 2;
-        int qEnd = qStart + size;
+        int qStart = - GRID_SIZE / 2;
+        int qEnd = qStart + GRID_SIZE;
 
         for (Axial pos = new(){q = qStart}; pos.q < qEnd; pos.q++)
         {
             int rStart = Math.Max(qStart, qStart - pos.q);
-            int rEnd = rStart + size - Math.Abs(pos.q);
+            int rEnd = rStart + GRID_SIZE - Math.Abs(pos.q);
 
             for (pos.r = rStart; pos.r < rEnd; pos.r++)
                 m_HexGrid.CreateHex(pos);
+        }
+        
+        SetupGrid();
+    }
+
+    private void SetupGrid()
+    {
+        int resourceCount = 0;
+        int valueCount = 0;
+
+        int qStart = - GRID_SIZE / 2;
+        int qEnd = qStart + GRID_SIZE;
+
+        for (Axial pos = new(){q = qStart}; pos.q < qEnd; pos.q++)
+        {
+            int rStart = Math.Max(qStart, qStart - pos.q);
+            int rEnd = rStart + GRID_SIZE - Math.Abs(pos.q);
+
+            for (pos.r = rStart; pos.r < rEnd; pos.r++)
+            {
+                m_HexGrid.TryGetHex(pos, out Hex hex);
+
+                Tile tile = (Tile)hex;
+                tile.Resource = DEFAULT_RESOURCE_SPREAD[resourceCount++];
+
+                if (tile.Resource != Type.Empty)
+                    tile.Value = DEFAULT_NUMBER_SPREAD[valueCount++];
+            }
         }
     }
 
@@ -85,29 +136,7 @@ public class Catan : Game
     {
         Vector2 mousePos = Mouse.GetState().Position.ToVector2().FlipY(GraphicsDevice.Viewport.Height);
 
-        if (m_HexGrid.FindHex(mousePos, out Axial pos))
-        {
-            if (m_LastHex != null)
-                if (m_LastHex.Position != pos)
-                {
-                    m_LastHex.Colour = Color.Black;
-                }
-
-            if (m_HexGrid.TryGetHex(pos, out Hex hex))
-            {
-                hex.Colour = Color.Red;
-                m_LastHex = hex;
-            }
-
-            else
-                m_LastHex = null;
-        }
-
-        else if (m_LastHex != null)
-        {
-            m_LastHex.Colour = Color.Black;
-            m_LastHex = null;
-        }
+        m_HexGrid.FindHex(mousePos, out m_HexPos);
 
         if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
             Exit();
@@ -119,16 +148,15 @@ public class Catan : Game
 
     protected override void Draw(GameTime gameTime)
     {
-        GraphicsDevice.Clear(Color.CornflowerBlue);
+        m_Canvas.ScreenSize = new(GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height);
 
-        s_SpriteBatch.Begin();
-        s_ShapeBatcher.Begin();
+        GraphicsDevice.Clear(Color.CornflowerBlue);
+        m_Canvas.Begin();
 
         //m_Board.Draw();
-        m_HexGrid.Draw();
+        m_HexGrid.Draw(m_Canvas);
 
-        s_ShapeBatcher.End();
-        s_SpriteBatch.End();
+        m_Canvas.End();
 
         base.Draw(gameTime);
 
@@ -174,12 +202,8 @@ public class Catan : Game
             if (ImGui.Checkbox("Use Fixed Timestep", ref fixedTimeStep))
                 IsFixedTimeStep = fixedTimeStep;
         }
-
-        string keyText = "Current Hex: ";
-        if (m_LastHex != null)
-            keyText += string.Format("{0} {1}", m_LastHex.Position.q, m_LastHex.Position.r);
         
-        ImGui.Text(keyText);
+        ImGui.Text(string.Format("Current Hex: q={0} r={1}", m_HexPos.q, m_HexPos.r));
 
         ImGui.End();
 
