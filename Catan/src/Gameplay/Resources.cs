@@ -1,3 +1,5 @@
+using System.Reflection.Metadata;
+using ImGuiNET;
 using Microsoft.Xna.Framework;
 
 namespace Catan;
@@ -25,6 +27,20 @@ public class Resources
     {
         public Collection()
         {}
+
+        public void ImDraw()
+        {
+            for (Type type = Type.Brick; type < Type.Wool + 1; type++)
+                ImGui.Text(string.Format("{0}: {1}", type.ToString(), this[type]));
+        }
+
+        public Collection Clone()
+        {
+            Collection clone = new();
+            m_Resources.CopyTo(clone.m_Resources, 0);
+
+            return clone;
+        }
 
         public readonly int Brick
         {
@@ -69,6 +85,46 @@ public class Resources
                 
                 m_Resources[(int)type - 1] = value;
             }
+        }
+
+        public static Collection operator+(Collection lhs, Collection rhs)
+        {
+            Collection result = new();
+
+            for (Type type = Type.Brick; type < Type.Wool + 1; type++)
+                result[type] = lhs[type] + rhs[type];
+            
+            return result;
+        }
+
+        public static Collection operator-(Collection lhs, Collection rhs)
+        {
+            Collection result = new();
+
+            for (Type type = Type.Brick; type < Type.Wool + 1; type++)
+                result[type] = lhs[type] - rhs[type];
+            
+            return result;
+        }
+
+        public static bool operator>=(Collection lhs, Collection rhs)
+        {
+            bool result = true;
+
+            for (Type type = Type.Brick; type < Type.Wool + 1; type++)
+                result &= lhs[type] >= rhs[type];
+
+            return result;
+        }
+
+        public static bool operator<=(Collection lhs, Collection rhs)
+        {
+            bool result = true;
+
+            for (Type type = Type.Brick; type < Type.Wool + 1; type++)
+                result &= lhs[type] <= rhs[type];
+            
+            return result;
         }
 
         /// <summary>
