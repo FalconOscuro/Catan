@@ -1,6 +1,6 @@
 using Microsoft.Xna.Framework;
 
-namespace Catan;
+namespace Utility;
 
 public struct Transform {
     public float Scale;

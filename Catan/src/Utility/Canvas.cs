@@ -1,7 +1,7 @@
-using System.Numerics;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace Catan;
+namespace Utility.Graphics;
 
 public struct Canvas {
     public ShapeBatcher shapeBatcher;

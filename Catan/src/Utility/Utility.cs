@@ -1,11 +1,11 @@
 using System;
-using System.Collections.Generic;
 
 using Microsoft.Xna.Framework;
 
 using ImGuiNET;
+using Microsoft.Xna.Framework.Graphics;
 
-namespace Catan;
+namespace Utility;
 
 static class Utility
 {
@@ -82,5 +82,10 @@ static class Utility
     public static Vector3 ToVector3(this Vector2 vector)
     {
         return new(vector.X, vector.Y, 0f);
+    }
+
+    public static Vector2 GetSizeVec(this Viewport viewport)
+    {
+        return new(viewport.Width, viewport.Height);
     }
 }

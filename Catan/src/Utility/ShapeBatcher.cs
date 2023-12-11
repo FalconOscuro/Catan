@@ -1,12 +1,8 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace Catan;
+namespace Utility.Graphics;
 
 /*
  * Shape batcher is based on code development by Two-Bit Coding
