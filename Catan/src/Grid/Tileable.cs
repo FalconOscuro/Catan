@@ -1,6 +1,5 @@
-using Catan;
-using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
+using Utility;
+using Utility.Graphics;
 
 namespace Grid;
 

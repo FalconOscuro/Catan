@@ -1,45 +1,74 @@
 using Microsoft.Xna.Framework;
 using Grid.Hexagonal;
+using Utility;
+using Utility.Graphics;
+
+using Type = Catan.Resources.Type;
 
 namespace Catan;
 
+// Could have reference to board state or GM
+
+/// <summary>
+/// Gameplay board tile
+/// </summary>
 public class Tile : Hex 
 {
-    private Resources.Type m_Resource;
+    /// <summary>
+    /// Resource on tile
+    /// Also affects the colour
+    /// </summary>
+    private Type m_Resource;
 
-    public Resources.Type Resource { 
+    /// <summary>
+    /// Front facing getter/setter for resource property
+    /// </summary>
+    public Type Resource { 
         get { return m_Resource; }
         set { m_Resource = value; Colour = Resources.GetColour(value); }
     }
 
+    /// <summary>
+    /// Roll number associated to the tile
+    /// </summary>
     public int Value = 0;
 
-    public Tile(Axial axial):
-        base(axial)
+    /// <summary>
+    /// True if value was rolled
+    /// </summary>
+    public bool Active = false;
+
+    /// <summary>
+    /// True if occupied by robber
+    /// </summary>
+    public bool Robber = false;
+
+    public Tile()
     {
-        Resource = Resources.Type.Empty;
+        Resource = Type.Empty;
     }
 
+    /// <summary>
+    /// Draw underlying hex and info
+    /// </summary>
     public override void Draw(Transform transform, Canvas canvas)
     {
+        // Draw back hex
         base.Draw(transform, canvas);
 
-        canvas.shapeBatcher.DrawFilledCircle(transform.Translation, transform.Scale * 0.15f, 10, Resources.GetColour(Resources.Type.Empty));
+        // Draw circle for value visibility
+        // Coloured same as desert for easy blending
+        // Also acts as robber indicator
+        canvas.shapeBatcher.DrawFilledCircle(transform.Translation, transform.Scale * 0.15f, 10, 
+            Robber ? Color.Black : Resources.GetColour(Type.Empty));
 
-        if (Resource != Resources.Type.Empty)
+        // Draw value number
+        if (Resource != Type.Empty && !Robber)
         {
             string valueString = Value.ToString();
-
             Vector2 texPos = transform.Translation.FlipY(canvas.ScreenSize.Y) - (Catan.s_Font.MeasureString(valueString) * 0.5f);
 
-            canvas.spriteBatch.DrawString(Catan.s_Font, valueString, texPos, Color.Black);
+            canvas.spriteBatch.DrawString(Catan.s_Font, valueString, texPos, Active ? Color.Red : Color.Black);
         }
-    }
-}
-
-public class TileFactory : HexFactory {
-    public override Hex CreateHex(Axial pos)
-    {
-        return new Tile(pos);
     }
 }

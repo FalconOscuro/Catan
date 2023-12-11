@@ -1,20 +1,22 @@
-using Catan;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+
+using Utility;
+using Utility.Graphics;
 
 namespace Grid.Hexagonal;
 using static Utility;
 
 public class Hex : Tileable
 {
-    public Hex(Axial axial)
-    {
-        Position = axial;
-    }
+    public Hex()
+    {}
 
     public Color Colour = Color.Black;
 
-    public Axial Position { get; private set; }
+    public virtual object Clone() {
+        return this.MemberwiseClone();
+    }
 
     public override void Draw(Transform transform, Canvas canvas)
     {
@@ -27,15 +29,5 @@ public class Hex : Tileable
             vertices[i] = new VertexPositionColor(transform.Apply(UNSCALED_HEX_VERTICES[i]).ToVector3(), Colour);
 
         canvas.shapeBatcher.DrawPrimitives(vertices, indices);
-    }
-}
-
-public abstract class HexFactory {
-    public abstract Hex CreateHex(Axial pos);
-}
-
-public class DefaultHexFactory : HexFactory {
-    public override Hex CreateHex(Axial pos) {
-        return new Hex(pos);
     }
 }

@@ -1,22 +1,17 @@
-using System;
-using System.Security.AccessControl;
-using Catan;
 using Microsoft.Xna.Framework;
 
+using Utility;
+using Utility.Graphics;
+
 namespace Grid.Hexagonal;
-using static Utility;
 
 public class Edge : Tileable
 {
-    private Key m_Position;
+    public Edge()
+    {}
 
-    public Edge(Key position)
-    {
-        m_Position = position;
-    }
-
-    public Key GetPosition() {
-        return m_Position;
+    public virtual object Clone() {
+        return this.MemberwiseClone();
     }
 
     public override void Draw(Transform transform, Canvas canvas)
@@ -69,15 +64,5 @@ public class Edge : Tileable
                 return;
             }
         }
-    }
-}
-
-public abstract class EdgeFactory {
-    public abstract Edge CreateEdge(Edge.Key key);
-}
-
-public class DefaultEdgeFactory : EdgeFactory {
-    public override Edge CreateEdge(Edge.Key key) {
-        return new Edge(key);
     }
 }

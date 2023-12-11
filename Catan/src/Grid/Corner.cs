@@ -1,24 +1,20 @@
-using Catan;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
+
+using Utility;
+using Utility.Graphics;
 
 namespace Grid.Hexagonal;
-using static Utility;
 
 public class Corner : Tileable
 {
-    private Key m_Position;
-
-    public Corner(Key position)
-    {
-        m_Position = position;
-    }
-
-    public Key GetPosition() {
-        return m_Position;
-    }
+    public Corner()
+    {}
 
     public bool DrawFilled = true;
+
+    public virtual object Clone() {
+        return this.MemberwiseClone();
+    }
 
     public override void Draw(Transform transform, Canvas canvas)
     {
@@ -70,15 +66,5 @@ public class Corner : Tileable
                 break;
             }
         }
-    }
-}
-
-public abstract class CornerFactory {
-    public abstract Corner CreateCorner(Corner.Key key);
-}
-
-public class DefaultCornerFactory : CornerFactory{
-    public override Corner CreateCorner(Corner.Key key) {
-        return new Corner(key);
     }
 }

@@ -1,7 +1,7 @@
 using System;
-using Catan;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
+using Utility;
+using Utility.Graphics;
 
 namespace Grid.Hexagonal;
 using static Utility;
@@ -20,6 +20,23 @@ internal class HexContainer
     public readonly Edge[] Edges = new Edge[3];
 
     public readonly Corner[] Corners = new Corner[2];
+
+    public HexContainer Clone()
+    {
+        HexContainer clone = new(Position){
+            Hex = Hex == null ? null : (Hex)Hex.Clone()
+        };
+
+        // Clone edges
+        for (int i = 0; i < 3; i++)
+            clone.Edges[i] = Edges[i] == null ? null : (Edge)Edges[i].Clone();
+
+        // Clone Corners
+        for (int i = 0; i < 2; i++)
+            clone.Corners[i] = Corners[i] == null ? null : (Corner)Corners[i].Clone();
+
+        return clone;
+    }
 
     public void Draw(Transform transform, Canvas canvas)
     {
