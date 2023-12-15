@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
-using Catan;
+using System.Linq;
+
 using Microsoft.Xna.Framework;
 using Utility;
 using Utility.Graphics;
@@ -106,6 +107,11 @@ public class HexGrid
         m_Hexes[pos] = hex;
     }
 
+    public List<Axial> GetAllHexes()
+    {
+        return m_Hexes.Keys.ToList();
+    }
+
     /// <summary>
     /// Try to get edge at given position
     /// </summary>
@@ -126,6 +132,10 @@ public class HexGrid
         m_Edges[key.Align()] = edge;
     }
 
+    public List<Edge.Key> GetAllEdges() {
+        return m_Edges.Keys.ToList();
+    }
+
     public bool TryGetVertex<T>(Vertex.Key key, out T vertex) where T : Vertex
     {
         bool found = m_Vertices.TryGetValue(key.Align(), out var temp);
@@ -137,6 +147,10 @@ public class HexGrid
     public void InsertVertex(Vertex.Key key, Vertex vertex)
     {
         m_Vertices[key.Align()] = vertex;
+    }
+
+    public List<Vertex.Key> GetAllVertices() {
+        return m_Vertices.Keys.ToList();
     }
 
     /// <summary>
