@@ -57,7 +57,7 @@ public class Vertex
 
         /// <summary>
         /// Each vertex can be referred to as being relative to the surrounding 3 
-        /// vertex positions. To avoid duplicating data, when stored into a grid
+        /// hexagon positions. To avoid duplicating data, when stored into a grid
         /// all positions should be converted to the relative east or west position
         /// on a tile.
         /// </summary>
