@@ -118,12 +118,14 @@ public class Vertex
         /// <returns>Array of length 3</returns>
         public readonly Key[] GetAdjacentVertices()
         {
-            Key aligned = Align();
+            // If unaligned recurse to aligned version
+            if (!Aligned())
+                return Align().GetAdjacentVertices();
 
             int mult;
             Side adjSide;
 
-            if (aligned.Side == Side.W)
+            if (Side == Side.W)
             {
                 mult = -1;
                 adjSide = Side.E;
@@ -139,7 +141,7 @@ public class Vertex
 
             for (int i = 0; i < 3; i++)
                 keys[i] = new(){
-                    Position = aligned.Position + 
+                    Position = Position + 
                         (new Axial(i == 0 ? 2 : 1, i == 2 ? 0 : -1) * mult),
                     Side = adjSide
                 };
@@ -156,25 +158,27 @@ public class Vertex
         /// <returns>Array of length 3</returns>
         public readonly Edge.Key[] GetProtrudingEdges()
         {
-            Key aligned = Align();
+            // If not aligned recurse to aligned version
+            if (!Aligned())
+                return Align().GetProtrudingEdges();
 
             Edge.Key[] keys = new Edge.Key[]{new(), new(), new()};
 
-            if (aligned.Side == Side.W)
+            if (Side == Side.W)
             {
                 keys[0].Side = Edge.Side.NW;
-                keys[1].Position = aligned.Position + new Axial(-1, 0);
+                keys[1].Position = Position + new Axial(-1, 0);
                 keys[2].Side = Edge.Side.NE;
             }
 
             else
             {
                 keys[0].Side = Edge.Side.NE;
-                keys[1].Position = aligned.Position + new Axial(1, -1);
+                keys[1].Position = Position + new Axial(1, -1);
                 keys[2].Side = Edge.Side.NW;
             }
 
-            keys[0].Position = aligned.Position;
+            keys[0].Position = Position;
             keys[1].Side = Edge.Side.N;
             keys[2].Position = keys[1].Position;
 

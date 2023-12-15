@@ -107,5 +107,60 @@ public class Edge
         public readonly float GetRotation() {
             return -((int)Align().Side - 1) * MathF.PI / 3f;
         }
+    
+        /// <summary>
+        /// Get aligned positions for vertices at either end of edge
+        /// </summary>
+        /// <remarks>
+        /// NOTE: Returned positions are not garuanteed to exist within grid
+        /// </remarks>
+        /// <returns>Array of length 2</returns>
+        public readonly Vertex.Key[] GetEndpoints()
+        {
+            // If not aligned recurse to aligned version
+            if (!Aligned())
+                return Align().GetEndpoints();
+
+            Vertex.Key[] keys = new Vertex.Key[2];
+
+            switch (Side)
+            {
+            case Side.NW:
+                keys[0] = new(){
+                    Side = Vertex.Side.W
+                };
+                keys[1] = new(){
+                    Position = new(-1, 1),
+                    Side = Vertex.Side.E
+                };
+                break;
+
+            case Side.N:
+                keys[0] = new(){
+                    Position = new(-1, 1),
+                    Side = Vertex.Side.E
+                };
+                keys[1] = new(){
+                    Position = new(1, 0),
+                    Side = Vertex.Side.W
+                };
+                break;
+
+            case Side.NE:
+                keys[0] = new(){
+                    Position = new(1, 0),
+                    Side = Vertex.Side.W
+                };
+                keys[1] = new(){
+                    Side = Vertex.Side.E
+                };
+                break;
+            }
+
+            for (int i = 0; i < 2; i++)
+                keys[i].Position += Position;
+            
+            return keys;
+        }
     }
 }
