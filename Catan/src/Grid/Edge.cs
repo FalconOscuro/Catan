@@ -6,11 +6,17 @@ using Utility.Graphics;
 
 namespace Grid.Hexagonal;
 
+/// <summary>
+/// A single edge of a hexagon within the grid
+/// </summary>
 public class Edge
 {
     public Edge()
     {}
 
+    /// <summary>
+    /// Shallow copy
+    /// </summary>
     public virtual object Clone() {
         return this.MemberwiseClone();
     }
@@ -31,6 +37,9 @@ public class Edge
         canvas.shapeBatcher.DrawLine(start, end, transform.Scale * 0.1f, Color.Black);
     }
 
+    /// <summary>
+    /// Side of edge relative to a hex
+    /// </summary>
     public enum Side {
         NW,
         N,
@@ -40,6 +49,10 @@ public class Edge
         SW
     }
 
+    /// <summary>
+    /// Position of an edge,
+    /// Described as cardinal direction relative to axial position of hex
+    /// </summary>
     public struct Key {
         public Axial Position;
         public Side Side;
@@ -48,6 +61,13 @@ public class Edge
             return Side < Side.SE;
         }
 
+        /// <summary>
+        /// Each Edge can be referred to as being relative to the adjacent 2 
+        /// hexagon positions. To avoid duplicating data, when stored into a grid
+        /// all positions should be converted to the relative NW/N/NE position
+        /// of a tile.
+        /// </summary>
+        /// <returns>Position referring to same side but aligned to be NW/N/NE of a tile</returns>
         public readonly Key Align()
         {
             Key aligned = new(){
@@ -71,12 +91,19 @@ public class Edge
             return aligned;
         }
 
+        /// <summary>
+        /// Get position for centre of described edge converted to real-space
+        /// </summary>
+        /// <returns></returns>
         public readonly Vector2 GetRealPos() {
             Vector2 offset = new(0, 0.5f);
 
             return Position.GetRealPos() + offset.Rotate(GetRotation());
         }
 
+        /// <summary>
+        /// Get rotation for described edge from horizontal
+        /// </summary>
         public readonly float GetRotation() {
             return -((int)Align().Side - 1) * MathF.PI / 3f;
         }
