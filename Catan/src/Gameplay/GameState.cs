@@ -356,16 +356,61 @@ public struct GameState
 
         foreach (Edge.Key edgePos in edges)
         {
-            if (!Board.TryGetEdge(edgePos, out Path edge))
-                continue; // Throw error?
+            if (CheckRoadPos(edgePos, playerID))
+                ValidActions.Add(new BuildRoadAction(){
+                    OwnerID = playerID,
+                    Position = edgePos
+                });
+        }
+    }
+
+    /// <summary>
+    /// Evaluates eligibility for a single road
+    /// </summary>
+    private readonly bool CheckRoadPos(Edge.Key pos, int playerID)
+    {
+        if (!Board.TryGetEdge(pos, out Path edge))
+            return false; // Should be impossible, throw error?
+
+        // Path already owned
+        else if (edge.OwnerID != -1)
+            return false;
+        
+        Vertex.Key[] nodes = pos.GetEndpoints();
+
+        foreach(Vertex.Key nodePos in nodes)
+        {
+            if (!Board.TryGetVertex(nodePos, out Node node))
+                continue; // Should be impossible, throw error?
             
-            // Check if already occupied
-            else if (edge.OwnerID != -1)
+            // Path connects to owned node
+            else if (node.OwnerID == playerID)
+                return true;
+            
+            // Owned by other player, cannot build through
+            else if (node.OwnerID != -1)
                 continue;
             
-            // Check opposing nodes
-            Vertex.Key nodes;
+            // Loop protruding edges from current node
+            // Searching for connected roads
+            Edge.Key[] adjEdges = nodePos.GetProtrudingEdges();
+            foreach(Edge.Key adjEdgePos in adjEdges)
+            {
+                // Skip target edge
+                if (adjEdgePos == pos)
+                    continue;
+                
+                if (!Board.TryGetEdge(adjEdgePos, out Path adjEdge))
+                    continue;
+                
+                // Found connected road
+                else if (adjEdge.OwnerID == playerID)
+                    return true;
+            }
         }
+
+        // All possibilites checked, cannot build here
+        return false;
     }
 
     public enum Phase{
