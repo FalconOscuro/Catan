@@ -1,3 +1,4 @@
+using System;
 using Microsoft.Xna.Framework;
 
 using Utility;
@@ -5,7 +6,7 @@ using Utility.Graphics;
 
 namespace Grid.Hexagonal;
 
-public class Edge : Tileable
+public class Edge
 {
     public Edge()
     {}
@@ -14,7 +15,7 @@ public class Edge : Tileable
         return this.MemberwiseClone();
     }
 
-    public override void Draw(Transform transform, Canvas canvas)
+    public virtual void Draw(Transform transform, Canvas canvas)
     {
         Vector2 start = new(){
             X = -1
@@ -43,26 +44,41 @@ public class Edge : Tileable
         public Axial Position;
         public Side Side;
 
-        public void Align()
+        public readonly bool Aligned() {
+            return Side < Side.SE;
+        }
+
+        public readonly Key Align()
         {
-            switch (Side)
-            {
-            case Side.SE:
-                Position.q++;
-                Position.r--;
-                Side = Side.NW;
-                return;
+            Key aligned = new(){
+                Position = Position,
+                Side = Side
+            };
 
-            case Side.S:
-                Position.r--;
-                Side = Side.N;
-                return;
+            // Already aligned
+            if (Aligned())
+                return aligned;
 
-            case Side.SW:
-                Position.q--;
-                Side = Side.NE;
-                return;
-            }
+            aligned.Side -= 3;
+
+            Axial offset = new(){
+                Q = -((int)aligned.Side - 1),
+                R = aligned.Side < Side.NE ? -1 : 0
+            };
+
+            aligned.Position += offset;
+
+            return aligned;
+        }
+
+        public readonly Vector2 GetRealPos() {
+            Vector2 offset = new(0, 0.5f);
+
+            return Position.GetRealPos() + offset.Rotate(GetRotation());
+        }
+
+        public readonly float GetRotation() {
+            return -((int)Align().Side - 1) * MathF.PI / 3f;
         }
     }
 }

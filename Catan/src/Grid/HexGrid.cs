@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Catan;
 using Microsoft.Xna.Framework;
 using Utility;
 using Utility.Graphics;
@@ -49,11 +50,16 @@ public class HexGrid
     /// Dictionary of hex containers
     /// Each containing 1 hex, 3 sides and 2 corners
     /// </summary>
-    private readonly Dictionary<Axial, HexContainer> m_Hexes;
+    private readonly Dictionary<Axial, Hex> m_Hexes;
+
+    private readonly Dictionary<Vertex.Key, Vertex> m_Vertices;
+    private readonly Dictionary<Edge.Key, Edge> m_Edges;
 
     public HexGrid()
     {
         m_Hexes = new();
+        m_Vertices = new();
+        m_Edges = new();
     }
 
     /// <summary>
@@ -67,9 +73,15 @@ public class HexGrid
             Rotation = Rotation
         };
 
-        // Clone dictionary
+        // Clone dictionaries
         foreach (var keyPair in m_Hexes)
-            clone.m_Hexes[keyPair.Key] = keyPair.Value.Clone();
+            clone.m_Hexes[keyPair.Key] = (Hex)keyPair.Value.Clone();
+        
+        foreach (var keyPair in m_Edges)
+            clone.m_Edges[keyPair.Key] = (Edge)keyPair.Value.Clone();
+        
+        foreach (var keyPair in m_Vertices)
+            clone.m_Vertices[keyPair.Key] = (Vertex)keyPair.Value.Clone();
 
         return clone;
     }
@@ -78,79 +90,53 @@ public class HexGrid
     /// Attempt to fetch hex at given position
     /// </summary>
     /// <returns>False if hex does not exist</returns>
-    public bool TryGetHex(Axial pos, out Hex hex)
+    public bool TryGetHex<T>(Axial pos, out T hex) where T : Hex
     {
-        hex = null;
-        if (m_Hexes.TryGetValue(pos, out var container))
-            hex = container.Hex;
+        bool found = m_Hexes.TryGetValue(pos, out var temp);
+        hex = temp as T;
         
-        return hex != null;
+        return found;
     }
 
     /// <summary>
-    /// Create and return Hex at given position
+    /// Insert Hex at given position
     /// </summary>
-    /// <returns>Created hex or existing hex position is occupied</returns>
     public void InsertHex(Axial pos, Hex hex)
     {
-        // Test for container
-        if (!m_Hexes.ContainsKey(pos))
-            m_Hexes[pos] = new HexContainer(pos);
-        
-        m_Hexes[pos].Hex = hex;
+        m_Hexes[pos] = hex;
     }
 
     /// <summary>
     /// Try to get edge at given position
     /// </summary>
     /// <returns>False if edge does not exist</returns>
-    public bool TryGetEdge(Edge.Key key, out Edge edge)
+    public bool TryGetEdge<T>(Edge.Key key, out T edge) where T : Edge
     {
-        // Align key to Hex container format
-        key.Align();
+        bool found = m_Edges.TryGetValue(key.Align(), out var temp);
+        edge = temp as T;
 
-        edge = null;
-        if (m_Hexes.TryGetValue(key.Position, out var container))
-            edge = container.Edges[(int)key.Side];
-
-        return edge != null;
+        return found;
     }
 
     /// <summary>
-    /// Create edge at given position
+    /// Insert edge at given position
     /// </summary>
-    /// <returns>Created edge or pre-existing edge</returns>
     public void InsertEdge(Edge.Key key, Edge edge)
     {
-        // Align to container format
-        key.Align();
-
-        // Test for container
-        if (!m_Hexes.ContainsKey(key.Position))
-            m_Hexes[key.Position] = new HexContainer(key.Position);
-
-        m_Hexes[key.Position].Edges[(int)key.Side] = edge;
+        m_Edges[key.Align()] = edge;
     }
 
-    public bool TryGetCorner(Corner.Key key, out Corner corner)
+    public bool TryGetVertex<T>(Vertex.Key key, out T vertex) where T : Vertex
     {
-        key.Align();
-
-        corner = null;
-        if (m_Hexes.TryGetValue(key.Position, out var container))
-            corner = container.Corners[(int)key.Side];
+        bool found = m_Vertices.TryGetValue(key.Align(), out var temp);
+        vertex = temp as T;
         
-        return corner != null;
+        return found;
     }
 
-    public void InsertCorner(Corner.Key key, Corner corner)
+    public void InsertVertex(Vertex.Key key, Vertex vertex)
     {
-        key.Align();
-
-        if (!m_Hexes.ContainsKey(key.Position))
-            m_Hexes[key.Position] = new HexContainer(key.Position);
-
-        m_Hexes[key.Position].Corners[(int)key.Side] = corner;
+        m_Vertices[key.Align()] = vertex;
     }
 
     /// <summary>
@@ -169,19 +155,19 @@ public class HexGrid
         float rFrac = (pos.Y - (pos.X * INVERSE_SQRT_3)) / Height;
         float sFrac = -qFrac-rFrac;
 
-        axialPos.q = (int)MathF.Round(qFrac);
-        axialPos.r = (int)MathF.Round(rFrac);
+        axialPos.Q = (int)MathF.Round(qFrac);
+        axialPos.R = (int)MathF.Round(rFrac);
         s = (int)MathF.Round(sFrac);
 
-        float qDiff = Math.Abs(qFrac - axialPos.q);
-        float rDiff = Math.Abs(rFrac - axialPos.r);
+        float qDiff = Math.Abs(qFrac - axialPos.Q);
+        float rDiff = Math.Abs(rFrac - axialPos.R);
         float sDiff = Math.Abs(sFrac - s);
 
         if (qDiff > rDiff && qDiff > sDiff)
-            axialPos.q = -axialPos.r-s;
+            axialPos.Q = -axialPos.R-s;
         
         else if (rDiff > sDiff)
-            axialPos.r = -axialPos.q-s;
+            axialPos.R = -axialPos.Q-s;
 
         return m_Hexes.ContainsKey(axialPos);
     }
@@ -194,10 +180,47 @@ public class HexGrid
             Translation = Offset
         };
 
-        /// <summary>
-        /// Loop through all hexes
-        /// </summary>
+        // Draw hexes
         foreach (var hexKeyPair in m_Hexes)
-            hexKeyPair.Value.Draw(transform, canvas);
+        {
+            Vector2 realPos = hexKeyPair.Key.GetRealPos();
+
+            Transform hexTransform = new(){
+                Rotation = Rotation,
+                Scale = Height * 0.9f,// Make modifiable const
+                Translation = transform.Apply(realPos)
+            };
+
+            hexKeyPair.Value.Draw(hexTransform, canvas);
+        }
+
+        // Draw edges
+        foreach (var edgeKeyPair in m_Edges)
+        {
+            float edgeRot = edgeKeyPair.Key.GetRotation();
+            Vector2 realPos = edgeKeyPair.Key.GetRealPos();
+
+            Transform edgeTransform = new(){
+                Rotation = edgeRot + Rotation,
+                Scale = Width * 0.2f,
+                Translation = transform.Apply(realPos)
+            };
+
+            edgeKeyPair.Value.Draw(edgeTransform, canvas);
+        }
+
+        // Draw vertices
+        foreach (var vertexKeyPair in m_Vertices)
+        {
+            Vector2 realPos = vertexKeyPair.Key.GetRealPos();
+
+            // Vertices are single point so do not need rotation
+            Transform vTransform = new(){
+                Scale = Height * 0.05f,
+                Translation = transform.Apply(realPos)
+            };
+
+            vertexKeyPair.Value.Draw(vTransform, canvas);
+        }
     }
 }

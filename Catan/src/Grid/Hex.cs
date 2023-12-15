@@ -7,7 +7,7 @@ using Utility.Graphics;
 namespace Grid.Hexagonal;
 using static Utility;
 
-public class Hex : Tileable
+public class Hex
 {
     public Hex()
     {}
@@ -18,7 +18,7 @@ public class Hex : Tileable
         return this.MemberwiseClone();
     }
 
-    public override void Draw(Transform transform, Canvas canvas)
+    public virtual void Draw(Transform transform, Canvas canvas)
     {
         int[] indices = new int[18];
         HEX_INDICES.CopyTo(indices, 0);
