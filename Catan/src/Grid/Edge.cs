@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.Xna.Framework;
 
 using Utility;
@@ -161,6 +162,35 @@ public class Edge
                 keys[i].Position += Position;
             
             return keys;
+        }
+
+        public override readonly bool Equals([NotNullWhen(true)] object obj)
+        {
+            Key? key = obj as Key?;
+
+            if (!key.HasValue)
+                return false;
+            
+            return key.Value == this;
+        }
+
+        public override readonly int GetHashCode()
+        {
+            return base.GetHashCode();
+        }
+
+        public static bool operator==(Key a, Key b) {
+            a = a.Align();
+            b = b.Align();
+
+            return a.Position == b.Position && a.Side == b.Side;
+        }
+
+        public static bool operator!=(Key a, Key b) {
+            a = a.Align();
+            b = b.Align();
+
+            return a.Position != b.Position || a.Side != b.Side;
         }
     }
 }
