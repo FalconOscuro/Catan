@@ -307,7 +307,7 @@ public struct GameState
             if (!pregame)
             {
                 // Check if connected by road
-                Edge.Key[] edges = nodePos.GetAdjacentEdges();
+                Edge.Key[] edges = nodePos.GetProtrudingEdges();
                 
                 bool connected = false;
                 foreach (Edge.Key edgePos in edges)

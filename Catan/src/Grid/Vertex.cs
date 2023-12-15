@@ -148,13 +148,13 @@ public class Vertex
         }
 
         /// <summary>
-        /// Get an array of aligned positions for all adjacent edges
+        /// Get an array of aligned positions for all protruding edges
         /// </summary>
         /// <remarks>
         /// NOTE: Returned positions are not garuanteed to exist within grid
         /// </remarks>
         /// <returns>Array of length 3</returns>
-        public readonly Edge.Key[] GetAdjacentEdges()
+        public readonly Edge.Key[] GetProtrudingEdges()
         {
             Key aligned = Align();
 
