@@ -1,3 +1,4 @@
+using System;
 using Microsoft.Xna.Framework;
 
 using Utility;
@@ -6,6 +7,9 @@ using Utility.Graphics;
 namespace Grid.Hexagonal;
 using static Utility;
 
+/// <summary>
+/// A singular vertex for a hexagon in a grid
+/// </summary>
 public class Vertex
 {
     public Vertex()
@@ -26,6 +30,9 @@ public class Vertex
             canvas.shapeBatcher.DrawCircle(transform.Translation, transform.Scale, 10, transform.Scale * 0.1f, Color.Black);
     }
 
+    /// <summary>
+    /// Side of vertex relative to a tiles axial position
+    /// </summary>
     public enum Side {
         W,
         E,
@@ -35,6 +42,10 @@ public class Vertex
         SW
     }
 
+    /// <summary>
+    /// Describes the position of a vertex
+    /// As a cardinal direction from an axial position
+    /// </summary>
     public struct Key
     {
         public Axial Position;
@@ -44,6 +55,13 @@ public class Vertex
             return Side < Side.NW;
         }
 
+        /// <summary>
+        /// Each vertex can be referred to as being relative to the surrounding 3 
+        /// vertex positions. To avoid duplicating data, when stored into a grid
+        /// all positions should be converted to the relative east or west position
+        /// on a tile.
+        /// </summary>
+        /// <returns>Position referring to same vertex but aligned to be E/W of a tile</returns>
         public readonly Key Align()
         {
             Key aligned = new(){
@@ -83,12 +101,22 @@ public class Vertex
             return aligned;
         }
 
+        /// <summary>
+        /// Get the un-transformed real-space position of the vertex
+        /// </summary>
         public readonly Vector2 GetRealPos() {
             return Position.GetRealPos() + 
                 new Vector2(INVERSE_SQRT_3 * (Align().Side == Side.W ? -1 : 1), 0);
         }
 
-        public readonly Key[] GetAdjacentEdges()
+        /// <summary>
+        /// Get an array of aligned positions for all adjacent vertices.
+        /// </summary>
+        /// <remarks>
+        /// NOTE: Returned positions are not garuanteed to exist within grid
+        /// </remarks>
+        /// <returns>Array of length 3</returns>
+        public readonly Key[] GetAdjacentVertices()
         {
             Key aligned = Align();
 
@@ -109,20 +137,46 @@ public class Vertex
 
             Key[] keys = new Key[3];
 
-            keys[0] = new(){
-                Position = aligned.Position + (new Axial(2, -1) * mult),
-                Side = adjSide
-            };
+            for (int i = 0; i < 3; i++)
+                keys[i] = new(){
+                    Position = aligned.Position + 
+                        (new Axial(i == 0 ? 2 : 1, i == 2 ? 0 : -1) * mult),
+                    Side = adjSide
+                };
 
-            keys[1] = new(){
-                Position = aligned.Position + (new Axial(1, -1) * mult),
-                Side = adjSide
-            };
+            return keys;
+        }
 
-            keys[2] = new(){
-                Position = aligned.Position + (new Axial(1, 0) * mult),
-                Side = adjSide
-            };
+        /// <summary>
+        /// Get an array of aligned positions for all adjacent edges
+        /// </summary>
+        /// <remarks>
+        /// NOTE: Returned positions are not garuanteed to exist within grid
+        /// </remarks>
+        /// <returns>Array of length 3</returns>
+        public readonly Edge.Key[] GetAdjacentEdges()
+        {
+            Key aligned = Align();
+
+            Edge.Key[] keys = new Edge.Key[]{new(), new(), new()};
+
+            if (aligned.Side == Side.W)
+            {
+                keys[0].Side = Edge.Side.NW;
+                keys[1].Position = aligned.Position + new Axial(-1, 0);
+                keys[2].Side = Edge.Side.NE;
+            }
+
+            else
+            {
+                keys[0].Side = Edge.Side.NE;
+                keys[1].Position = aligned.Position + new Axial(1, -1);
+                keys[2].Side = Edge.Side.NW;
+            }
+
+            keys[0].Position = aligned.Position;
+            keys[1].Side = Edge.Side.N;
+            keys[2].Position = keys[1].Position;
 
             return keys;
         }
