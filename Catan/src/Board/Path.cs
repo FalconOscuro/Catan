@@ -4,7 +4,7 @@ namespace Catan;
 
 public class Path : Edge
 {
-    public Player Owner = null;
+    public int OwnerID = -1;
 
     public Path()
     {}
