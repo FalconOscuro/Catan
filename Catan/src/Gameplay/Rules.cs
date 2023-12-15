@@ -26,6 +26,10 @@ internal static class Rules
 
     public const int BOARD_WIDTH = 5;
 
+    public const int MAX_SETTLEMENTS = 5;
+    public const int MAX_ROADS = 15;
+    public const int MAX_CITIES = 4;
+
     public static readonly Resources.Collection BANK_START = new(){
         Brick = 19,
         Grain = 19,

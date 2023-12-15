@@ -6,9 +6,10 @@ public class Player
 {
     public Resources.Collection Hand;
 
-    public int Settlements = 5;
-    public int Roads = 15;
-    public int Cities = 4;
+    // Could change to count No of owned instead of No remaining?
+    public int Settlements = Rules.MAX_SETTLEMENTS;
+    public int Roads = Rules.MAX_ROADS;
+    public int Cities = Rules.MAX_CITIES;
 
     public int VictoryPoints = 0;
 

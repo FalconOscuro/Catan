@@ -252,9 +252,11 @@ public struct GameState
         return (CurrentTurnIndex + CurrentPlayerOffset) % Rules.NUM_PLAYERS;
     }
 
+    // Switch to FSM?
     private void GenerateValidActions()
     {
         ValidActions.Clear();
+        int currentPlayerID = GetCurrentPlayer();
 
         switch (CurrentPhase)
         {
@@ -264,7 +266,11 @@ public struct GameState
             break;
 
         case Phase.TURN_MAIN:
-            GetValidSettlementActions();
+            GetValidSettlementActions(currentPlayerID);
+            GetValidRoadActions(currentPlayerID);
+            GetValidCityActions(currentPlayerID);
+            // Dev cards
+            // Trading
             break;
 
         case Phase.DISCARD:
@@ -279,10 +285,8 @@ public struct GameState
     /// Add all valid settlement actions for the current player to the valid action list
     /// </summary>
     /// <param name="pregame"></param>
-    private readonly void GetValidSettlementActions(bool pregame = false)
+    private readonly void GetValidSettlementActions(int playerID, bool pregame = false)
     {
-        int playerID = GetCurrentPlayer();
-
         // Does player have settlements remaining
         if (Players[playerID].Settlements == 0)
             return;
@@ -333,17 +337,36 @@ public struct GameState
             if (!isValid)
                 continue;
             
-            ValidActions.Add(new BuildSettlementAction(){
-                OwnerID = playerID,
-                Position = nodePos
-            });
+            ValidActions.Add(new BuildSettlementAction(playerID, nodePos));
         }
     }
 
-    private readonly void GetValidRoadActions(bool free = false)
+    /// <summary>
+    /// Add all valid city actions for current player to the valid action list
+    /// </summary>
+    private readonly void GetValidCityActions(int playerID)
     {
-        int playerID = GetCurrentPlayer();
+        // Check if player has remaining cities, or replaceable settlements
+        if (Players[playerID].Cities == 0 || Players[playerID].Settlements == Rules.MAX_SETTLEMENTS)
+            return;
+        
+        // Check if can afford
+        else if (Players[playerID].Hand < Rules.CITY_COST)
+            return;
+        
+        List<Vertex.Key> nodes = Board.GetAllVertices();
+        foreach (Vertex.Key nodePos in nodes)
+        {
+            if (!Board.TryGetVertex(nodePos, out Node node))
+                continue; // Should be impossible, throw error?
+            
+            else if (node.OwnerID == playerID && !node.City)
+                ValidActions.Add(new BuildCityAction(playerID, nodePos));
+        }
+    }
 
+    private readonly void GetValidRoadActions(int playerID, bool free = false)
+    {
         // Check for remaining roads
         if (Players[playerID].Roads == 0)
             return;
@@ -357,10 +380,7 @@ public struct GameState
         foreach (Edge.Key edgePos in edges)
         {
             if (CheckRoadPos(edgePos, playerID))
-                ValidActions.Add(new BuildRoadAction(){
-                    OwnerID = playerID,
-                    Position = edgePos
-                });
+                ValidActions.Add(new BuildRoadAction(playerID, edgePos));
         }
     }
 
