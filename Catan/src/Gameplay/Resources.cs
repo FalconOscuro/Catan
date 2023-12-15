@@ -28,18 +28,41 @@ public class Resources
         public Collection()
         {}
 
+        /// <summary>
+        /// ImGui functionality
+        /// </summary>
         public void ImDraw()
         {
             for (Type type = Type.Brick; type < Type.Wool + 1; type++)
                 ImGui.Text(string.Format("{0}: {1}", type.ToString(), this[type]));
         }
 
-        public Collection Clone()
+        /// <summary>
+        /// Get deep copy of resources
+        /// </summary>
+        /// <remarks>
+        /// Only required as collection encapsulates an array,
+        /// could be avoided by storing to individual fields,
+        /// only requiring shallow copying
+        /// </remarks>
+        public readonly Collection Clone()
         {
             Collection clone = new();
             m_Resources.CopyTo(clone.m_Resources, 0);
 
             return clone;
+        }
+
+        /// <summary>
+        /// The sum total of all resource types within collection
+        /// </summary>
+        public readonly int Count()
+        {
+            int count = 0;
+            for (Type type = Type.Brick; type < Type.Wool + 1; type++)
+                count += this[type];
+            
+            return count;
         }
 
         public readonly int Brick
@@ -107,6 +130,9 @@ public class Resources
             return result;
         }
 
+        /// <summary>
+        /// Evaluate if all resource fields are greater than or equal
+        /// </summary>
         public static bool operator>=(Collection lhs, Collection rhs)
         {
             bool result = true;
@@ -117,12 +143,41 @@ public class Resources
             return result;
         }
 
+        /// <summary>
+        /// Evaluate if all resource fields are less than or equal
+        /// </summary>
         public static bool operator<=(Collection lhs, Collection rhs)
         {
             bool result = true;
 
             for (Type type = Type.Brick; type < Type.Wool + 1; type++)
                 result &= lhs[type] <= rhs[type];
+            
+            return result;
+        }
+
+        /// <summary>
+        /// Evaluate if all resource fields are greater than
+        /// </summary>
+        public static bool operator>(Collection lhs, Collection rhs)
+        {
+            bool result = true;
+
+            for (Type type = Type.Brick; type < Type.Wool + 1; type++)
+                result &= lhs[type] > rhs[type];
+            
+            return result;
+        }
+
+        /// <summary>
+        /// Evaluate if all resource fields are less than
+        /// </summary>
+        public static bool operator<(Collection lhs, Collection rhs)
+        {
+            bool result = true;
+
+            for (Type type = Type.Brick; type < Type.Wool + 1; type++)
+                result &= lhs[type] < rhs[type];
             
             return result;
         }
@@ -140,25 +195,14 @@ public class Resources
     /// </summary>
     public static Color GetColour(Type type)
     {
-        switch(type)
+        return type switch
         {
-            case Type.Brick:
-                return Color.Maroon;
-            
-            case Type.Grain:
-                return Color.Yellow;
-
-            case Type.Lumber:
-                return Color.DarkGreen;
-
-            case Type.Ore:
-                return Color.Gray;
-
-            case Type.Wool:
-                return Color.LightGreen;
-
-            default:
-                return Color.Orange;
-        }
+            Type.Brick => Color.Maroon,
+            Type.Grain => Color.Yellow,
+            Type.Lumber => Color.DarkGreen,
+            Type.Ore => Color.Gray,
+            Type.Wool => Color.LightGreen,
+            _ => Color.Orange,
+        };
     }
 }
