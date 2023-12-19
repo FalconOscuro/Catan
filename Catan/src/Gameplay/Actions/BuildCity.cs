@@ -16,6 +16,6 @@ public class BuildCityAction : IAction
         Position = position;
     }
 
-    public void Execute(ref GameState gameState)
+    protected override void DoExecute(GameState gameState)
     {}
 }

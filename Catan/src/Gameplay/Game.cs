@@ -1,5 +1,5 @@
 using System;
-using System.Threading;
+using System.Collections.Generic;
 using Grid.Hexagonal;
 using Utility.Graphics;
 
@@ -75,7 +75,7 @@ public class Game
 
                     gameState.TileValueMap[tile.Value].Add(pos);
                 }
-                
+
                 gameState.Board.InsertHex(pos, tile);
 
                 // Ensure surrounding paths are created

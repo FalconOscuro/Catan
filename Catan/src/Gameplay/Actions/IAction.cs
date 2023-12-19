@@ -3,7 +3,15 @@ namespace Catan;
 /// <summary>
 /// Structure for Command patter of actions executable by a player
 /// </summary>
-public interface IAction
+public abstract class IAction
 {
-    void Execute(ref GameState gameState);
+    public void Execute(GameState gameState)
+    {
+        DoExecute(gameState);
+
+        gameState.PlayedActions.Add(this);
+        gameState.UpdatePhase(this);
+    }
+
+    protected abstract void DoExecute(GameState gameState);
 }

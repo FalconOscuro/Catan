@@ -9,9 +9,9 @@ namespace Catan;
 /// <summary>
 /// Roll Dice
 /// </summary>
-public class RollDice : IAction
+public class RollDiceAction : IAction
 {
-    public void Execute(ref GameState gameState)
+    protected override void DoExecute(GameState gameState)
     {
         (int, int) dice = gameState.RollDice();
         int roll = dice.Item1 + dice.Item2;
@@ -28,7 +28,6 @@ public class RollDice : IAction
         else
         {
             gameState.DistributeResources();
-            gameState.UpdatePhase(GameState.Phase.TURN_MAIN);
         }
     }
 }

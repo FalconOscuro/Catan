@@ -40,7 +40,7 @@ public class Trade : IAction
         return canOwnerTrade && canTargetTrade;
     }
 
-    public void Execute(ref GameState gameState)
+    protected override void DoExecute(GameState gameState)
     {
         gameState.DoTrade(OwnerID, TargetID, Giving, Recieving);
     }

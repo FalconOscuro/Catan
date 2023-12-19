@@ -3,7 +3,7 @@ using Type = Resources.Type;
 
 internal static class Rules 
 {
-    public static readonly Resources.Collection SETTLEMENT_COST  = new(){
+    public static readonly Resources.Collection SETTLEMENT_COST = new(){
         Brick = 1,
         Grain = 1,
         Lumber = 1,
@@ -20,6 +20,12 @@ internal static class Rules
         Ore = 3
     };
 
+    public static readonly Resources.Collection DEVELOPMENT_CARD_COST = new(){
+        Grain = 1,
+        Ore = 1,
+        Wool = 1
+    };
+
     public const int MAX_HAND_SIZE = 7;
 
     public const int NUM_PLAYERS = 4;
@@ -29,6 +35,8 @@ internal static class Rules
     public const int MAX_SETTLEMENTS = 5;
     public const int MAX_ROADS = 15;
     public const int MAX_CITIES = 4;
+
+    public const int MAX_VICTORY_POINTS = 10;
 
     public static readonly Resources.Collection BANK_START = new(){
         Brick = 19,

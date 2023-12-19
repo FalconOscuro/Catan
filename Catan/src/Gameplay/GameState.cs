@@ -8,7 +8,7 @@ namespace Catan;
 /// A model describing the current game state,
 /// alongside basic action functions
 /// </summary>
-public struct GameState
+public class GameState
 {
     // Dev Card Deck
     // Progress Cards
@@ -41,17 +41,17 @@ public struct GameState
     /// </summary>
     public int LastRoll = 0;
 
-    public Phase CurrentPhase { get; private set; }
+    public GamePhaseManager PhaseManager = new();
 
     // TODO: Init with seed
     public Random Random = new();
 
     public List<IAction> ValidActions = new();
+
+    public List<IAction> PlayedActions = new();
     
     public GameState()
-    {
-        CurrentPhase = 0;
-    }
+    {}
 
     public GameState Clone()
     {
@@ -68,25 +68,16 @@ public struct GameState
         return clone;
     }
 
-    public void UpdatePhase(Phase phase)
+    public void UpdatePhase(IAction action)
     {
-        if (phase == Phase.DISCARD)
-        {
-            while (Players[GetCurrentPlayer()].Hand.Count() <= Rules.MAX_HAND_SIZE && 
-                    CurrentPlayerOffset != Rules.NUM_PLAYERS)
-                CurrentPlayerOffset++;
-            
-            if (CurrentPlayerOffset == Rules.NUM_PLAYERS)
-            {
-                CurrentPlayerOffset = 0;
-                phase = Phase.ROBBER;
-            }
-        }
+        PlayedActions.Add(action);
 
-        CurrentPhase = phase;
+        
+    }
 
-        // Check victory first
-        // Recompute possible actions
+    public void AdvanceTurn()
+    {
+        CurrentTurnIndex = (CurrentTurnIndex + 1) % Rules.NUM_PLAYERS;
     }
 
     // Should be able to specify dice roll for simulation
@@ -247,45 +238,16 @@ public struct GameState
                 DoTrade(i, -1, new(), playerTrades[i]);
     }
 
-    private readonly int GetCurrentPlayer()
+    public int GetCurrentPlayer()
     {
         return (CurrentTurnIndex + CurrentPlayerOffset) % Rules.NUM_PLAYERS;
-    }
-
-    // Switch to FSM?
-    private void GenerateValidActions()
-    {
-        ValidActions.Clear();
-        int currentPlayerID = GetCurrentPlayer();
-
-        switch (CurrentPhase)
-        {
-        case Phase.TURN_START:
-            ValidActions.Add(new RollDice());
-            // Dev cards
-            break;
-
-        case Phase.TURN_MAIN:
-            GetValidSettlementActions(currentPlayerID);
-            GetValidRoadActions(currentPlayerID);
-            GetValidCityActions(currentPlayerID);
-            // Dev cards
-            // Trading
-            break;
-
-        case Phase.DISCARD:
-            break;
-
-        case Phase.ROBBER:
-            break;
-        }
     }
 
     /// <summary>
     /// Add all valid settlement actions for the current player to the valid action list
     /// </summary>
     /// <param name="pregame"></param>
-    private readonly void GetValidSettlementActions(int playerID, bool pregame = false)
+    private void GetValidSettlementActions(int playerID, bool pregame = false)
     {
         // Does player have settlements remaining
         if (Players[playerID].Settlements == 0)
@@ -342,9 +304,56 @@ public struct GameState
     }
 
     /// <summary>
+    /// Evaluate eligibility for single settlement
+    /// </summary>
+    /// <param name="playerID"></param>
+    /// <param name="pos"></param>
+    /// <param name="pregame"></param>
+    /// <returns></returns>
+    public bool CheckSettlementPos(int playerID, Vertex.Key pos, bool pregame = false)
+    {
+        // Could not find node
+        if (!Board.TryGetVertex(pos, out Node node))
+            return false;
+        
+        // Already owned
+        else if (node.OwnerID != -1)
+            return false;
+        
+        // Connection check
+        if (!pregame)
+        {
+            // Check if connected by road
+            Edge.Key[] edges = pos.GetProtrudingEdges();
+                
+            bool connected = false;
+            foreach (Edge.Key edgePos in edges)
+            {
+                if (Board.TryGetEdge(edgePos, out Path path))
+                    connected |= path.OwnerID == playerID;
+            }
+
+            if (!connected)
+                return false;
+        }
+
+        // Check if too close to other settlements
+        Vertex.Key[] adjNodes = pos.GetAdjacentVertices();
+
+        bool isValid = true;
+        foreach(Vertex.Key adjNodePos in adjNodes)
+        {
+            if (Board.TryGetVertex(adjNodePos, out Node adjNode))
+                isValid &= adjNode.OwnerID == -1;
+        }
+
+        return isValid;
+    }
+
+    /// <summary>
     /// Add all valid city actions for current player to the valid action list
     /// </summary>
-    private readonly void GetValidCityActions(int playerID)
+    private void GetValidCityActions(int playerID)
     {
         // Check if player has remaining cities, or replaceable settlements
         if (Players[playerID].Cities == 0 || Players[playerID].Settlements == Rules.MAX_SETTLEMENTS)
@@ -365,7 +374,7 @@ public struct GameState
         }
     }
 
-    private readonly void GetValidRoadActions(int playerID, bool free = false)
+    private void GetValidRoadActions(int playerID, bool free = false)
     {
         // Check for remaining roads
         if (Players[playerID].Roads == 0)
@@ -387,7 +396,7 @@ public struct GameState
     /// <summary>
     /// Evaluates eligibility for a single road
     /// </summary>
-    private readonly bool CheckRoadPos(Edge.Key pos, int playerID)
+    public bool CheckRoadPos(Edge.Key pos, int playerID)
     {
         if (!Board.TryGetEdge(pos, out Path edge))
             return false; // Should be impossible, throw error?
@@ -433,6 +442,7 @@ public struct GameState
         return false;
     }
 
+    // Potential different phases of the game
     public enum Phase{
         TURN_START,
         TURN_MAIN,

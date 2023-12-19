@@ -9,13 +9,15 @@ public class BuildSettlementAction : IAction
 {
     public int OwnerID;
     public Vertex.Key Position;
+    public bool Free;
 
-    public BuildSettlementAction(int ownerID, Vertex.Key position)
+    public BuildSettlementAction(int ownerID, Vertex.Key position, bool free = false)
     {
         OwnerID = ownerID;
         Position = position;
+        Free = free;
     }
 
-    public void Execute(ref GameState gameState)
+    protected override void DoExecute(GameState gameState)
     {}
 }
