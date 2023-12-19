@@ -39,7 +39,7 @@ public struct Axial
     }
 
     public static bool operator==(Axial a, Axial b) {
-        return a.Q == b.Q && a.Q == b.Q;
+        return a.Q == b.Q && a.R == b.R;
     }
 
     public static bool operator!=(Axial a, Axial b) {
