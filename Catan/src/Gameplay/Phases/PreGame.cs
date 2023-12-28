@@ -64,7 +64,7 @@ public class PreGameRoad : IPreGamePhase
     public void OnEnter(params object[] argn)
     {
         if (argn.Length < 2)
-            throw new ArgumentException("PreGameRoad OnEnter() given incorrect number of arguments");
+            throw new ArgumentException(string.Format("PreGameRoad OnEnter() given incorrect number of arguments: expected 2 got {0}", argn.Length));
         
         m_SettlementPos = (Vertex.Key)argn[0];
         m_IsPregame2 = (bool)argn[1];

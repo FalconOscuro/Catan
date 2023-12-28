@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Numerics;
 using Grid.Hexagonal;
 
 namespace Catan;
@@ -31,7 +32,7 @@ public class GameState
     /// <summary>
     /// Players
     /// </summary>
-    public readonly Player[] Players = new Player[Rules.NUM_PLAYERS];
+    public readonly Player[] Players = new Player[]{new(), new(), new(), new()}; // TEMP, CHANGE!!!!!
 
     public int CurrentPlayerOffset = 0;
     public int CurrentTurnIndex = 0;
@@ -68,11 +69,17 @@ public class GameState
         return clone;
     }
 
+    public void Update()
+    {
+        Players[GetCurrentPlayer()].DMM.Update(this);
+    }
+
     public void UpdatePhase(IAction action)
     {
         PlayedActions.Add(action);
 
-        
+        PhaseManager.NextPhase(this, action);
+        Players[GetCurrentPlayer()].DMM.Actions = PhaseManager.GetValidActions(this);
     }
 
     public void AdvanceTurn()

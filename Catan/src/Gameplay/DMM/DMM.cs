@@ -7,14 +7,7 @@ namespace Catan.Behaviour;
 /// </summary>
 public abstract class DMM
 {
-    public abstract void PromptDecision();
+    public List<IAction> Actions;
 
-    public enum DecisionType {
-        TurnStart,
-        TurnMain
-    }
-
-    protected List<IAction> GetAllActions() {
-        return null;
-    }
+    public abstract void Update(GameState gameState);
 }

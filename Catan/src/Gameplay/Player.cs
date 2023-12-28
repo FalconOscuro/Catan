@@ -1,3 +1,4 @@
+using Catan.Behaviour;
 using ImGuiNET;
 
 namespace Catan;
@@ -13,14 +14,12 @@ public class Player
 
     public int VictoryPoints = 0;
 
+    // TEMP DEBUG, REMOVE!!!!
+    public DMM DMM = new RandomDMM();
+
     public Player()
     {
         Hand = new();
-    }
-
-    public void Update()
-    {
-
     }
 
     public void ImDraw()

@@ -13,6 +13,11 @@ public class Game
     private Game()
     {}
 
+    public void Update()
+    {
+        GameState.Update();
+    }
+
     public void Draw(Canvas canvas) {
         GameState.Board.Draw(canvas);
     }
@@ -93,6 +98,9 @@ public class Game
             // TODO: Players
             // TODO: Dev Cards
         }
+
+        // Should be a part of gamestate
+        gameState.Players[gameState.GetCurrentPlayer()].DMM.Actions = gameState.PhaseManager.GetValidActions(gameState);
 
         return new Game(){
             GameState = gameState

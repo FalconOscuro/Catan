@@ -28,11 +28,16 @@ public class GamePhaseManager
         m_Phases[CurrentPhase].OnExit();
 
         CurrentPhase = phaseName;
-        m_Phases[CurrentPhase].OnEnter();
+        m_Phases[CurrentPhase].OnEnter(argn);
     }
 
     public void NextPhase(GameState gameState, IAction lastAction)
     {
         m_Phases[CurrentPhase].NextPhase(gameState, lastAction);
+    }
+
+    public List<IAction> GetValidActions(GameState gameState)
+    {
+        return m_Phases[CurrentPhase].GetValidActions(gameState);
     }
 }
