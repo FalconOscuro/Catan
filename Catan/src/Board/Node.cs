@@ -11,7 +11,10 @@ public class Node : Vertex
         set { m_OwnerID = value; Colour = Rules.GetPlayerIDColour(value); }
     }
 
-    public bool City = false;
+    public bool City {
+        get { return !DrawFilled; }
+        set { DrawFilled = !value; }
+    }
 
     public Node()
     {}
