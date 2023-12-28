@@ -12,6 +12,8 @@ namespace Grid.Hexagonal;
 /// </summary>
 public class Edge
 {
+    public Color Colour = Color.Black;
+
     public Edge()
     {}
 
@@ -35,7 +37,7 @@ public class Edge
         start = transform.Apply(start);
         end = transform.Apply(end);
 
-        canvas.shapeBatcher.DrawLine(start, end, transform.Scale * 0.1f, Color.Black);
+        canvas.shapeBatcher.DrawLine(start, end, transform.Scale * 0.1f, Colour);
     }
 
     /// <summary>

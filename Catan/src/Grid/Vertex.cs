@@ -16,6 +16,7 @@ public class Vertex
     {}
 
     public bool DrawFilled = true;
+    public Color Colour = Color.Black;
 
     public virtual object Clone() {
         return this.MemberwiseClone();
@@ -24,10 +25,10 @@ public class Vertex
     public virtual void Draw(Transform transform, Canvas canvas)
     {
         if (DrawFilled)
-            canvas.shapeBatcher.DrawFilledCircle(transform.Translation, transform.Scale, 10, Color.Black);
+            canvas.shapeBatcher.DrawFilledCircle(transform.Translation, transform.Scale, 10, Colour);
 
         else
-            canvas.shapeBatcher.DrawCircle(transform.Translation, transform.Scale, 10, transform.Scale * 0.1f, Color.Black);
+            canvas.shapeBatcher.DrawCircle(transform.Translation, transform.Scale, 10, transform.Scale * 0.1f, Colour);
     }
 
     /// <summary>

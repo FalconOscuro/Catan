@@ -4,7 +4,12 @@ namespace Catan;
 
 public class Path : Edge
 {
-    public int OwnerID = -1;
+    private int m_OwnerID = -1;
+
+    public int OwnerID {
+        get { return m_OwnerID; }
+        set { m_OwnerID = value; Colour = Rules.GetPlayerIDColour(value); }
+    }
 
     public Path()
     {}

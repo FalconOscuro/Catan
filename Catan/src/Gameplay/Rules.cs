@@ -1,4 +1,6 @@
 namespace Catan;
+
+using Microsoft.Xna.Framework;
 using Type = Resources.Type;
 
 internal static class Rules 
@@ -61,4 +63,16 @@ internal static class Rules
                     10, 4, 6, 12, 
                         9, 2, 10
     };
+
+    public static Color GetPlayerIDColour(int playerID)
+    {
+        return playerID switch
+        {
+            0 => Color.Blue,
+            1 => Color.Orange,
+            2 => Color.White,
+            3 => Color.Red,
+            _ => Color.Black,
+        };
+    }
 }
