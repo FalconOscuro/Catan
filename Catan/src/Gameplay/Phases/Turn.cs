@@ -56,6 +56,11 @@ public class TurnMain : ITurnPhase
     public List<IAction> GetValidActions(GameState gameState)
     {
         List<IAction> actions = new();
+        int currentPlayer = gameState.GetCurrentPlayer();
+
+        gameState.GetValidRoadActions(currentPlayer, actions);
+        gameState.GetValidSettlementActions(currentPlayer, actions);
+        gameState.GetValidCityActions(currentPlayer, actions);
 
         actions.Add(new EndTurn());
 

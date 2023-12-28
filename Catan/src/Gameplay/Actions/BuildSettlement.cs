@@ -18,6 +18,13 @@ public class BuildSettlementAction : IAction
         Free = free;
     }
 
+    public override string ToString()
+    {
+        return string.Format("{0} build settlement", OwnerID);
+    }
+
     protected override void DoExecute(GameState gameState)
-    {}
+    {
+        gameState.BuildSettlement(OwnerID, Position, Free);
+    }
 }

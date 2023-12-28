@@ -47,8 +47,6 @@ public class GameState
     // TODO: Init with seed
     public Random Random = new();
 
-    public List<IAction> ValidActions = new();
-
     public List<IAction> PlayedActions = new();
     
     public GameState()
@@ -168,6 +166,9 @@ public class GameState
     {
         Resources.Collection[] playerTrades = new Resources.Collection[Rules.NUM_PLAYERS];
 
+        for (int i = 0; i < Rules.NUM_PLAYERS; i++)
+            playerTrades[i] = new();
+
         // Get all distribution trades for role
         foreach (var pos in TileValueMap[LastRoll])
         {
@@ -242,7 +243,17 @@ public class GameState
         // Execute all trades
         for (int i = 0; i < Rules.NUM_PLAYERS; i++)
             if (playerTrades[i].Count() != 0)
+            {
                 DoTrade(i, -1, new(), playerTrades[i]);
+
+                // Create dummy action for log
+                Trade trade = new(){
+                    OwnerID = i,
+                    TargetID = -1,
+                    Recieving = playerTrades[i].Clone()
+                };
+                PlayedActions.Add(trade);
+            }
     }
 
     public int GetCurrentPlayer()
@@ -254,14 +265,14 @@ public class GameState
     /// Add all valid settlement actions for the current player to the valid action list
     /// </summary>
     /// <param name="pregame"></param>
-    private void GetValidSettlementActions(int playerID, bool pregame = false)
+    public void GetValidSettlementActions(int playerID, List<IAction> validActions, bool pregame = false)
     {
         // Does player have settlements remaining
         if (Players[playerID].Settlements == 0)
             return;
 
         // Can player afford it, ignored with pregame flag
-        else if (Players[playerID].Hand < Rules.SETTLEMENT_COST && !pregame)
+        else if (!(Rules.SETTLEMENT_COST <= Players[playerID].Hand || pregame))
             return;
         
         List<Vertex.Key> nodes = Board.GetAllVertices();
@@ -306,7 +317,7 @@ public class GameState
             if (!isValid)
                 continue;
             
-            ValidActions.Add(new BuildSettlementAction(playerID, nodePos));
+            validActions.Add(new BuildSettlementAction(playerID, nodePos));
         }
     }
 
@@ -360,14 +371,14 @@ public class GameState
     /// <summary>
     /// Add all valid city actions for current player to the valid action list
     /// </summary>
-    private void GetValidCityActions(int playerID)
+    public void GetValidCityActions(int playerID, List<IAction> validActions)
     {
         // Check if player has remaining cities, or replaceable settlements
         if (Players[playerID].Cities == 0 || Players[playerID].Settlements == Rules.MAX_SETTLEMENTS)
             return;
         
         // Check if can afford
-        else if (Players[playerID].Hand < Rules.CITY_COST)
+        else if (!(Rules.CITY_COST <= Players[playerID].Hand))
             return;
         
         List<Vertex.Key> nodes = Board.GetAllVertices();
@@ -377,18 +388,18 @@ public class GameState
                 continue; // Should be impossible, throw error?
             
             else if (node.OwnerID == playerID && !node.City)
-                ValidActions.Add(new BuildCityAction(playerID, nodePos));
+                validActions.Add(new BuildCityAction(playerID, nodePos));
         }
     }
 
-    private void GetValidRoadActions(int playerID, bool free = false)
+    public void GetValidRoadActions(int playerID, List<IAction> validActions, bool free = false)
     {
         // Check for remaining roads
         if (Players[playerID].Roads == 0)
             return;
         
         // Check if player can afford, ignored with free flag
-        else if (Players[playerID].Hand < Rules.ROAD_COST && !free)
+        else if (!(Rules.ROAD_COST <= Players[playerID].Hand || free))
             return;
         
         List<Edge.Key> edges = Board.GetAllEdges();
@@ -396,7 +407,7 @@ public class GameState
         foreach (Edge.Key edgePos in edges)
         {
             if (CheckRoadPos(edgePos, playerID))
-                ValidActions.Add(new BuildRoadAction(playerID, edgePos));
+                validActions.Add(new BuildRoadAction(playerID, edgePos));
         }
     }
 

@@ -24,7 +24,25 @@ public class Player
 
     public void ImDraw()
     {
-        ImGui.SeparatorText("Hand");
-        Hand.ImDraw();
+        ImGui.Text(string.Format("VP: {0}", VictoryPoints));
+
+        if(ImGui.TreeNode("Hand"))
+        {
+            Hand.ImDraw();
+            ImGui.TreePop();
+        }
+
+        if (ImGui.TreeNode("Pieces"))
+        {
+            ImGui.Text(string.Format("Settlements: {0}", Settlements));
+            ImGui.Text(string.Format("Roads: {0}", Roads));
+            ImGui.Text(string.Format("Cities: {0}", Cities));
+            ImGui.TreePop();
+        }
+
+        if (ImGui.TreeNode("Valid Actions"))
+        {
+            IAction.ImDrawActList(DMM.Actions, GetHashCode().ToString());
+        }
     }
 }

@@ -18,6 +18,13 @@ public class BuildRoadAction : IAction
         Free = free;
     }
 
+    public override string ToString()
+    {
+        return string.Format("{0} build road", OwnerID);
+    }
+
     protected override void DoExecute(GameState gameState)
-    {}
+    {
+        gameState.BuildRoad(OwnerID, Position, Free);
+    }
 }

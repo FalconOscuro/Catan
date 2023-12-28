@@ -16,6 +16,13 @@ public class BuildCityAction : IAction
         Position = position;
     }
 
+    public override string ToString()
+    {
+        return string.Format("{0} build city", OwnerID);
+    }
+
     protected override void DoExecute(GameState gameState)
-    {}
+    {
+        gameState.BuildCity(OwnerID, Position);
+    }
 }

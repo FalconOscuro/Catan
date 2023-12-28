@@ -98,16 +98,14 @@ public class PreGameRoad : IPreGamePhase
                 gameState.CurrentPlayerOffset++;
         }
 
-        else
+        else if (gameState.CurrentPlayerOffset == 0)
         {
-            if (gameState.CurrentPlayerOffset == 0)
-            {
-                // Go to turn start phase
-                gameState.PhaseManager.ChangePhase(TurnStart.NAME);
-            }
-
-            gameState.CurrentPlayerOffset--;
+            gameState.PhaseManager.ChangePhase(TurnStart.NAME);
+            return;
         }
+
+        else
+            gameState.CurrentPlayerOffset--;
 
         gameState.PhaseManager.ChangePhase(PreGameSettlement.NAME, m_IsPregame2);
     }

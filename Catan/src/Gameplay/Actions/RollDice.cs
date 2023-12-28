@@ -11,23 +11,16 @@ namespace Catan;
 /// </summary>
 public class RollDiceAction : IAction
 {
+    public override string ToString()
+    {
+        return "Dice Roll"; // Should display result
+    }
+
     protected override void DoExecute(GameState gameState)
     {
         (int, int) dice = gameState.RollDice();
         int roll = dice.Item1 + dice.Item2;
 
-        gameState.LastRoll = roll;
-
-        if (roll == 7)
-        {
-            // Discard
-            // Else Robber
-
-        }
-
-        else
-        {
-            gameState.DistributeResources();
-        }
+        gameState.LastRoll = roll; // !!!
     }
 }

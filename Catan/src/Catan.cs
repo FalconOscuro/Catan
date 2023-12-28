@@ -143,11 +143,17 @@ public class Catan : Microsoft.Xna.Framework.Game
                 IsFixedTimeStep = fixedTimeStep;
         }
 
+        ImGui.Checkbox("Step Mode", ref m_UseStepMode);
+
         if (m_UseStepMode)
             m_DoStep = ImGui.Button("Step");
         
         ImGui.Text(string.Format("Current Hex: q={0} r={1}", m_HexPos.Q, m_HexPos.R));
 
+        ImGui.End();
+
+        ImGui.Begin("Game");
+        m_Game.ImDraw();
         ImGui.End();
 
         //m_GameMaster.ImDraw();

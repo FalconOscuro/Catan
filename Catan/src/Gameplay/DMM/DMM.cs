@@ -7,7 +7,7 @@ namespace Catan.Behaviour;
 /// </summary>
 public abstract class DMM
 {
-    public List<IAction> Actions;
+    public List<IAction> Actions = new();
 
     public abstract void Update(GameState gameState);
 }

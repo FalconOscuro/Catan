@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Numerics;
 using Grid.Hexagonal;
+using ImGuiNET;
 using Utility.Graphics;
 
 namespace Catan;
@@ -20,6 +22,40 @@ public class Game
 
     public void Draw(Canvas canvas) {
         GameState.Board.Draw(canvas);
+    }
+
+    public void ImDraw()
+    {
+        ImGui.Text(string.Format("Dice Roll: {0}", GameState.LastRoll));
+        ImGui.Text(string.Format("Turn: {0} - {1}", GameState.GetCurrentPlayer(), GameState.PhaseManager.CurrentPhase));
+
+        if (ImGui.CollapsingHeader("Actions"))
+        {
+            IAction.ImDrawActList(GameState.PlayedActions, "PlayedActions");
+        }
+
+        if (ImGui.CollapsingHeader("Bank"))
+            GameState.Bank.ImDraw();
+
+        // Players
+        if (ImGui.CollapsingHeader("Players"))
+        {
+            if (ImGui.BeginTabBar("Players"))
+            {
+                for (int i = 0; i < Rules.NUM_PLAYERS; i++)
+                {
+                    if(ImGui.BeginTabItem(i.ToString()))
+                    {
+                        ImGui.TextColored(Rules.GetPlayerIDColour(i).ToVector4().ToNumerics(), "Colour");
+
+                        GameState.Players[i].ImDraw();
+                        ImGui.EndTabItem();
+                    }
+                }
+
+                ImGui.EndTabBar();
+            }
+        }
     }
 
     // Default start

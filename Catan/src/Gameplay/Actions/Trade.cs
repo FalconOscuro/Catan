@@ -40,6 +40,11 @@ public class Trade : IAction
         return canOwnerTrade && canTargetTrade;
     }
 
+    public override string ToString()
+    {
+        return string.Format("{0} trade {1}", OwnerID, TargetID);// Need long version
+    }
+
     protected override void DoExecute(GameState gameState)
     {
         gameState.DoTrade(OwnerID, TargetID, Giving, Recieving);
