@@ -5,10 +5,28 @@ namespace Catan;
 /// <summary>
 /// Build a new settlement
 /// </summary>
+/// <remarks>
+/// Logic: <see cref="GameState.BuildSettlement(int, Vertex.Key, bool)"/><br/>
+/// Phases: <see cref="PreGameSettlement"/>, <see cref="TurnMain"/>
+/// </remarks>
 public class BuildSettlementAction : IAction
 {
+    /// <summary>
+    /// ID for player building settlement
+    /// </summary>
     public int OwnerID;
+
+    /// <summary>
+    /// Position for built settlement
+    /// </summary>
     public Vertex.Key Position;
+
+    /// <summary>
+    /// Does this action cost resources
+    /// </summary>
+    /// <remarks>
+    /// Used by <see cref="PreGameSettlement"/>
+    /// </remarks>
     public bool Free;
 
     public BuildSettlementAction(int ownerID, Vertex.Key position, bool free = false)
@@ -23,6 +41,9 @@ public class BuildSettlementAction : IAction
         return string.Format("{0} build settlement", OwnerID);
     }
 
+    /// <summary>
+    /// Executes <see cref="GameState.BuildSettlement(int, Vertex.Key, bool)"/>.
+    /// </summary>
     protected override void DoExecute(GameState gameState)
     {
         gameState.BuildSettlement(OwnerID, Position, Free);

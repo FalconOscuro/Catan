@@ -5,9 +5,20 @@ namespace Catan;
 /// <summary>
 /// Build a new city
 /// </summary>
+/// <remarks>
+/// Logic: <see cref="GameState.BuildCity(int, Vertex.Key)"/><br/>
+/// Phases: <see cref="TurnMain"/>
+/// </remarks>
 public class BuildCityAction : IAction
 {
+    /// <summary>
+    /// ID for player building city
+    /// </summary>
     public int OwnerID;
+
+    /// <summary>
+    /// Position for city
+    /// </summary>
     public Vertex.Key Position;
 
     public BuildCityAction(int ownerID, Vertex.Key position)
@@ -21,6 +32,9 @@ public class BuildCityAction : IAction
         return string.Format("{0} build city", OwnerID);
     }
 
+    /// <summary>
+    /// Executes <see cref="GameState.BuildCity(int, Vertex.Key)"/>.
+    /// </summary>
     protected override void DoExecute(GameState gameState)
     {
         gameState.BuildCity(OwnerID, Position);

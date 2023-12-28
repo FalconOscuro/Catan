@@ -22,6 +22,9 @@ public class Player
         Hand = new();
     }
 
+    /// <summary>
+    /// ImGui debug tools
+    /// </summary>
     public void ImDraw()
     {
         ImGui.Text(string.Format("VP: {0}", VictoryPoints));

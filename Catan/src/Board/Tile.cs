@@ -7,22 +7,23 @@ using Type = Catan.Resources.Type;
 
 namespace Catan;
 
-// Could have reference to board state or GM
-
 /// <summary>
 /// Gameplay board tile
 /// </summary>
 public class Tile : Hex 
 {
     /// <summary>
-    /// Resource on tile
-    /// Also affects the colour
+    /// Protected <see cref="Resource"/> field.
     /// </summary>
+    /// <remarks>
+    /// Should only be modified via <see cref="Resource"/> setter.
+    /// </remarks>
     private Type m_Resource;
 
     /// <summary>
-    /// Front facing getter/setter for resource property
+    /// The resource type for this tile.
     /// </summary>
+    /// <value> Determines the <see cref="Colour"/></value>
     public Type Resource { 
         get { return m_Resource; }
         set { m_Resource = value; Colour = Resources.GetColour(value); }

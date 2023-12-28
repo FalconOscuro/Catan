@@ -8,6 +8,12 @@ using Utility.Graphics;
 namespace Catan;
 using Type = Resources.Type;
 
+/// <summary>
+/// Controls a singular <see cref="GameState"/>
+/// </summary>
+/// <remarks>
+/// For use with monogame.
+/// </remarks>
 public class Game
 {
     public GameState GameState;
@@ -15,29 +21,39 @@ public class Game
     private Game()
     {}
 
+    /// <summary>
+    /// Execute single update tick
+    /// </summary>
     public void Update()
     {
         GameState.Update();
     }
 
+    /// <summary>
+    /// Draw all game elements
+    /// </summary>
     public void Draw(Canvas canvas) {
         GameState.Board.Draw(canvas);
     }
 
+    /// <summary>
+    /// Draw debug elements with ImGui
+    /// </summary>
     public void ImDraw()
     {
+        // Move to Gamestate class?
+
         ImGui.Text(string.Format("Dice Roll: {0}", GameState.LastRoll));
         ImGui.Text(string.Format("Turn: {0} - {1}", GameState.GetCurrentPlayer(), GameState.PhaseManager.CurrentPhase));
 
         if (ImGui.CollapsingHeader("Actions"))
-        {
             IAction.ImDrawActList(GameState.PlayedActions, "PlayedActions");
-        }
 
         if (ImGui.CollapsingHeader("Bank"))
             GameState.Bank.ImDraw();
 
-        // Players
+        // Players arranged as tabs
+        // NOTE: Current method does not allow for switching of tabs to left if viewing a players valid actions FIX
         if (ImGui.CollapsingHeader("Players"))
         {
             if (ImGui.BeginTabBar("Players"))
@@ -46,6 +62,7 @@ public class Game
                 {
                     if(ImGui.BeginTabItem(i.ToString()))
                     {
+                        // Move to player class
                         ImGui.TextColored(Rules.GetPlayerIDColour(i).ToVector4().ToNumerics(), "Colour");
 
                         GameState.Players[i].ImDraw();

@@ -1,9 +1,12 @@
 namespace Catan;
 
 /// <summary>
-/// Trade between 2 players
-/// or a player and the bank
+/// Trade between 2 players, or a player and the bank
 /// </summary>
+/// <remarks>
+/// Logic: <see cref="GameState.DoTrade(int, int, Catan.Resources.Collection, Catan.Resources.Collection)"/><br/>
+/// Phases: 
+/// </remarks>
 public class Trade : IAction
 {
     /// <summary>
@@ -32,6 +35,12 @@ public class Trade : IAction
     public Trade()
     {}
 
+    /// <summary>
+    /// Is this trade possible
+    /// </summary>
+    /// <remarks>
+    /// Deprecated?
+    /// </remarks>
     public bool CanExecute(GameState gameState)
     {
         bool canOwnerTrade = gameState.Players[OwnerID].Hand >= Giving;
@@ -45,6 +54,9 @@ public class Trade : IAction
         return string.Format("{0} trade {1}", OwnerID, TargetID);// Need long version
     }
 
+    /// <summary>
+    /// Executes <see cref="GameState.DoTrade(int, int, Resources.Collection, Resources.Collection)"/>.
+    /// </summary>
     protected override void DoExecute(GameState gameState)
     {
         gameState.DoTrade(OwnerID, TargetID, Giving, Recieving);

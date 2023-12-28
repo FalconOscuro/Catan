@@ -2,6 +2,9 @@ using System;
 
 namespace Catan.Behaviour;
 
+/// <summary>
+/// Simple DMM, decides action at random from <see cref="Actions"/>.
+/// </summary>
 public class RandomDMM : DMM
 {
     private Random m_Random;

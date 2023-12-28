@@ -34,7 +34,17 @@ public class GameState
     /// </summary>
     public readonly Player[] Players = new Player[]{new(), new(), new(), new()}; // TEMP, CHANGE!!!!!
 
+    /// <summary>
+    /// Offset from <see cref="CurrentTurnIndex"/>, used for out of turn actions.
+    /// </summary>
     public int CurrentPlayerOffset = 0;
+
+    /// <summary>
+    /// Absolute current player turn
+    /// </summary>
+    /// <remarks>
+    /// For current player accounting for <see cref="CurrentPlayerOffset"/> use <see cref="GetCurrentPlayer"/>.
+    /// </remarks>
     public int CurrentTurnIndex = 0;
 
     /// <summary>
@@ -42,16 +52,28 @@ public class GameState
     /// </summary>
     public int LastRoll = 0;
 
+    /// <summary>
+    /// FSM
+    /// </summary>
     public GamePhaseManager PhaseManager = new();
 
     // TODO: Init with seed
     public Random Random = new();
 
+    /// <summary>
+    /// Log of all executed actions
+    /// </summary>
     public List<IAction> PlayedActions = new();
     
     public GameState()
     {}
 
+    /// <summary>
+    /// Creates a deep clone.
+    /// </summary>
+    /// <remarks>
+    /// Useful for simulation.
+    /// </remarks>
     public GameState Clone()
     {
         GameState clone = new(){
@@ -67,25 +89,38 @@ public class GameState
         return clone;
     }
 
+    /// <summary>
+    /// Execute update tick for current player, utilizing <see cref="DMM"/>.
+    /// </summary>
     public void Update()
     {
         Players[GetCurrentPlayer()].DMM.Update(this);
     }
 
+    /// <summary>
+    /// Called on <see cref="IAction.Execute(GameState)"/>.
+    /// </summary>
+    /// <param name="action">Triggering action.</param>
     public void UpdatePhase(IAction action)
     {
+        // Add action to played action list
         PlayedActions.Add(action);
 
-        PhaseManager.NextPhase(this, action);
+        // Update FSM & retrieve valid actions
+        PhaseManager.Update(this, action);
         Players[GetCurrentPlayer()].DMM.Actions = PhaseManager.GetValidActions(this);
     }
 
+    /// <summary>
+    /// Increments <see cref="CurrentTurnIndex"/> whilst avoiding IndexOutOfRange error.
+    /// </summary>
     public void AdvanceTurn()
     {
         CurrentTurnIndex = (CurrentTurnIndex + 1) % Rules.NUM_PLAYERS;
     }
 
     // Should be able to specify dice roll for simulation
+    // TODO: Overhaul
     public (int, int) RollDice()
     {
         int d1 = Random.Next(1, 7);
@@ -94,6 +129,13 @@ public class GameState
         return (d1, d2);
     }
 
+    /// <summary>
+    /// Trading logic called by <see cref="Trade"/> Command.
+    /// </summary>
+    /// <remarks>
+    /// Does not check if trade is valid!
+    /// </remarks>
+    /// <param name="targetID">If set to -1 targets <see cref="Bank"/></param>
     public void DoTrade(int ownerID, int targetID, Resources.Collection giving, Resources.Collection recieving)
     {
         Players[ownerID].Hand += recieving - giving;
@@ -105,6 +147,13 @@ public class GameState
             Players[targetID].Hand += giving - recieving;
     }
 
+    /// <summary>
+    /// Settlement building logic called by <see cref="BuildSettlementAction"/>.
+    /// </summary>
+    /// <remarks>
+    /// WARNING: Does not check if valid!
+    /// </remarks>
+    /// <param name="free">Used during <see cref="PreGameSettlement"/> phase</param>
     public void BuildSettlement(int ownerID, Vertex.Key position, bool free = false)
     {
         Players[ownerID].Settlements--;
@@ -119,6 +168,13 @@ public class GameState
             DoTrade(ownerID, -1, Rules.SETTLEMENT_COST, new());
     }
 
+    /// <summary>
+    /// Road building logic called by <see cref="BuildRoadAction"/>.
+    /// </summary>
+    /// <remarks>
+    /// WARNING: Does not check if valid!
+    /// </remarks>
+    /// <param name="free">Used during <see cref="PreGameRoad"/> and RoadBuilding</param>
     public void BuildRoad(int ownerID, Edge.Key position, bool free)
     {
         Players[ownerID].Roads--;
@@ -132,6 +188,12 @@ public class GameState
             DoTrade(ownerID, -1, Rules.ROAD_COST, new());
     }
 
+    /// <summary>
+    /// City building logic called by <see cref="BuildCityAction"/>.
+    /// </summary>
+    /// <remarks>
+    /// WARNING: Does not check if valid!
+    /// </remarks>
     public void BuildCity(int ownerID, Vertex.Key position)
     {
         Players[ownerID].Settlements++;
@@ -162,6 +224,9 @@ public class GameState
     // play dev card
     // Steal
 
+    /// <summary>
+    /// Resource distribution after a non-robber <see cref="RollDice"/>.
+    /// </summary>
     public void DistributeResources()
     {
         Resources.Collection[] playerTrades = new Resources.Collection[Rules.NUM_PLAYERS];
@@ -256,6 +321,9 @@ public class GameState
             }
     }
 
+    /// <summary>
+    /// Get current active player, accounting for offset.
+    /// </summary>
     public int GetCurrentPlayer()
     {
         return (CurrentTurnIndex + CurrentPlayerOffset) % Rules.NUM_PLAYERS;
@@ -324,10 +392,7 @@ public class GameState
     /// <summary>
     /// Evaluate eligibility for single settlement
     /// </summary>
-    /// <param name="playerID"></param>
-    /// <param name="pos"></param>
-    /// <param name="pregame"></param>
-    /// <returns></returns>
+    /// <param name="pregame"><see cref="PreGameSettlement"/> has no cost and looser placement restrictions.</param>
     public bool CheckSettlementPos(int playerID, Vertex.Key pos, bool pregame = false)
     {
         // Could not find node
