@@ -26,6 +26,9 @@ public class Catan : Microsoft.Xna.Framework.Game
     private int m_FrameIndex;
     private float m_TimeTotal;
 
+    private bool m_DoStep;
+    private bool m_UseStepMode = true;
+
     public static SpriteFont s_Font {get; private set;}
 
     private Axial m_HexPos;
@@ -69,6 +72,12 @@ public class Catan : Microsoft.Xna.Framework.Game
 
     protected override void Update(GameTime gameTime)
     {
+        if (m_DoStep || !m_UseStepMode)
+        {
+            m_Game.Update();
+            m_DoStep = false;
+        }
+
         Vector2 mousePos = Mouse.GetState().Position.ToVector2().FlipY(GraphicsDevice.Viewport.Height);
         m_Game.GameState.Board.FindHex(mousePos, out m_HexPos);
 
@@ -133,6 +142,9 @@ public class Catan : Microsoft.Xna.Framework.Game
             if (ImGui.Checkbox("Use Fixed Timestep", ref fixedTimeStep))
                 IsFixedTimeStep = fixedTimeStep;
         }
+
+        if (m_UseStepMode)
+            m_DoStep = ImGui.Button("Step");
         
         ImGui.Text(string.Format("Current Hex: q={0} r={1}", m_HexPos.Q, m_HexPos.R));
 
