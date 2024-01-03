@@ -53,6 +53,11 @@ public class Resources
             return clone;
         }
 
+        public override readonly string ToString()
+        {
+            return $"[B:{Brick}, G:{Grain}, L:{Lumber}, O:{Ore}, W:{Wool}]";
+        }
+
         /// <summary>
         /// The sum total of all resource types within collection
         /// </summary>

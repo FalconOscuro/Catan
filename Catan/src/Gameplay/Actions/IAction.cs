@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Numerics;
 using ImGuiNET;
 
@@ -38,6 +39,8 @@ public abstract class IAction
     /// </remarks>
     public override abstract string ToString();
 
+    public abstract string GetDescription();
+
     /// <summary>
     /// Command specified by implementation
     /// </summary>
@@ -46,18 +49,37 @@ public abstract class IAction
     /// </remarks>
     protected abstract void DoExecute(GameState gameState);
 
+    private static int s_SelectedActionIndex = 0;
+
     /// <summary>
     /// ImGUI drawing for a list of actions.
     /// </summary>
     /// <param name="str_id">ID used by ImGUI.</param>
     public static void ImDrawActList(List<IAction> actions, string str_id)
     {
-        uint id = ImGui.GetID(str_id);
-        if(ImGui.BeginChild(id, new Vector2(ImGui.GetContentRegionAvail().X, 100f), true))
+        float spacing = ImGui.GetTextLineHeightWithSpacing();
+        Vector2 size = new((ImGui.GetContentRegionAvail().X) / 2f, 8 * spacing);
+        if (ImGui.BeginListBox("##"+str_id, size))
         {
-            for (int i = actions.Count - 1; i >= 0; i--)
-                ImGui.Text(actions[i].ToString());
+            for (int i = 0; i < actions.Count; i++)
+            {
+                bool isSelected = i == s_SelectedActionIndex;
+
+                if(ImGui.Selectable($"{i}: {actions[i]}", isSelected))
+                {
+                    s_SelectedActionIndex = i;
+                    isSelected = true;
+                }
+
+                if (isSelected)
+                    ImGui.SetItemDefaultFocus();
+            }
+
+            ImGui.EndListBox();
+
+            ImGui.SameLine();
+            string text = actions.Count > s_SelectedActionIndex ? actions[s_SelectedActionIndex].GetDescription() : "";
+            ImGui.InputTextMultiline("##"+str_id, ref text, 1024, size, ImGuiInputTextFlags.ReadOnly);
         }
-        ImGui.EndChild();
     }
 }

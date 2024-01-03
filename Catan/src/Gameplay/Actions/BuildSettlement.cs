@@ -41,6 +41,16 @@ public class BuildSettlementAction : IAction
         return string.Format("{0} build settlement", OwnerID);
     }
 
+    public override string GetDescription()
+    {
+        return string.Format(
+            "Player: {0}\n" +
+            "Position: {1}\n" +
+            "Free: {2}",
+            OwnerID, Position.ToString(), Free
+        );
+    }
+
     /// <summary>
     /// Executes <see cref="GameState.BuildSettlement(int, Vertex.Key, bool)"/>.
     /// </summary>

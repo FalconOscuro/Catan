@@ -46,9 +46,7 @@ public class TurnStart : ITurnPhase
             return;
         
         else if (gameState.LastRoll == 7)
-        {
-            // TODO: Robber & discard states
-        }
+            gameState.PhaseManager.ChangePhase(Discard.NAME, gameState);
 
         else
         {

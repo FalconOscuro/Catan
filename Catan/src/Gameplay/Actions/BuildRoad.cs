@@ -41,6 +41,16 @@ public class BuildRoadAction : IAction
         return string.Format("{0} build road", OwnerID);
     }
 
+    public override string GetDescription()
+    {
+        return string.Format(
+            "Player: {0}\n" +
+            "Postion: {1}\n" +
+            "Free: {2}",
+            OwnerID, Position.ToString(), Free
+        );
+    }
+
     /// <summary>
     /// Executes <see cref="GameState.BuildRoad(int, Edge.Key, bool)"/>.
     /// </summary>

@@ -33,6 +33,11 @@ public struct Axial
         return axial.Value == this;
     }
 
+    public override readonly string ToString()
+    {
+        return $"q:{Q} r:{R}";
+    }
+
     public override readonly int GetHashCode()
     {
         return base.GetHashCode();

@@ -14,6 +14,11 @@ public class EndTurn : IAction
         return "Turn end"; // Should display playerID
     }
 
+    public override string GetDescription()
+    {
+        return ToString();
+    }
+
     /// <summary>
     /// Executes <see cref="GameState.AdvanceTurn"/>.
     /// </summary>

@@ -176,6 +176,11 @@ public class Edge
             return key.Value == this;
         }
 
+        public override string ToString()
+        {
+            return Position.ToString() + $" E:{Side}";
+        }
+
         public override readonly int GetHashCode()
         {
             return base.GetHashCode();

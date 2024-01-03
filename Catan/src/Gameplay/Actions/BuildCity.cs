@@ -32,6 +32,15 @@ public class BuildCityAction : IAction
         return string.Format("{0} build city", OwnerID);
     }
 
+    public override string GetDescription()
+    {
+        return string.Format(
+            "Player: {0}\n" +
+            "Position: {1}",
+            OwnerID, Position.ToString()
+        );
+    }
+
     /// <summary>
     /// Executes <see cref="GameState.BuildCity(int, Vertex.Key)"/>.
     /// </summary>

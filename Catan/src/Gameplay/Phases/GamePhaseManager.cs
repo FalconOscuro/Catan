@@ -27,7 +27,9 @@ public class GamePhaseManager
         { PreGameSettlement.NAME, new PreGameSettlement() },
         { PreGameRoad.NAME, new PreGameRoad() },
         { TurnStart.NAME, new TurnStart() },
-        { TurnMain.NAME, new TurnMain() }
+        { TurnMain.NAME, new TurnMain() },
+        { Robber.NAME, new Robber() },
+        { Discard.NAME, new Discard() }
     };
 
     public GamePhaseManager()

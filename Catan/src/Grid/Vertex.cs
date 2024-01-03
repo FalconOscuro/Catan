@@ -185,5 +185,10 @@ public class Vertex
 
             return keys;
         }
+
+        public override string ToString()
+        {
+            return Position.ToString() + $" V:{Side}";
+        }
     }
 }

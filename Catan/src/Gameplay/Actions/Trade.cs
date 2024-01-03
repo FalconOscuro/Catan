@@ -54,6 +54,19 @@ public class Trade : IAction
         return string.Format("{0} trade {1}", OwnerID, TargetID);// Need long version
     }
 
+    public override string GetDescription()
+    {
+        return string.Format(
+            "Owner: {0}\n" +
+            "Trading: {1}\n\n" +
+
+            "Target: {2}\n" +
+            "Trading: {3}",
+            OwnerID, Giving.ToString(),
+            TargetID, Recieving.ToString()
+        );
+    }
+
     /// <summary>
     /// Executes <see cref="GameState.DoTrade(int, int, Resources.Collection, Resources.Collection)"/>.
     /// </summary>

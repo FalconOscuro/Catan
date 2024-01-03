@@ -20,6 +20,11 @@ public class RollDiceAction : IAction
         return "Dice Roll"; // Should display result
     }
 
+    public override string GetDescription()
+    {
+        return ToString();
+    }
+
     /// <summary>
     /// Executes <see cref="GameState.RollDice"/>.
     /// </summary>
