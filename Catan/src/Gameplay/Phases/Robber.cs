@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using Catan.Action;
+using Grid.Hexagonal;
 
 namespace Catan.State;
 using Type = Resources.Type;
@@ -14,11 +16,57 @@ public class Robber : IGamePhase
 
     public List<Action.IAction> GetValidActions(GameState gameState)
     {
-        return new();
+        List<Action.IAction> actions = new();
+
+        int playerID = gameState.GetCurrentPlayer();
+
+        List<Axial> tiles = gameState.Board.GetAllHexes();
+
+        foreach (Axial tilePos in tiles)
+        {
+            // Tile already has robber
+            if (tilePos == gameState.RobberPos)
+                continue;
+            
+            // Check adj nodes for targetable players
+            int adjPlayerCount = 0;
+            for (Vertex.Key nodePos = new(){Position = tilePos, Side = Vertex.Side.W}; nodePos.Side < Vertex.Side.SW + 1; nodePos.Side++)
+            {
+                gameState.Board.TryGetVertex(nodePos, out Node node);
+
+                if (node.OwnerID != playerID && node.OwnerID != -1)
+                {
+                    IAction action = new Action.RobberAction(){
+                        OwnerID = playerID,
+                        TargetID = node.OwnerID,
+                        TargetPos = tilePos
+                    };
+
+                    adjPlayerCount++;
+                    actions.Add(action);
+                }
+            }
+
+            // No targetable players found
+            if (adjPlayerCount == 0)
+            {
+                IAction action = new Action.RobberAction(){
+                    OwnerID = playerID,
+                    TargetID = -1,
+                    TargetPos = tilePos
+                };
+
+                actions.Add(action);
+            }
+        }
+
+        return actions;
     }
 
     public void Update(GameState gameState, Action.IAction lastAction)
-    {}
+    {
+        gameState.PhaseManager.ChangePhase(TurnMain.NAME);
+    }
 
     public const string NAME = "Robber";
 }

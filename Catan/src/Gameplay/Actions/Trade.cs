@@ -58,10 +58,10 @@ public class Trade : IAction
     {
         return string.Format(
             "Owner: {0}\n" +
-            "Trading: {1}\n\n" +
+            "Trading:\n{1}\n\n" +
 
             "Target: {2}\n" +
-            "Trading: {3}",
+            "Trading:\n{3}",
             OwnerID, Giving.ToString(),
             TargetID, Recieving.ToString()
         );

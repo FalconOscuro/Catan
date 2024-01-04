@@ -45,7 +45,7 @@ public class Player
 
         if (ImGui.TreeNode("Valid Actions"))
         {
-            IAction.ImDrawActList(DMM.Actions, GetHashCode().ToString());
+            Action.IAction.ImDrawActList(DMM.Actions, GetHashCode().ToString());
         }
     }
 }

@@ -208,7 +208,7 @@ public class GameState
         DoTrade(ownerID, -1, Rules.CITY_COST, new());
     }
 
-    public void MoveRobber(Axial position)
+    public void MoveRobber(Axial position, int targetID, int ownerID)
     {
         // Remove from old tile
         Board.TryGetHex(RobberPos, out Tile tile);
@@ -218,6 +218,32 @@ public class GameState
         RobberPos = position;
         Board.TryGetHex(RobberPos, out tile);
         tile.Robber = true;
+
+        // No resource stolen
+        if (targetID == -1 || ownerID == -1)
+            return;
+
+        // Steal random resource
+        int targetHandSize = Players[targetID].Hand.Count();
+
+        // No cards to steal
+        if (targetHandSize < 1)
+            return;
+        
+        int stolenCard = Random.Next(targetHandSize) + 1;
+
+        Resources.Type type = Resources.Type.Empty;
+        int count = 0;
+
+        // Find type of stolen card
+        while (stolenCard > count)
+        {
+            type ++;
+            count += Players[targetID].Hand[type];
+        }
+
+        Players[targetID].Hand[type] -= 1;
+        Players[ownerID].Hand[type] += 1;
     }
 
     // buy dev card
