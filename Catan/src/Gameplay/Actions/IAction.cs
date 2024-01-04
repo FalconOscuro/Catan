@@ -1,9 +1,8 @@
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Numerics;
 using ImGuiNET;
 
-namespace Catan;
+namespace Catan.Action;
 
 // Self evaluation of actions?
 

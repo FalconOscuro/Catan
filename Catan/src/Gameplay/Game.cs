@@ -1,8 +1,7 @@
 using System;
-using System.Collections.Generic;
-using System.Numerics;
-using Grid.Hexagonal;
 using ImGuiNET;
+
+using Grid.Hexagonal;
 using Utility.Graphics;
 
 namespace Catan;
@@ -47,7 +46,7 @@ public class Game
         ImGui.Text(string.Format("Turn: {0} - {1}", GameState.GetCurrentPlayer(), GameState.PhaseManager.CurrentPhase));
 
         if (ImGui.CollapsingHeader("Actions"))
-            IAction.ImDrawActList(GameState.PlayedActions, "PlayedActions");
+            Action.IAction.ImDrawActList(GameState.PlayedActions, "PlayedActions");
 
         if (ImGui.CollapsingHeader("Bank"))
             GameState.Bank.ImDraw();

@@ -1,6 +1,6 @@
 using Grid.Hexagonal;
 
-namespace Catan;
+namespace Catan.Action;
 
 /// <summary>
 /// Build a new road

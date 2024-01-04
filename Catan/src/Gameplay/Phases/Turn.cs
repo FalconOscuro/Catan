@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Catan;
+namespace Catan.State;
 
 public interface ITurnPhase : IGamePhase
 {}
@@ -24,11 +24,11 @@ public class TurnStart : ITurnPhase
     public void OnExit()
     {}
 
-    public List<IAction> GetValidActions(GameState gameState)
+    public List<Action.IAction> GetValidActions(GameState gameState)
     {
-        List<IAction> actions = new()
+        List<Action.IAction> actions = new()
         {
-            new RollDiceAction() // diceroll is always valid action
+            new Action.RollDiceAction() // diceroll is always valid action
         };
 
         // Dev cards
@@ -39,10 +39,10 @@ public class TurnStart : ITurnPhase
     /// <remarks>
     /// Advances to <see cref="TurnMain"/> if lastAction was <see cref="RollDiceAction"/>.
     /// </remarks>
-    public void Update(GameState gameState, IAction lastAction)
+    public void Update(GameState gameState, Action.IAction lastAction)
     {
         // Account for dev cards
-        if (lastAction.GetType() != typeof(RollDiceAction))
+        if (lastAction.GetType() != typeof(Action.RollDiceAction))
             return;
         
         else if (gameState.LastRoll == 7)
@@ -79,9 +79,9 @@ public class TurnMain : ITurnPhase
     public void OnExit()
     {}
 
-    public List<IAction> GetValidActions(GameState gameState)
+    public List<Action.IAction> GetValidActions(GameState gameState)
     {
-        List<IAction> actions = new();
+        List<Action.IAction> actions = new();
         int currentPlayer = gameState.GetCurrentPlayer();
 
         // Check for buildables
@@ -92,7 +92,7 @@ public class TurnMain : ITurnPhase
         // TODO: Trading, Dev cards
 
         // Endturn is always valid
-        actions.Add(new EndTurn());
+        actions.Add(new Action.EndTurn());
 
         return actions;
     }
@@ -101,9 +101,9 @@ public class TurnMain : ITurnPhase
     /// Advances to <see cref="TurnStart"/> on <see cref="EndTurn"/>".
     /// Could be moved to gameState??
     /// </remarks>
-    public void Update(GameState gameState, IAction lastAction)
+    public void Update(GameState gameState, Action.IAction lastAction)
     {
-        if (lastAction is EndTurn)
+        if (lastAction is Action.EndTurn)
             gameState.PhaseManager.ChangePhase(TurnStart.NAME);
     }
 

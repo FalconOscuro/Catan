@@ -1,4 +1,4 @@
-namespace Catan;
+namespace Catan.Action;
 
 /// <summary>
 /// Trade between 2 players, or a player and the bank

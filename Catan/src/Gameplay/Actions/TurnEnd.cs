@@ -1,4 +1,4 @@
-namespace Catan;
+namespace Catan.Action;
 
 /// <summary>
 /// Simple turn ending action

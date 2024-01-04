@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Catan;
+namespace Catan.State;
 
 /// <summary>
 /// Gameplay FSM
@@ -65,7 +65,7 @@ public class GamePhaseManager
     /// Can result in <see cref="ChangePhase"/>.
     /// </remarks>
     /// <param name="lastAction">Last action executed by player.</param>
-    public void Update(GameState gameState, IAction lastAction)
+    public void Update(GameState gameState, Action.IAction lastAction)
     {
         m_Phases[CurrentPhase].Update(gameState, lastAction);
     }
@@ -73,7 +73,7 @@ public class GamePhaseManager
     /// <summary>
     /// Get a list from the current <see cref="IGamePhase"/>
     /// </summary>
-    public List<IAction> GetValidActions(GameState gameState)
+    public List<Action.IAction> GetValidActions(GameState gameState)
     {
         return m_Phases[CurrentPhase].GetValidActions(gameState);
     }

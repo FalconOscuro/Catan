@@ -13,7 +13,7 @@ public abstract class DMM
     /// <remarks>
     /// Determined by <see cref="IGamePhase.GetValidActions(GameState)"/>.
     /// </remarks>
-    public List<IAction> Actions = new();
+    public List<Action.IAction> Actions = new();
 
     /// <summary>
     /// Update function called during owning Players turn

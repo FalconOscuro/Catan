@@ -1,6 +1,4 @@
-using System;
-
-namespace Catan;
+namespace Catan.Action;
 
 // NOTES:
 // Need to be able to simulate different dice roll results

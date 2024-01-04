@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Catan;
+namespace Catan.State;
 
 /// <summary>
 /// Interface State used in <see cref="GamePhaseManager"/>
@@ -28,7 +28,7 @@ public interface IGamePhase
     /// <remarks>
     /// Used by a <see cref="Player.DMM"/>.
     /// </remarks>
-    List<IAction> GetValidActions(GameState gameState);
+    List<Action.IAction> GetValidActions(GameState gameState);
 
     /// <summary>
     /// Update phase.
@@ -36,5 +36,5 @@ public interface IGamePhase
     /// <remarks>
     /// Can be used to updated <see cref="GamePhaseManager.CurrentPhase"/> based on last action.
     /// </remarks>
-    void Update(GameState gameState, IAction lastAction);
+    void Update(GameState gameState, Action.IAction lastAction);
 }

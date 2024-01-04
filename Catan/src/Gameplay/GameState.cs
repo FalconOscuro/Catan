@@ -55,7 +55,7 @@ public class GameState
     /// <summary>
     /// FSM
     /// </summary>
-    public GamePhaseManager PhaseManager = new();
+    public State.GamePhaseManager PhaseManager = new();
 
     // TODO: Init with seed
     public Random Random = new();
@@ -63,7 +63,7 @@ public class GameState
     /// <summary>
     /// Log of all executed actions
     /// </summary>
-    public List<IAction> PlayedActions = new();
+    public List<Action.IAction> PlayedActions = new();
     
     public GameState()
     {}
@@ -101,7 +101,7 @@ public class GameState
     /// Called on <see cref="IAction.Execute(GameState)"/>.
     /// </summary>
     /// <param name="action">Triggering action.</param>
-    public void UpdatePhase(IAction action)
+    public void UpdatePhase(Action.IAction action)
     {
         // Add action to played action list
         PlayedActions.Add(action);
@@ -312,7 +312,7 @@ public class GameState
                 DoTrade(i, -1, new(), playerTrades[i]);
 
                 // Create dummy action for log
-                Trade trade = new(){
+                Action.Trade trade = new(){
                     OwnerID = i,
                     TargetID = -1,
                     Recieving = playerTrades[i].Clone()
@@ -333,7 +333,7 @@ public class GameState
     /// Add all valid settlement actions for the current player to the valid action list
     /// </summary>
     /// <param name="pregame"></param>
-    public void GetValidSettlementActions(int playerID, List<IAction> validActions, bool pregame = false)
+    public void GetValidSettlementActions(int playerID, List<Action.IAction> validActions, bool pregame = false)
     {
         // Does player have settlements remaining
         if (Players[playerID].Settlements == 0)
@@ -385,7 +385,7 @@ public class GameState
             if (!isValid)
                 continue;
             
-            validActions.Add(new BuildSettlementAction(playerID, nodePos));
+            validActions.Add(new Action.BuildSettlementAction(playerID, nodePos));
         }
     }
 
@@ -436,7 +436,7 @@ public class GameState
     /// <summary>
     /// Add all valid city actions for current player to the valid action list
     /// </summary>
-    public void GetValidCityActions(int playerID, List<IAction> validActions)
+    public void GetValidCityActions(int playerID, List<Action.IAction> validActions)
     {
         // Check if player has remaining cities, or replaceable settlements
         if (Players[playerID].Cities == 0 || Players[playerID].Settlements == Rules.MAX_SETTLEMENTS)
@@ -453,11 +453,11 @@ public class GameState
                 continue; // Should be impossible, throw error?
             
             else if (node.OwnerID == playerID && !node.City)
-                validActions.Add(new BuildCityAction(playerID, nodePos));
+                validActions.Add(new Action.BuildCityAction(playerID, nodePos));
         }
     }
 
-    public void GetValidRoadActions(int playerID, List<IAction> validActions, bool free = false)
+    public void GetValidRoadActions(int playerID, List<Action.IAction> validActions, bool free = false)
     {
         // Check for remaining roads
         if (Players[playerID].Roads == 0)
@@ -472,7 +472,7 @@ public class GameState
         foreach (Edge.Key edgePos in edges)
         {
             if (CheckRoadPos(edgePos, playerID))
-                validActions.Add(new BuildRoadAction(playerID, edgePos));
+                validActions.Add(new Action.BuildRoadAction(playerID, edgePos));
         }
     }
 

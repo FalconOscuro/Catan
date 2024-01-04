@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
+
 using Grid.Hexagonal;
 
-namespace Catan;
+namespace Catan.State;
 
 // TODO: 2nd pregame resources
 
@@ -43,9 +43,9 @@ public class PreGameSettlement : IPreGamePhase
     public void OnExit()
     {}
 
-    public List<IAction> GetValidActions(GameState gameState)
+    public List<Action.IAction> GetValidActions(GameState gameState)
     {
-        List<IAction> actions = new();
+        List<Action.IAction> actions = new();
         int playerID = gameState.GetCurrentPlayer();
 
         // Check validity of all nodes
@@ -53,7 +53,7 @@ public class PreGameSettlement : IPreGamePhase
         foreach (Vertex.Key nodePos in nodes)
         {
             if (gameState.CheckSettlementPos(playerID, nodePos, true))
-                actions.Add(new BuildSettlementAction(playerID, nodePos, true));
+                actions.Add(new Action.BuildSettlementAction(playerID, nodePos, true));
         }
 
         return actions;
@@ -63,14 +63,14 @@ public class PreGameSettlement : IPreGamePhase
     /// Always advances <see cref="GamePhaseManager.CurrentPhase"/> to <see cref="PreGameRoad"/>,
     /// passing <see cref="m_IsPregame2"/> and settlement pos for lastAction.
     /// </remarks>
-    public void Update(GameState gameState, IAction lastAction)
+    public void Update(GameState gameState, Action.IAction lastAction)
     {
         // Only BuildSettlementActions are valid
-        if (lastAction.GetType() != typeof(BuildSettlementAction))
+        if (lastAction.GetType() != typeof(Action.BuildSettlementAction))
             throw new ArgumentException("PreGameSettlement got unexpected type for lastAction, expected BuildSettlementAction");
 
         // Advances to PreGameRoad, passing built settlement as argn
-        Vertex.Key settlementPos = ((BuildSettlementAction)lastAction).Position;
+        Vertex.Key settlementPos = ((Action.BuildSettlementAction)lastAction).Position;
 
         // Need to gain starting resources
 
@@ -122,16 +122,16 @@ public class PreGameRoad : IPreGamePhase
     public void OnExit()
     {}
 
-    public List<IAction> GetValidActions(GameState gameState)
+    public List<Action.IAction> GetValidActions(GameState gameState)
     {
-        List<IAction> actions = new();
+        List<Action.IAction> actions = new();
         int playerID = gameState.GetCurrentPlayer();
 
         // Check validity for all surrounding edges of settlement
         Edge.Key[] edges = m_SettlementPos.GetProtrudingEdges();
         foreach (Edge.Key edgePos in edges)
             if (gameState.Board.TryGetEdge<Path>(edgePos, out _))
-                actions.Add(new BuildRoadAction(playerID, edgePos, true));
+                actions.Add(new Action.BuildRoadAction(playerID, edgePos, true));
 
         return actions;
     }
@@ -140,7 +140,7 @@ public class PreGameRoad : IPreGamePhase
     /// Advances <see cref="GamePhaseManager.CurrentPhase"/> to <see cref="PreGameSettlement"/> passing <see cref="m_IsPreGame2"/>,
     /// or <see cref="TurnStart"/> if end of pre-game reached.
     /// </remarks>
-    public void Update(GameState gameState, IAction lastAction)
+    public void Update(GameState gameState, Action.IAction lastAction)
     {
         // Responsible for advancing current player turn
 

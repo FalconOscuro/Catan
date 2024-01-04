@@ -1,8 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
-namespace Catan;
+namespace Catan.State;
 using Type = Resources.Type;
 
 public class Robber : IGamePhase
@@ -13,12 +12,12 @@ public class Robber : IGamePhase
     public void OnExit()
     {}
 
-    public List<IAction> GetValidActions(GameState gameState)
+    public List<Action.IAction> GetValidActions(GameState gameState)
     {
         return new();
     }
 
-    public void Update(GameState gameState, IAction lastAction)
+    public void Update(GameState gameState, Action.IAction lastAction)
     {}
 
     public const string NAME = "Robber";
@@ -36,9 +35,9 @@ public class Discard : IGamePhase
     public void OnExit()
     {}
 
-    public List<IAction> GetValidActions(GameState gameState)
+    public List<Action.IAction> GetValidActions(GameState gameState)
     {
-        List<IAction> actions = new();
+        List<Action.IAction> actions = new();
         int playerID = gameState.GetCurrentPlayer();
 
         Resources.Collection hand = gameState.Players[playerID].Hand;
@@ -49,7 +48,7 @@ public class Discard : IGamePhase
         
         foreach (var found in RecurseOptions(hand, new Resources.Collection(), discardNum))
         {
-            Trade trade = new(){
+            Action.Trade trade = new(){
                 OwnerID = playerID,
                 TargetID = -1,
                 Giving = found.Clone()
@@ -103,7 +102,7 @@ public class Discard : IGamePhase
         }
     }
 
-    public void Update(GameState gameState, IAction lastAction)
+    public void Update(GameState gameState, Action.IAction lastAction)
     {
         gameState.CurrentPlayerOffset++;
         FindTarget(gameState);
