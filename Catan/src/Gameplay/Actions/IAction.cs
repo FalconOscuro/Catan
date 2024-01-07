@@ -15,6 +15,12 @@ namespace Catan.Action;
 /// </remarks>
 public abstract class IAction
 {
+    public bool IsSilent = false;
+    public bool IsHidden = false;
+    public bool TriggerStateChange = false;
+
+    public int OwnerID;
+
     /// <summary>
     /// Execute action command
     /// </summary>
@@ -22,12 +28,12 @@ public abstract class IAction
     /// Calls implementation specific command (<see cref="DoExecute"/>),
     /// followed by generic action logic (<see cref="UpdatePhase"/>).
     /// </remarks>
-    public void Execute(GameState gameState)
+    public GameState Execute(GameState gameState)
     {
-        DoExecute(gameState);
+        gameState = DoExecute(gameState);
 
-        //gameState.PlayedActions.Add(this);
-        gameState.UpdatePhase(this);
+        gameState.UpdatePhase((IAction)MemberwiseClone());
+        return gameState;
     }
 
     /// <summary>
@@ -46,7 +52,7 @@ public abstract class IAction
     /// <remarks>
     /// Should execute a Function of <paramref name="gameState"/>
     /// </remarks>
-    protected abstract void DoExecute(GameState gameState);
+    protected abstract GameState DoExecute(GameState gameState);
 
     private static int s_SelectedActionIndex = 0;
 
@@ -57,7 +63,7 @@ public abstract class IAction
     public static void ImDrawActList(List<IAction> actions, string str_id)
     {
         float spacing = ImGui.GetTextLineHeightWithSpacing();
-        Vector2 size = new((ImGui.GetContentRegionAvail().X) / 2f, 8 * spacing);
+        Vector2 size = new(ImGui.GetContentRegionAvail().X / 2f, 8 * spacing);
         if (ImGui.BeginListBox("##"+str_id, size))
         {
             for (int i = 0; i < actions.Count; i++)

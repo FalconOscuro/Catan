@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-
+using Catan.Action;
 using Grid.Hexagonal;
 
 namespace Catan.State;
@@ -31,7 +31,7 @@ public class PreGameSettlement : IPreGamePhase
     private bool m_IsPregame2;
 
     /// <param name="argn">arg0: <see cref="m_IsPreGame2"/>, defaults to false</param>
-    public void OnEnter(params object[] argn)
+    public void OnEnter(GameState gameState, params object[] argn)
     {
         if (argn.Length == 0)
             m_IsPregame2 = false;
@@ -46,14 +46,16 @@ public class PreGameSettlement : IPreGamePhase
     public List<Action.IAction> GetValidActions(GameState gameState)
     {
         List<Action.IAction> actions = new();
-        int playerID = gameState.GetCurrentPlayer();
+        int playerID = gameState.GetCurrentPlayerID();
 
         // Check validity of all nodes
         List<Vertex.Key> nodes = gameState.Board.GetAllVertices();
         foreach (Vertex.Key nodePos in nodes)
         {
             if (gameState.CheckSettlementPos(playerID, nodePos, true))
-                actions.Add(new Action.BuildSettlementAction(playerID, nodePos, true));
+                actions.Add(new BuildSettlementAction(playerID, nodePos, true){
+                    TriggerStateChange = true
+                });
         }
 
         return actions;
@@ -66,15 +68,11 @@ public class PreGameSettlement : IPreGamePhase
     public void Update(GameState gameState, Action.IAction lastAction)
     {
         // Only BuildSettlementActions are valid
-        if (lastAction.GetType() != typeof(Action.BuildSettlementAction))
+        BuildSettlementAction settlement = lastAction as BuildSettlementAction ?? 
             throw new ArgumentException("PreGameSettlement got unexpected type for lastAction, expected BuildSettlementAction");
 
         // Advances to PreGameRoad, passing built settlement as argn
-        Vertex.Key settlementPos = ((Action.BuildSettlementAction)lastAction).Position;
-
-        // Need to gain starting resources
-
-        gameState.PhaseManager.ChangePhase(PreGameRoad.NAME, settlementPos, m_IsPregame2);
+        gameState.PhaseManager.ChangePhase(PreGameRoad.NAME, gameState, settlement.Position, m_IsPregame2);
     }
 
     public const string NAME = "PreGameSettlement";
@@ -110,7 +108,7 @@ public class PreGameRoad : IPreGamePhase
     /// arg0: <see cref="m_SettlementPos"/>,
     /// arg1: <see cref="m_IsPregame2"/>
     /// </param>
-    public void OnEnter(params object[] argn)
+    public void OnEnter(GameState gameState, params object[] argn)
     {
         if (argn.Length < 2)
             throw new ArgumentException(string.Format("PreGameRoad OnEnter() given incorrect number of arguments: expected 2 got {0}", argn.Length));
@@ -122,16 +120,18 @@ public class PreGameRoad : IPreGamePhase
     public void OnExit()
     {}
 
-    public List<Action.IAction> GetValidActions(GameState gameState)
+    public List<IAction> GetValidActions(GameState gameState)
     {
-        List<Action.IAction> actions = new();
-        int playerID = gameState.GetCurrentPlayer();
+        List<IAction> actions = new();
+        int playerID = gameState.GetCurrentPlayerID();
 
         // Check validity for all surrounding edges of settlement
         Edge.Key[] edges = m_SettlementPos.GetProtrudingEdges();
         foreach (Edge.Key edgePos in edges)
             if (gameState.Board.TryGetEdge<Path>(edgePos, out _))
-                actions.Add(new Action.BuildRoadAction(playerID, edgePos, true));
+                actions.Add(new BuildRoadAction(playerID, edgePos, true){
+                    TriggerStateChange = true
+                });
 
         return actions;
     }
@@ -140,7 +140,7 @@ public class PreGameRoad : IPreGamePhase
     /// Advances <see cref="GamePhaseManager.CurrentPhase"/> to <see cref="PreGameSettlement"/> passing <see cref="m_IsPreGame2"/>,
     /// or <see cref="TurnStart"/> if end of pre-game reached.
     /// </remarks>
-    public void Update(GameState gameState, Action.IAction lastAction)
+    public void Update(GameState gameState, IAction lastAction)
     {
         // Responsible for advancing current player turn
 
@@ -158,7 +158,7 @@ public class PreGameRoad : IPreGamePhase
         // if pregame 2 & offset is 0, pregame is finished, advance to turnstart to begin main game loop
         else if (gameState.CurrentPlayerOffset == 0)
         {
-            gameState.PhaseManager.ChangePhase(TurnStart.NAME);
+            gameState.PhaseManager.ChangePhase(TurnStart.NAME, gameState);
             return;
         }
 
@@ -166,7 +166,7 @@ public class PreGameRoad : IPreGamePhase
         else
             gameState.CurrentPlayerOffset--;
 
-        gameState.PhaseManager.ChangePhase(PreGameSettlement.NAME, m_IsPregame2);
+        gameState.PhaseManager.ChangePhase(PreGameSettlement.NAME, gameState, m_IsPregame2);
     }
 
     public const string NAME = "PreGameRoad";

@@ -8,18 +8,35 @@ using Type = Resources.Type;
 
 public class Robber : IGamePhase
 {
-    public void OnEnter(params object[] argn)
+    public void OnEnter(GameState gameState, params object[] argn)
     {}
 
     public void OnExit()
     {}
 
-    public List<Action.IAction> GetValidActions(GameState gameState)
+    public List<IAction> GetValidActions(GameState gameState)
     {
-        List<Action.IAction> actions = new();
+        List<IAction> actions = new();
 
-        int playerID = gameState.GetCurrentPlayer();
+        int playerID = gameState.GetCurrentPlayerID();
+        foreach ((Axial targetPos, int targetID) in GetAllRobberMoves(gameState, playerID))
+            actions.Add(new RobberAction(){
+                OwnerID = playerID,
+                TargetID = targetID,
+                TargetPos = targetPos,
+                TriggerStateChange = true
+            });
 
+        return actions;
+    }
+
+    public void Update(GameState gameState, IAction lastAction)
+    {
+        gameState.PhaseManager.ChangePhase(TurnMain.NAME, gameState);
+    }
+
+    public static IEnumerable<(Axial, int)> GetAllRobberMoves(GameState gameState, int playerID)
+    {
         List<Axial> tiles = gameState.Board.GetAllHexes();
 
         foreach (Axial tilePos in tiles)
@@ -36,14 +53,9 @@ public class Robber : IGamePhase
 
                 if (node.OwnerID != playerID && node.OwnerID != -1)
                 {
-                    IAction action = new Action.RobberAction(){
-                        OwnerID = playerID,
-                        TargetID = node.OwnerID,
-                        TargetPos = tilePos
-                    };
+                    yield return (tilePos, node.OwnerID);
 
                     adjPlayerCount++;
-                    actions.Add(action);
                 }
             }
 
@@ -56,16 +68,9 @@ public class Robber : IGamePhase
                     TargetPos = tilePos
                 };
 
-                actions.Add(action);
+                yield return (tilePos, -1);
             }
         }
-
-        return actions;
-    }
-
-    public void Update(GameState gameState, Action.IAction lastAction)
-    {
-        gameState.PhaseManager.ChangePhase(TurnMain.NAME);
     }
 
     public const string NAME = "Robber";
@@ -73,33 +78,31 @@ public class Robber : IGamePhase
 
 public class Discard : IGamePhase
 {
-    public void OnEnter(params object[] argn)
+    public void OnEnter(GameState gameState, params object[] argn)
     {
-        GameState gameState = argn[0] as GameState;
-
         FindTarget(gameState);
     }
 
     public void OnExit()
     {}
 
-    public List<Action.IAction> GetValidActions(GameState gameState)
+    public List<IAction> GetValidActions(GameState gameState)
     {
-        List<Action.IAction> actions = new();
-        int playerID = gameState.GetCurrentPlayer();
+        List<IAction> actions = new();
+        int playerID = gameState.GetCurrentPlayerID();
 
         Resources.Collection hand = gameState.Players[playerID].Hand;
 
         // Half hand size rounded down
         int discardNum = Math.DivRem(hand.Count(), 2).Quotient;
-        Resources.Collection discarding = new();
         
         foreach (var found in RecurseOptions(hand, new Resources.Collection(), discardNum))
         {
-            Action.Trade trade = new(){
+            Trade trade = new(){
                 OwnerID = playerID,
                 TargetID = -1,
-                Giving = found.Clone()
+                Giving = found.Clone(),
+                TriggerStateChange = true
             };
 
             actions.Add(trade);
@@ -159,11 +162,11 @@ public class Discard : IGamePhase
     private void FindTarget(GameState gameState)
     {
         for (; gameState.CurrentPlayerOffset < Rules.NUM_PLAYERS; gameState.CurrentPlayerOffset++)
-            if (gameState.Players[gameState.GetCurrentPlayer()].Hand.Count() > Rules.MAX_HAND_SIZE)
+            if (gameState.Players[gameState.GetCurrentPlayerID()].Hand.Count() > Rules.MAX_HAND_SIZE)
                 return;
         
         gameState.CurrentPlayerOffset = 0;
-        gameState.PhaseManager.ChangePhase(Robber.NAME);
+        gameState.PhaseManager.ChangePhase(Robber.NAME, gameState);
     }
 
     public const string NAME = "Discard";

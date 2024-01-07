@@ -64,6 +64,14 @@ internal static class Rules
                         9, 2, 10
     };
 
+    public const int DEV_CARD_VICTORY_POINT_COUNT = 5;
+    public const int DEV_CARD_KNIGHT_COUNT = 14;
+
+    // NOTE: In base rules all progress typed dev cards have 2 copies, could be replaced with singluar PROGRESS_CARD_COUNT?
+    public const int DEV_CARD_ROAD_BUILDING_COUNT = 0;
+    public const int DEV_CARD_YEAR_OF_PLENTY_COUNT = 0;
+    public const int DEV_CARD_MONOPOLY_COUNT = 0;
+
     public static Color GetPlayerIDColour(int playerID)
     {
         return playerID switch

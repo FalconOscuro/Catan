@@ -1,9 +1,59 @@
 using System.Collections.Generic;
+using System.Linq;
+using Catan.Action;
+using Grid.Hexagonal;
 
 namespace Catan.State;
 
-public interface ITurnPhase : IGamePhase
-{}
+public abstract class ITurnPhase : IGamePhase
+{
+    public Dictionary<DevCards.Type, bool> PlayableDevCards = new();
+
+    public virtual void OnEnter(GameState gameState, params object[] argn)
+    {
+        Player player = gameState.GetCurrentPlayer();
+
+        for (DevCards.Type devCard = DevCards.Type.Knight; devCard < DevCards.Type.Monopoly + 1; devCard++)
+            PlayableDevCards[devCard] = player.HeldDevCards.Contains(devCard);
+    }
+
+    public abstract void OnExit();
+
+    public abstract void Update(GameState gameState, IAction lastAction);
+
+    public abstract List<IAction> GetValidActions(GameState gameState);
+
+    protected List<IAction> GetDevCardActions(GameState gameState)
+    {
+        List<IAction> actions = new();
+        Player player = gameState.GetCurrentPlayer();
+
+        // Empty hand, also need to check if dev card already played & Differentiate same turn bought dev cards
+        if (player.HeldDevCards.Count == 0 || player.HasPlayedDevCard)
+            return actions;
+
+        if (PlayableDevCards[DevCards.Type.Knight])
+        {
+            foreach ((Axial targetPos, int targetID) in Robber.GetAllRobberMoves(gameState, player.ID))
+                actions.Add(new KnightAction(){
+                    OwnerID = player.ID,
+                    TargetID = targetID,
+                    TargetPos = targetPos
+                });
+        }
+
+        if (PlayableDevCards[DevCards.Type.RoadBuilding])
+        {}
+
+        if (PlayableDevCards[DevCards.Type.Monopoly])
+        {}
+
+        if (PlayableDevCards[DevCards.Type.YearOfPlenty])
+        {}
+
+        return actions;
+    }
+}
 
 // TODO: Dev cards
 
@@ -16,22 +66,26 @@ public interface ITurnPhase : IGamePhase
 /// </remarks>
 public class TurnStart : ITurnPhase
 {
-    public void OnEnter(params object[] argn)
+    public override void OnEnter(GameState gameState, params object[] argn)
     {
-        // TODO: Update all dev cards to be playable
+        base.OnEnter(gameState, argn);
+
+        gameState.GetCurrentPlayer().HasPlayedDevCard = false;
     }
 
-    public void OnExit()
+    public override void OnExit()
     {}
 
-    public List<Action.IAction> GetValidActions(GameState gameState)
+    public override List<IAction> GetValidActions(GameState gameState)
     {
-        List<Action.IAction> actions = new()
+        List<IAction> actions = new()
         {
-            new Action.RollDiceAction() // diceroll is always valid action
+            new RollDiceAction(){
+                OwnerID = gameState.GetCurrentPlayerID()
+            } // diceroll is always valid action
         };
 
-        // Dev cards
+        actions = actions.Concat(GetDevCardActions(gameState)).ToList();
 
         return actions;
     }
@@ -39,22 +93,17 @@ public class TurnStart : ITurnPhase
     /// <remarks>
     /// Advances to <see cref="TurnMain"/> if lastAction was <see cref="RollDiceAction"/>.
     /// </remarks>
-    public void Update(GameState gameState, Action.IAction lastAction)
+    public override void Update(GameState gameState, Action.IAction lastAction)
     {
         // Account for dev cards
-        if (lastAction.GetType() != typeof(Action.RollDiceAction))
+        if (lastAction is not RollDiceAction diceRoll)
             return;
-        
-        else if (gameState.LastRoll == 7)
+
+        else if (diceRoll.TriggerRobber)
             gameState.PhaseManager.ChangePhase(Discard.NAME, gameState);
 
         else
-        {
-            // Distribute resources and change state
-            // Could be moved to gamestate??
-            gameState.DistributeResources();
-            gameState.PhaseManager.ChangePhase(TurnMain.NAME);
-        }
+            gameState.PhaseManager.ChangePhase(TurnMain.NAME, gameState);
     }
 
     public const string NAME = "TurnStart";
@@ -72,27 +121,32 @@ public class TurnStart : ITurnPhase
 /// </remarks>
 public class TurnMain : ITurnPhase
 {
-    // TODO: Keep track of played dev cards
-    public void OnEnter(params object[] argn)
+    public override void OnExit()
     {}
 
-    public void OnExit()
-    {}
-
-    public List<Action.IAction> GetValidActions(GameState gameState)
+    public override List<IAction> GetValidActions(GameState gameState)
     {
-        List<Action.IAction> actions = new();
-        int currentPlayer = gameState.GetCurrentPlayer();
+        List<IAction> actions = new();
+        int currentPlayer = gameState.GetCurrentPlayerID();
 
         // Check for buildables
         gameState.GetValidRoadActions(currentPlayer, actions);
         gameState.GetValidSettlementActions(currentPlayer, actions);
         gameState.GetValidCityActions(currentPlayer, actions);
 
-        // TODO: Trading, Dev cards
+        // Purchasing Dev cards
+        if (gameState.DevCardDeck.Count > 0 && gameState.Players[currentPlayer].Hand >= Rules.DEVELOPMENT_CARD_COST)
+        {
+            IAction action = new BuyDevCardAction(){
+                OwnerID = currentPlayer
+            };
+            actions.Add(action);
+        }
+
+        actions = actions.Concat(GetDevCardActions(gameState)).ToList();
 
         // Endturn is always valid
-        actions.Add(new Action.EndTurn());
+        actions.Add(new EndTurn(){OwnerID = currentPlayer});
 
         return actions;
     }
@@ -101,10 +155,10 @@ public class TurnMain : ITurnPhase
     /// Advances to <see cref="TurnStart"/> on <see cref="EndTurn"/>".
     /// Could be moved to gameState??
     /// </remarks>
-    public void Update(GameState gameState, Action.IAction lastAction)
+    public override void Update(GameState gameState, IAction lastAction)
     {
-        if (lastAction is Action.EndTurn)
-            gameState.PhaseManager.ChangePhase(TurnStart.NAME);
+        if (lastAction is EndTurn)
+            gameState.PhaseManager.ChangePhase(TurnStart.NAME, gameState);
     }
 
     public const string NAME = "TurnMain";

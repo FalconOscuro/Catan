@@ -14,7 +14,7 @@ public interface IGamePhase
     /// Called when made <see cref="GamePhaseManager.CurrentPhase"/>.
     /// </summary>
     /// <param name="argn">Extra arguments require parsing.</param>
-    void OnEnter(params object[] argn);
+    void OnEnter(GameState gameState, params object[] argn);
 
     /// <summary>
     /// Called when removed as <see cref="GamePhaseManager.CurrentPhase"/> by <see cref="GamePhaseManager.ChangePhase(string, object[])"/>.

@@ -186,6 +186,26 @@ public class Vertex
             return keys;
         }
 
+        public readonly Axial[] GetAdjacentHexes()
+        {
+            if (!Aligned())
+                return Align().GetAdjacentHexes();
+            
+            Axial[] tiles = new Axial[3];
+
+            for (int i = 0; i < 3; i++)
+                tiles[i] = Position;
+            
+            int dir = Side == Side.W ? -1 : 1;
+            Axial offset = new(dir, 0);
+
+            tiles[1] += offset;
+            offset.R = -dir;
+            tiles[2] += offset;
+
+            return tiles;
+        }
+
         public override string ToString()
         {
             return Position.ToString() + $" V:{Side}";

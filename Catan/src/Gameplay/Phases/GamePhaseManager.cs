@@ -36,7 +36,7 @@ public class GamePhaseManager
     {
         // TODO: Allow skip pregame for pre-gen boards
         CurrentPhase = PreGameSettlement.NAME;
-        m_Phases[CurrentPhase].OnEnter();
+        m_Phases[CurrentPhase].OnEnter(null); // CHANGE
     }
 
     /// <summary>
@@ -44,7 +44,7 @@ public class GamePhaseManager
     /// </summary>
     /// <param name="phaseName">Key for new phase</param>
     /// <param name="argn">Arguments passed to new phase on enter</param>
-    public void ChangePhase(string phaseName, params object[] argn)
+    public void ChangePhase(string phaseName, GameState gameState, params object[] argn)
     {
         // Ensure phase exists
         if (!m_Phases.ContainsKey(phaseName))
@@ -55,7 +55,7 @@ public class GamePhaseManager
 
         // Exit new phase passing arguments
         CurrentPhase = phaseName;
-        m_Phases[CurrentPhase].OnEnter(argn);
+        m_Phases[CurrentPhase].OnEnter(gameState, argn);
     }
 
     /// <summary>
@@ -67,6 +67,9 @@ public class GamePhaseManager
     /// <param name="lastAction">Last action executed by player.</param>
     public void Update(GameState gameState, Action.IAction lastAction)
     {
+        if (!lastAction.TriggerStateChange)
+            return;
+
         m_Phases[CurrentPhase].Update(gameState, lastAction);
     }
 

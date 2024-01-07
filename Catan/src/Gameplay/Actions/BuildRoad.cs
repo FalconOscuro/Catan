@@ -1,3 +1,4 @@
+using System;
 using Grid.Hexagonal;
 
 namespace Catan.Action;
@@ -11,11 +12,6 @@ namespace Catan.Action;
 /// </remarks> 
 public class BuildRoadAction : IAction
 {
-    /// <summary>
-    /// ID for player building road
-    /// </summary>
-    public int OwnerID;
-
     /// <summary>
     /// Position for built road
     /// </summary>
@@ -54,8 +50,26 @@ public class BuildRoadAction : IAction
     /// <summary>
     /// Executes <see cref="GameState.BuildRoad(int, Edge.Key, bool)"/>.
     /// </summary>
-    protected override void DoExecute(GameState gameState)
+    protected override GameState DoExecute(GameState gameState)
     {
-        gameState.BuildRoad(OwnerID, Position, Free);
+        Player player = gameState.Players[OwnerID];
+        player.Roads--;
+        
+        if (!gameState.Board.TryGetEdge(Position, out Path path))
+            throw new Exception();
+        
+        path.OwnerID = OwnerID;
+
+        if (Free)
+            return gameState;
+        
+        IAction trade = new Trade(){
+            OwnerID = OwnerID,
+            TargetID = -1,
+            Giving = Rules.ROAD_COST
+        };
+
+        // Need to re-check longest road
+        return trade.Execute(gameState);
     }
 }

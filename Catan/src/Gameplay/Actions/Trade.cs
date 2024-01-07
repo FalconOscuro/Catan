@@ -10,11 +10,6 @@ namespace Catan.Action;
 public class Trade : IAction
 {
     /// <summary>
-    /// Owner / Initiator of the trade
-    /// </summary>
-    public int OwnerID;
-
-    /// <summary>
     /// Target to be traded with,
     /// if set to -1, trade will be executed with the bank
     /// </summary>
@@ -30,7 +25,7 @@ public class Trade : IAction
     /// Resources going from target to owner
     /// </summary>
     /// <returns></returns>
-    public Resources.Collection Recieving = new();
+    public Resources.Collection Receiving = new();
 
     public Trade()
     {}
@@ -44,7 +39,7 @@ public class Trade : IAction
     public bool CanExecute(GameState gameState)
     {
         bool canOwnerTrade = gameState.Players[OwnerID].Hand >= Giving;
-        bool canTargetTrade = (TargetID == -1 ? gameState.Bank : gameState.Players[TargetID].Hand) >= Recieving;
+        bool canTargetTrade = (TargetID == -1 ? gameState.Bank : gameState.Players[TargetID].Hand) >= Receiving;
 
         return canOwnerTrade && canTargetTrade;
     }
@@ -63,15 +58,23 @@ public class Trade : IAction
             "Target: {2}\n" +
             "Trading:\n{3}",
             OwnerID, Giving.ToString(),
-            TargetID, Recieving.ToString()
+            TargetID, Receiving.ToString()
         );
     }
 
     /// <summary>
     /// Executes <see cref="GameState.DoTrade(int, int, Resources.Collection, Resources.Collection)"/>.
     /// </summary>
-    protected override void DoExecute(GameState gameState)
+    protected override GameState DoExecute(GameState gameState)
     {
-        gameState.DoTrade(OwnerID, TargetID, Giving, Recieving);
+        gameState.Players[OwnerID].Hand += Receiving - Giving;
+
+        if (TargetID == -1)
+            gameState.Bank += Giving - Receiving;
+        
+        else
+            gameState.Players[TargetID].Hand += Giving - Receiving;
+        
+        return gameState;
     }
 }

@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Dynamic;
+using System.Linq;
 using System.Numerics;
 using Grid.Hexagonal;
+using ImGuiNET;
 
 namespace Catan;
 
@@ -28,11 +31,18 @@ public class GameState
     public Dictionary<int, List<Axial>> TileValueMap = new();
 
     public Axial RobberPos = new();
-    
+
     /// <summary>
     /// Players
     /// </summary>
-    public readonly Player[] Players = new Player[]{new(), new(), new(), new()}; // TEMP, CHANGE!!!!!
+    public readonly Player[] Players; // TEMP, CHANGE!!!!!
+
+    // Should be hidden
+    public Stack<DevCards.Type> DevCardDeck = new();
+
+    public List<DevCards.Type> PlayedDevCards = new();
+
+    public int LargestArmyOwnerID { get; private set; }
 
     /// <summary>
     /// Offset from <see cref="CurrentTurnIndex"/>, used for out of turn actions.
@@ -43,14 +53,14 @@ public class GameState
     /// Absolute current player turn
     /// </summary>
     /// <remarks>
-    /// For current player accounting for <see cref="CurrentPlayerOffset"/> use <see cref="GetCurrentPlayer"/>.
+    /// For current player accounting for <see cref="CurrentPlayerOffset"/> use <see cref="GetCurrentPlayerID"/>.
     /// </remarks>
     public int CurrentTurnIndex = 0;
 
     /// <summary>
     /// Sum result of the last dice roll
     /// </summary>
-    public int LastRoll = 0;
+    public (int, int) LastRoll { get; private set; }
 
     /// <summary>
     /// FSM
@@ -65,8 +75,16 @@ public class GameState
     /// </summary>
     public List<Action.IAction> PlayedActions = new();
     
+    private List<Action.IAction> m_AllActions = new();
+
     public GameState()
-    {}
+    {
+        Players = new Player[Rules.NUM_PLAYERS];
+        for (int i = 0; i < Rules.NUM_PLAYERS; i++)
+            Players[i] = new(i);
+        
+        LargestArmyOwnerID = -1;
+    }
 
     /// <summary>
     /// Creates a deep clone.
@@ -94,7 +112,12 @@ public class GameState
     /// </summary>
     public void Update()
     {
-        Players[GetCurrentPlayer()].DMM.Update(this);
+        Players[GetCurrentPlayerID()].DMM.Update(this);
+    }
+
+    public bool HasGameEnded()
+    {
+        return Players[CurrentTurnIndex].GetTotalVP() >= Rules.MAX_VICTORY_POINTS;
     }
 
     /// <summary>
@@ -104,11 +127,17 @@ public class GameState
     public void UpdatePhase(Action.IAction action)
     {
         // Add action to played action list
-        PlayedActions.Add(action);
+        if (!action.IsSilent)
+        {
+            m_AllActions.Add(action);
+
+            if (!action.IsHidden)
+                PlayedActions.Add(action);
+        }
 
         // Update FSM & retrieve valid actions
         PhaseManager.Update(this, action);
-        Players[GetCurrentPlayer()].DMM.Actions = PhaseManager.GetValidActions(this);
+        Players[GetCurrentPlayerID()].DMM.Actions = PhaseManager.GetValidActions(this);
     }
 
     /// <summary>
@@ -125,90 +154,32 @@ public class GameState
     {
         int d1 = Random.Next(1, 7);
         int d2 = Random.Next(1, 7);
+        LastRoll = (d1, d2);
 
-        return (d1, d2);
+        return LastRoll;
     }
 
-    /// <summary>
-    /// Trading logic called by <see cref="Trade"/> Command.
-    /// </summary>
-    /// <remarks>
-    /// Does not check if trade is valid!
-    /// </remarks>
-    /// <param name="targetID">If set to -1 targets <see cref="Bank"/></param>
-    public void DoTrade(int ownerID, int targetID, Resources.Collection giving, Resources.Collection recieving)
+    public DevCards.Type GetNextDevCard()
     {
-        Players[ownerID].Hand += recieving - giving;
+        if (DevCardDeck.Count < 1)
+            throw new Exception("Attempted to buy dev card, but deck was empty!");
 
-        if (targetID == -1)
-            Bank += giving - recieving;
-        
-        else
-            Players[targetID].Hand += giving - recieving;
+        // Should not be immediately playable
+        return DevCardDeck.Pop();
     }
 
-    /// <summary>
-    /// Settlement building logic called by <see cref="BuildSettlementAction"/>.
-    /// </summary>
-    /// <remarks>
-    /// WARNING: Does not check if valid!
-    /// </remarks>
-    /// <param name="free">Used during <see cref="PreGameSettlement"/> phase</param>
-    public void BuildSettlement(int ownerID, Vertex.Key position, bool free = false)
+    public void SetDevCardToPlayed(DevCards.Type type, int ownerID)
     {
-        Players[ownerID].Settlements--;
-        Players[ownerID].VictoryPoints++;
+        Player player = Players[ownerID];
 
-        if (!Board.TryGetVertex(position, out Node corner))
-            throw new Exception();
-        
-        corner.OwnerID = ownerID;
+        if (!player.HeldDevCards.Remove(type))
+            throw new Exception("Failed to find specified dev card in player hand");
 
-        if (!free)
-            DoTrade(ownerID, -1, Rules.SETTLEMENT_COST, new());
+        PlayedDevCards.Add(type);
+        player.HasPlayedDevCard = true;
     }
 
-    /// <summary>
-    /// Road building logic called by <see cref="BuildRoadAction"/>.
-    /// </summary>
-    /// <remarks>
-    /// WARNING: Does not check if valid!
-    /// </remarks>
-    /// <param name="free">Used during <see cref="PreGameRoad"/> and RoadBuilding</param>
-    public void BuildRoad(int ownerID, Edge.Key position, bool free)
-    {
-        Players[ownerID].Roads--;
-        
-        if (!Board.TryGetEdge(position, out Path path))
-            throw new Exception();
-        
-        path.OwnerID = ownerID;
-
-        if (!free)
-            DoTrade(ownerID, -1, Rules.ROAD_COST, new());
-    }
-
-    /// <summary>
-    /// City building logic called by <see cref="BuildCityAction"/>.
-    /// </summary>
-    /// <remarks>
-    /// WARNING: Does not check if valid!
-    /// </remarks>
-    public void BuildCity(int ownerID, Vertex.Key position)
-    {
-        Players[ownerID].Settlements++;
-        Players[ownerID].Cities--;
-        Players[ownerID].VictoryPoints++;
-
-        if (!Board.TryGetVertex(position, out Node corner))
-            throw new Exception();
-        
-        corner.City = true;
-
-        DoTrade(ownerID, -1, Rules.CITY_COST, new());
-    }
-
-    public void MoveRobber(Axial position, int targetID, int ownerID)
+    public void MoveRobber(Axial position)
     {
         // Remove from old tile
         Board.TryGetHex(RobberPos, out Tile tile);
@@ -218,141 +189,37 @@ public class GameState
         RobberPos = position;
         Board.TryGetHex(RobberPos, out tile);
         tile.Robber = true;
-
-        // No resource stolen
-        if (targetID == -1 || ownerID == -1)
-            return;
-
-        // Steal random resource
-        int targetHandSize = Players[targetID].Hand.Count();
-
-        // No cards to steal
-        if (targetHandSize < 1)
-            return;
-        
-        int stolenCard = Random.Next(targetHandSize) + 1;
-
-        Resources.Type type = Resources.Type.Empty;
-        int count = 0;
-
-        // Find type of stolen card
-        while (stolenCard > count)
-        {
-            type ++;
-            count += Players[targetID].Hand[type];
-        }
-
-        Players[targetID].Hand[type] -= 1;
-        Players[ownerID].Hand[type] += 1;
     }
 
-    // buy dev card
-    // play dev card
-    // Steal
-
-    /// <summary>
-    /// Resource distribution after a non-robber <see cref="RollDice"/>.
-    /// </summary>
-    public void DistributeResources()
+    public void UpdateLargestArmy(int playerID)
     {
-        Resources.Collection[] playerTrades = new Resources.Collection[Rules.NUM_PLAYERS];
-
-        for (int i = 0; i < Rules.NUM_PLAYERS; i++)
-            playerTrades[i] = new();
-
-        // Get all distribution trades for role
-        foreach (var pos in TileValueMap[LastRoll])
-        {
-            // Skip robber tile
-            if (pos == RobberPos)
-                continue;
-
-            if (!Board.TryGetHex(pos, out Tile tile))
-                throw new Exception(string.Format("Expected tile at (q={0}, r={1}), but found none!", pos.Q, pos.R));
-
-            Resources.Type type = tile.Resource;
-
-            // Skip if none of resource type available
-            if (Bank[type] == 0)
-                continue;
-
-            for (Vertex.Key key = new(){Position = pos}; key.Side < Vertex.Side.SW + 1; key.Side++)
-            {
-                if (!Board.TryGetVertex(key, out Node corner))
-                    throw new Exception(string.Format("Expected intersection at (q={0}, r{1}, side={2}), but found none!", pos.Q, pos.R, key.Side.ToString()));
-                
-                if (corner.OwnerID == -1)
-                    continue;
-
-                playerTrades[corner.OwnerID][type] += corner.City ? 2 : 1;
-            }
-        }
-
-        // Get sum total
-        Resources.Collection total = new();
-        for (int i = 0; i < Rules.NUM_PLAYERS; i++)
-            total += playerTrades[i];
-        
-        // There are no trades, exit function
-        if (total.Count() == 0)
+        if (playerID == LargestArmyOwnerID)
             return;
+        
+        bool unOwned = LargestArmyOwnerID == -1;
+        int largestArmy = unOwned ? 2 : Players[LargestArmyOwnerID].KnightsPlayed;
 
-        // Ensure trades can be executed
-        for (Resources.Type type = Resources.Type.Brick; type < Resources.Type.Wool + 1; type++)
+        if (Players[playerID].KnightsPlayed > largestArmy)
         {
-            if (Bank[type] >= total[type])
-                continue;
+            if (!unOwned)
+                Players[LargestArmyOwnerID].LargestArmy = false;
             
-            // Check number of requesting players
-            int firstPlayerIndex = -1;
-            bool cannotSupply = false;
-            for (int i = 0; i < Rules.NUM_PLAYERS; i++)
-            {
-                if(playerTrades[i][type] == 0)
-                    continue;
-                
-                else if (firstPlayerIndex == -1)
-                    firstPlayerIndex = i;
-                
-                else
-                {
-                    cannotSupply = true;
-                    break;
-                }
-            }
-
-            // A trade is cancelled if there is not enough supply,
-            // unless only 1 player is requesting
-            if (cannotSupply)
-                for (int i = firstPlayerIndex; i < Rules.NUM_PLAYERS; i++)
-                    playerTrades[i][type] = 0;
-            
-            else
-                playerTrades[firstPlayerIndex][type] = Bank[type];
+            Players[playerID].LargestArmy = true;
+            LargestArmyOwnerID = playerID;
         }
-
-        // Execute all trades
-        for (int i = 0; i < Rules.NUM_PLAYERS; i++)
-            if (playerTrades[i].Count() != 0)
-            {
-                DoTrade(i, -1, new(), playerTrades[i]);
-
-                // Create dummy action for log
-                Action.Trade trade = new(){
-                    OwnerID = i,
-                    TargetID = -1,
-                    Recieving = playerTrades[i].Clone()
-                };
-                PlayedActions.Add(trade);
-            }
     }
 
     /// <summary>
     /// Get current active player, accounting for offset.
     /// </summary>
-    public int GetCurrentPlayer()
+    public int GetCurrentPlayerID()
     {
         return (CurrentTurnIndex + CurrentPlayerOffset) % Rules.NUM_PLAYERS;
+    }
+
+    public Player GetCurrentPlayer()
+    {
+        return Players[GetCurrentPlayerID()];
     }
 
     /// <summary>
@@ -557,5 +424,95 @@ public class GameState
         TURN_MAIN,
         DISCARD,
         ROBBER
+    }
+
+    public void ImDraw()
+    {
+        string phaseMsg;
+        if (!HasGameEnded())
+            phaseMsg = string.Format("Turn: {0} - {1}", GetCurrentPlayerID(), PhaseManager.CurrentPhase);
+        
+        else
+            phaseMsg = string.Format("Player {0} wins!", GetCurrentPlayerID());
+
+
+        ImGui.Text(string.Format("Dice Roll: {0}", LastRoll));
+        ImGui.Text(phaseMsg);
+
+        if (ImGui.CollapsingHeader("Actions"))
+            Action.IAction.ImDrawActList(m_AllActions, "PlayedActions");
+
+        if (ImGui.CollapsingHeader("Resources"))
+        {
+            if (ImGui.TreeNode("Bank"))
+            {
+                Bank.ImDraw();
+                ImGui.TreePop();
+            }
+
+            if (ImGui.TreeNode("Dev Cards"))
+            {
+                Vector2 boxSize = new(
+                    ImGui.GetContentRegionAvail().X / 3, ImGui.GetTextLineHeightWithSpacing() * 5
+                );
+
+                if (ImGui.TreeNode("Unplayed"))
+                {
+                    ImGui.BeginListBox("##Unplayed Dev Cards", boxSize);
+
+                    for (int i = 0; i < DevCardDeck.Count; i++)
+                        ImGui.Selectable($"{i}: {DevCardDeck.ElementAt(i)}");
+
+                    ImGui.EndListBox();
+                    ImGui.TreePop();
+                }
+
+                if (ImGui.TreeNode("Played"))
+                {
+                    ImGui.BeginListBox("##Played Dev Cards", boxSize);
+
+                    for (int i = 0; i < PlayedDevCards.Count; i++)
+                        ImGui.Selectable($"{i}: {PlayedDevCards[i]}");
+
+                    ImGui.EndListBox();
+                    ImGui.TreePop();
+                }
+
+                ImGui.TreePop();
+            }
+
+            if (ImGui.TreeNode("Special Cards"))
+            {
+                ImGui.Text("Largest Army Owner:");
+                ImGui.SameLine();
+                
+                if (LargestArmyOwnerID == -1)
+                    ImGui.Text("None");
+                
+                else
+                    ImGui.TextColored(Rules.GetPlayerIDColour(LargestArmyOwnerID).ToVector4().ToNumerics(), $"Player {LargestArmyOwnerID}");
+
+                ImGui.TreePop();
+            }
+        }
+
+        // Players arranged as tabs
+        // NOTE: Current method does not allow for switching of tabs to left if viewing a players valid actions FIX
+        if (ImGui.CollapsingHeader("Players"))
+        {
+            if (ImGui.BeginTabBar("Players"))
+            {
+                for (int i = 0; i < Rules.NUM_PLAYERS; i++)
+                {
+                    if(ImGui.BeginTabItem(i.ToString()))
+                    {
+                        Players[i].ImDraw();
+                        ImGui.EndTabItem();
+                    }
+                }
+
+                ImGui.EndTabBar();
+            }
+        }
     }
 }

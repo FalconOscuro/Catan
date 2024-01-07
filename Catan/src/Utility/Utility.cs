@@ -4,28 +4,13 @@ using Microsoft.Xna.Framework;
 
 using ImGuiNET;
 using Microsoft.Xna.Framework.Graphics;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Utility;
 
 static class Utility
 {
-    public static void ShuffleArray<T>(this Random rand, T[] array, int iterations = 2)
-    {
-        int length = array.Length;
-
-        for (int i = 0; i < iterations; i++)
-        {
-            int n = length;
-
-            while (n > 1)
-            {
-                int pos = rand.Next(n--);
-
-                (array[pos], array[n]) = (array[n], array[pos]);
-            }
-        }
-    }
-
     public static void HelpMarker(string description)
     {
         ImGui.TextDisabled("(?)");
@@ -87,5 +72,16 @@ static class Utility
     public static Vector2 GetSizeVec(this Viewport viewport)
     {
         return new(viewport.Width, viewport.Height);
+    }
+
+    // Fisher-Yates Shuffle
+    public static void Shuffle<T>(this Random rand, T[] array)
+    {
+        int n = array.Length;
+        while (n > 1)
+        {
+            int k = rand.Next(n--);
+            (array[n], array[k]) = (array[k], array[n]);
+        }
     }
 }

@@ -9,9 +9,14 @@ namespace Catan.Action;
 /// </remarks>
 public class EndTurn : IAction
 {
+    public EndTurn()
+    {
+        TriggerStateChange = true;
+    }
+
     public override string ToString()
     {
-        return "Turn end"; // Should display playerID
+        return $"{OwnerID} Turn End"; // Should display playerID
     }
 
     public override string GetDescription()
@@ -22,8 +27,9 @@ public class EndTurn : IAction
     /// <summary>
     /// Executes <see cref="GameState.AdvanceTurn"/>.
     /// </summary>
-    protected override void DoExecute(GameState gameState)
+    protected override GameState DoExecute(GameState gameState)
     {
         gameState.AdvanceTurn();
+        return gameState;
     }
 }

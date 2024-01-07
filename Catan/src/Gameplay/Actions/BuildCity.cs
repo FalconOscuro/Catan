@@ -1,3 +1,4 @@
+using System;
 using Grid.Hexagonal;
 
 namespace Catan.Action;
@@ -11,11 +12,6 @@ namespace Catan.Action;
 /// </remarks>
 public class BuildCityAction : IAction
 {
-    /// <summary>
-    /// ID for player building city
-    /// </summary>
-    public int OwnerID;
-
     /// <summary>
     /// Position for city
     /// </summary>
@@ -41,11 +37,24 @@ public class BuildCityAction : IAction
         );
     }
 
-    /// <summary>
-    /// Executes <see cref="GameState.BuildCity(int, Vertex.Key)"/>.
-    /// </summary>
-    protected override void DoExecute(GameState gameState)
+    protected override GameState DoExecute(GameState gameState)
     {
-        gameState.BuildCity(OwnerID, Position);
+        Player player = gameState.Players[OwnerID];
+        player.Settlements++;
+        player.Cities--;
+        player.VictoryPoints++;
+
+        if (!gameState.Board.TryGetVertex(Position, out Node corner))
+            throw new Exception();
+        
+        corner.City = true;
+
+        IAction trade = new Trade(){
+            OwnerID = OwnerID,
+            TargetID = -1,
+            Giving = Rules.CITY_COST
+        };
+
+        return trade.Execute(gameState);
     }
 }

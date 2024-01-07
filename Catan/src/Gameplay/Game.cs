@@ -3,6 +3,10 @@ using ImGuiNET;
 
 using Grid.Hexagonal;
 using Utility.Graphics;
+using System.Collections.Generic;
+using System.Linq;
+using System.Collections;
+using Utility;
 
 namespace Catan;
 using Type = Resources.Type;
@@ -25,7 +29,8 @@ public class Game
     /// </summary>
     public void Update()
     {
-        GameState.Update();
+        if (!GameState.HasGameEnded())
+            GameState.Update();
     }
 
     /// <summary>
@@ -40,38 +45,7 @@ public class Game
     /// </summary>
     public void ImDraw()
     {
-        // Move to Gamestate class?
-
-        ImGui.Text(string.Format("Dice Roll: {0}", GameState.LastRoll));
-        ImGui.Text(string.Format("Turn: {0} - {1}", GameState.GetCurrentPlayer(), GameState.PhaseManager.CurrentPhase));
-
-        if (ImGui.CollapsingHeader("Actions"))
-            Action.IAction.ImDrawActList(GameState.PlayedActions, "PlayedActions");
-
-        if (ImGui.CollapsingHeader("Bank"))
-            GameState.Bank.ImDraw();
-
-        // Players arranged as tabs
-        // NOTE: Current method does not allow for switching of tabs to left if viewing a players valid actions FIX
-        if (ImGui.CollapsingHeader("Players"))
-        {
-            if (ImGui.BeginTabBar("Players"))
-            {
-                for (int i = 0; i < Rules.NUM_PLAYERS; i++)
-                {
-                    if(ImGui.BeginTabItem(i.ToString()))
-                    {
-                        // Move to player class
-                        ImGui.TextColored(Rules.GetPlayerIDColour(i).ToVector4().ToNumerics(), "Colour");
-
-                        GameState.Players[i].ImDraw();
-                        ImGui.EndTabItem();
-                    }
-                }
-
-                ImGui.EndTabBar();
-            }
-        }
+        GameState.ImDraw();
     }
 
     // Default start
@@ -87,8 +61,10 @@ public class Game
     /// <summary>
     /// Create new game specifying resource and value layout
     /// </summary>
-    public static Game NewGame(Type[] resourceMap, int[] valueMap)
+    public static Game NewGame(Type[] resourceMap, int[] valueMap, Random random = null)
     {
+        random ??= new();
+
         GameState gameState = new(){
             Bank = Rules.BANK_START.Clone()
         };
@@ -148,14 +124,38 @@ public class Game
 
             // TODO: Ports
             // TODO: Players
-            // TODO: Dev Cards
         }
 
+        // Setup Dev card deck
+        // Knights are added first as they are normally the most numerous & first set of insertions do not require shuffling
+        
+        DevCards.Type[] devCardDeck = Array.Empty<DevCards.Type>();
+        
+        devCardDeck = InsertDevCards(devCardDeck, DevCards.Type.Knight, Rules.DEV_CARD_KNIGHT_COUNT).ToArray();
+        devCardDeck = InsertDevCards(devCardDeck, DevCards.Type.VictoryPoint, Rules.DEV_CARD_VICTORY_POINT_COUNT).ToArray();
+        devCardDeck = InsertDevCards(devCardDeck, DevCards.Type.RoadBuilding, Rules.DEV_CARD_ROAD_BUILDING_COUNT).ToArray();
+        devCardDeck = InsertDevCards(devCardDeck, DevCards.Type.YearOfPlenty, Rules.DEV_CARD_YEAR_OF_PLENTY_COUNT).ToArray();
+        devCardDeck = InsertDevCards(devCardDeck, DevCards.Type.Monopoly, Rules.DEV_CARD_MONOPOLY_COUNT).ToArray();
+
+        // Shuffle
+        random.Shuffle(devCardDeck);
+
+        gameState.DevCardDeck = new (devCardDeck);
+
         // Should be a part of gamestate
-        gameState.Players[gameState.GetCurrentPlayer()].DMM.Actions = gameState.PhaseManager.GetValidActions(gameState);
+        gameState.Players[gameState.GetCurrentPlayerID()].DMM.Actions = gameState.PhaseManager.GetValidActions(gameState);
 
         return new Game(){
             GameState = gameState
         };
+    }
+
+    private static IEnumerable<DevCards.Type> InsertDevCards(IEnumerable<DevCards.Type> deck, DevCards.Type type, int count)
+    {
+        DevCards.Type[] newCards = new DevCards.Type[count];
+        for (int i = 0; i < count; i++)
+            newCards[i] = type;
+        
+        return deck.Concat(newCards);
     }
 }

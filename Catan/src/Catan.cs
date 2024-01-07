@@ -26,8 +26,8 @@ public class Catan : Microsoft.Xna.Framework.Game
     private int m_FrameIndex;
     private float m_TimeTotal;
 
-    private bool m_DoStep;
-    private bool m_UseStepMode = true;
+    private bool m_Step;
+    private bool m_Paused = true;
 
     public static SpriteFont s_Font {get; private set;}
 
@@ -72,10 +72,10 @@ public class Catan : Microsoft.Xna.Framework.Game
 
     protected override void Update(GameTime gameTime)
     {
-        if (m_DoStep || !m_UseStepMode)
+        if (m_Step || !m_Paused)
         {
             m_Game.Update();
-            m_DoStep = false;
+            m_Step = false;
         }
 
         Vector2 mousePos = Mouse.GetState().Position.ToVector2().FlipY(GraphicsDevice.Viewport.Height);
@@ -143,10 +143,10 @@ public class Catan : Microsoft.Xna.Framework.Game
                 IsFixedTimeStep = fixedTimeStep;
         }
 
-        ImGui.Checkbox("Step Mode", ref m_UseStepMode);
+        ImGui.Checkbox("Paused", ref m_Paused);
 
-        if (m_UseStepMode)
-            m_DoStep = ImGui.Button("Step");
+        if (m_Paused)
+            m_Step = ImGui.Button("Step");
         
         ImGui.Text(string.Format("Current Hex: q={0} r={1}", m_HexPos.Q, m_HexPos.R));
 

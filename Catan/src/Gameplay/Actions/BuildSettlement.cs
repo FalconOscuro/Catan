@@ -1,3 +1,4 @@
+using System;
 using Grid.Hexagonal;
 
 namespace Catan.Action;
@@ -12,11 +13,6 @@ namespace Catan.Action;
 public class BuildSettlementAction : IAction
 {
     /// <summary>
-    /// ID for player building settlement
-    /// </summary>
-    public int OwnerID;
-
-    /// <summary>
     /// Position for built settlement
     /// </summary>
     public Vertex.Key Position;
@@ -28,6 +24,8 @@ public class BuildSettlementAction : IAction
     /// Used by <see cref="PreGameSettlement"/>
     /// </remarks>
     public bool Free;
+
+    public bool DistributeResources;
 
     public BuildSettlementAction(int ownerID, Vertex.Key position, bool free = false)
     {
@@ -54,8 +52,48 @@ public class BuildSettlementAction : IAction
     /// <summary>
     /// Executes <see cref="GameState.BuildSettlement(int, Vertex.Key, bool)"/>.
     /// </summary>
-    protected override void DoExecute(GameState gameState)
+    protected override GameState DoExecute(GameState gameState)
     {
-        gameState.BuildSettlement(OwnerID, Position, Free);
+        Player player = gameState.Players[OwnerID];
+        player.Settlements--;
+        player.VictoryPoints++;
+
+        if (!gameState.Board.TryGetVertex(Position, out Node corner))
+            throw new Exception();
+        
+        corner.OwnerID = OwnerID;
+
+        if (DistributeResources)
+
+        if (!Free)
+        {
+            IAction trade = new Trade(){
+            OwnerID = OwnerID,
+            TargetID = -1,
+            Giving = Rules.SETTLEMENT_COST
+            };
+
+            gameState = trade.Execute(gameState);
+        }
+
+        if (DistributeResources)
+        {
+            Axial[] tiles = Position.GetAdjacentHexes();
+            Resources.Collection receiving = new();
+
+            foreach (Axial pos in tiles)
+                if (gameState.Board.TryGetHex(pos, out Tile tile))
+                    receiving[tile.Resource] += 1;
+            
+            IAction trade = new Trade(){
+                OwnerID = OwnerID,
+                TargetID = -1,
+                Receiving = receiving
+            };
+
+            gameState = trade.Execute(gameState);
+        }
+
+        return gameState;
     }
 }
