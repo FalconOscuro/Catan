@@ -25,6 +25,8 @@ public class Player
     public int KnightsPlayed = 0;
     public bool LargestArmy = false;
 
+    public bool LongestRoad = false;
+
     // TEMP DEBUG, REMOVE!!!!
     public DMM DMM = new RandomDMM();
 
@@ -46,7 +48,7 @@ public class Player
                 hiddenVP++;
 
         return VictoryPoints + hiddenVP + 
-            (LargestArmy ? 2 : 0);
+            (LargestArmy ? 2 : 0) + (LongestRoad ? 2 : 0);
     }
 
     /// <summary>
@@ -58,6 +60,7 @@ public class Player
         ImGui.Text(string.Format("VP: {0}", GetTotalVP()));
         ImGui.Text($"Knights Played: {KnightsPlayed}");
         ImGui.Text($"Largest Army: {LargestArmy}");
+        ImGui.Text($"Longest Road");
 
         if(ImGui.TreeNode("Hand"))
         {

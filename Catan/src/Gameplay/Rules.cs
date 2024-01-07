@@ -70,7 +70,7 @@ internal static class Rules
     // NOTE: In base rules all progress typed dev cards have 2 copies, could be replaced with singluar PROGRESS_CARD_COUNT?
     public const int DEV_CARD_ROAD_BUILDING_COUNT = 0;
     public const int DEV_CARD_YEAR_OF_PLENTY_COUNT = 0;
-    public const int DEV_CARD_MONOPOLY_COUNT = 0;
+    public const int DEV_CARD_MONOPOLY_COUNT = 2;
 
     public static Color GetPlayerIDColour(int playerID)
     {

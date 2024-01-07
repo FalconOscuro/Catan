@@ -46,7 +46,13 @@ public abstract class ITurnPhase : IGamePhase
         {}
 
         if (PlayableDevCards[DevCards.Type.Monopoly])
-        {}
+        {
+            for (Resources.Type type = Resources.Type.Brick; type < Resources.Type.Wool + 1; type++)
+                actions.Add(new Monopoly(){
+                    OwnerID = player.ID,
+                    TargetResource = type
+                });
+        }
 
         if (PlayableDevCards[DevCards.Type.YearOfPlenty])
         {}
@@ -54,8 +60,6 @@ public abstract class ITurnPhase : IGamePhase
         return actions;
     }
 }
-
-// TODO: Dev cards
 
 /// <summary>
 /// Start of turn phase
@@ -126,13 +130,15 @@ public class TurnMain : ITurnPhase
 
     public override List<IAction> GetValidActions(GameState gameState)
     {
-        List<IAction> actions = new();
+        IEnumerable<IAction> actions = new List<IAction>();
         int currentPlayer = gameState.GetCurrentPlayerID();
 
         // Check for buildables
-        gameState.GetValidRoadActions(currentPlayer, actions);
-        gameState.GetValidSettlementActions(currentPlayer, actions);
-        gameState.GetValidCityActions(currentPlayer, actions);
+        actions = actions.Concat(
+            GetValidSettlementActions(gameState).Concat(
+                GetValidCityActions(gameState).Concat(
+                    GetValidRoadActions(gameState)
+        )));
 
         // Purchasing Dev cards
         if (gameState.DevCardDeck.Count > 0 && gameState.Players[currentPlayer].Hand >= Rules.DEVELOPMENT_CARD_COST)
@@ -140,15 +146,13 @@ public class TurnMain : ITurnPhase
             IAction action = new BuyDevCardAction(){
                 OwnerID = currentPlayer
             };
-            actions.Add(action);
+            actions = actions.Append(action);
         }
 
-        actions = actions.Concat(GetDevCardActions(gameState)).ToList();
+        actions = actions.Concat(GetDevCardActions(gameState));
 
         // Endturn is always valid
-        actions.Add(new EndTurn(){OwnerID = currentPlayer});
-
-        return actions;
+        return actions.Append(new EndTurn(){OwnerID = currentPlayer}).ToList();
     }
 
     /// <remarks>
@@ -159,6 +163,175 @@ public class TurnMain : ITurnPhase
     {
         if (lastAction is EndTurn)
             gameState.PhaseManager.ChangePhase(TurnStart.NAME, gameState);
+    }
+
+    /// <summary>
+    /// Add all valid settlement actions for the current player to the valid action list
+    /// </summary>
+    /// <param name="pregame"></param>
+    public static List<IAction> GetValidSettlementActions(GameState gameState, bool pregame = false)
+    {
+        List<IAction> actions = new();
+        Player player = gameState.GetCurrentPlayer();
+
+        // Does player have settlements remaining
+        if (player.Settlements == 0)
+            return actions;
+
+        // Can player afford it, ignored with pregame flag
+        else if (!(Rules.SETTLEMENT_COST <= player.Hand || pregame))
+            return actions;
+        
+        List<Vertex.Key> nodes = gameState.Board.GetAllVertices();
+
+        foreach(Vertex.Key nodePos in nodes)
+        {
+            if (!gameState.Board.TryGetVertex(nodePos, out Node node))
+                continue;
+            // Throw error?
+
+            // node is already occupied
+            else if (node.OwnerID != -1)
+                continue;
+            
+            // These checks are ignored in pregame phase
+            if (!pregame)
+            {
+                // Check if connected by road
+                Edge.Key[] edges = nodePos.GetProtrudingEdges();
+                
+                bool connected = false;
+                foreach (Edge.Key edgePos in edges)
+                {
+                    if (gameState.Board.TryGetEdge(edgePos, out Path path))
+                        connected |= path.OwnerID == player.ID;
+                }
+
+                if (!connected)
+                    continue;
+            }
+
+            // Check if too close to other settlements
+            Vertex.Key[] adjNodes = nodePos.GetAdjacentVertices();
+
+            bool isValid = true;
+            foreach(Vertex.Key adjNodePos in adjNodes)
+            {
+                if (gameState.Board.TryGetVertex(adjNodePos, out Node adjNode))
+                    isValid &= adjNode.OwnerID == -1;
+            }
+
+            if (!isValid)
+                continue;
+            
+            actions.Add(new BuildSettlementAction(player.ID, nodePos){
+                TriggerStateChange = pregame
+            });
+        }
+
+        return actions;
+    }
+
+    /// <summary>
+    /// Add all valid city actions for current player to the valid action list
+    /// </summary>
+    public static List<IAction> GetValidCityActions(GameState gameState)
+    {
+        List<IAction> actions = new();
+        Player player = gameState.GetCurrentPlayer();
+
+        // Check if player has remaining cities, or replaceable settlements
+        if (player.Cities == 0 || player.Settlements == Rules.MAX_SETTLEMENTS)
+            return actions;
+        
+        // Check if can afford
+        else if (!(Rules.CITY_COST <= player.Hand))
+            return actions;
+        
+        List<Vertex.Key> nodes = gameState.Board.GetAllVertices();
+        foreach (Vertex.Key nodePos in nodes)
+        {
+            if (!gameState.Board.TryGetVertex(nodePos, out Node node))
+                continue; // Should be impossible, throw error?
+            
+            else if (node.OwnerID == player.ID && !node.City)
+                actions.Add(new BuildCityAction(player.ID, nodePos));
+        }
+
+        return actions;
+    }
+
+    public static List<IAction> GetValidRoadActions(GameState gameState, bool free = false)
+    {
+        List<IAction> actions = new();
+        Player player = gameState.GetCurrentPlayer();
+
+        // Check for remaining roads
+        if (player.Roads == 0)
+            return actions;
+        
+        // Check if player can afford, ignored with free flag
+        else if (!(Rules.ROAD_COST <= player.Hand || free))
+            return actions;
+        
+        List<Edge.Key> edges = gameState.Board.GetAllEdges();
+
+        foreach (Edge.Key edgePos in edges)
+        {
+            if (CheckRoadPos(gameState.Board, edgePos, player.ID))
+                actions.Add(new BuildRoadAction(player.ID, edgePos));
+        }
+
+        return actions;
+    }
+
+    /// <summary>
+    /// Evaluates eligibility for a single road
+    /// </summary>
+    private static bool CheckRoadPos(HexGrid board, Edge.Key pos, int playerID)
+    {
+        if (!board.TryGetEdge(pos, out Path edge))
+            return false; // Should be impossible, throw error?
+
+        // Path already owned
+        else if (edge.OwnerID != -1)
+            return false;
+        
+        Vertex.Key[] nodes = pos.GetEndpoints();
+
+        foreach(Vertex.Key nodePos in nodes)
+        {
+            if (!board.TryGetVertex(nodePos, out Node node))
+                continue; // Should be impossible, throw error?
+            
+            // Path connects to owned node
+            else if (node.OwnerID == playerID)
+                return true;
+            
+            // Owned by other player, cannot build through
+            else if (node.OwnerID != -1)
+                continue;
+            
+            // Loop protruding edges from current node
+            // Searching for connected roads
+            Edge.Key[] adjEdges = nodePos.GetProtrudingEdges();
+            foreach(Edge.Key adjEdgePos in adjEdges)
+            {
+                // Skip target edge
+                if (adjEdgePos == pos)
+                    continue;
+                
+                if (!board.TryGetEdge(adjEdgePos, out Path adjEdge))
+                    continue;
+                
+                // Found connected road
+                else if (adjEdge.OwnerID == playerID)
+                    return true;
+            }
+        }
+
+        // All possibilites checked, cannot build here
+        return false;
     }
 
     public const string NAME = "TurnMain";

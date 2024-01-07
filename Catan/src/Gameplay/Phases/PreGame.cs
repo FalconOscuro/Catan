@@ -43,20 +43,9 @@ public class PreGameSettlement : IPreGamePhase
     public void OnExit()
     {}
 
-    public List<Action.IAction> GetValidActions(GameState gameState)
+    public List<IAction> GetValidActions(GameState gameState)
     {
-        List<Action.IAction> actions = new();
-        int playerID = gameState.GetCurrentPlayerID();
-
-        // Check validity of all nodes
-        List<Vertex.Key> nodes = gameState.Board.GetAllVertices();
-        foreach (Vertex.Key nodePos in nodes)
-        {
-            if (gameState.CheckSettlementPos(playerID, nodePos, true))
-                actions.Add(new BuildSettlementAction(playerID, nodePos, true){
-                    TriggerStateChange = true
-                });
-        }
+        List<IAction> actions = TurnMain.GetValidSettlementActions(gameState, true);
 
         return actions;
     }
