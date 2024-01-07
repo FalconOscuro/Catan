@@ -72,6 +72,9 @@ internal static class Rules
     public const int DEV_CARD_YEAR_OF_PLENTY_COUNT = 0;
     public const int DEV_CARD_MONOPOLY_COUNT = 2;
 
+    public const int BANK_RATIO = 4;
+    public const int PORT_RATIO = 3;
+
     public static Color GetPlayerIDColour(int playerID)
     {
         return playerID switch

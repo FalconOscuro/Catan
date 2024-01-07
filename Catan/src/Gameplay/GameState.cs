@@ -62,6 +62,12 @@ public class GameState
     /// </summary>
     public (int, int) LastRoll { get; private set; }
 
+    public int LastRollSum {
+        get {
+            return LastRoll.Item1 + LastRoll.Item2;
+        }
+    }
+
     /// <summary>
     /// FSM
     /// </summary>
@@ -240,7 +246,7 @@ public class GameState
             phaseMsg = string.Format("Player {0} wins!", GetCurrentPlayerID());
 
 
-        ImGui.Text(string.Format("Dice Roll: {0}", LastRoll));
+        ImGui.Text($"Dice Roll: {LastRoll} = {LastRollSum}");
         ImGui.Text(phaseMsg);
 
         if (ImGui.CollapsingHeader("Actions"))

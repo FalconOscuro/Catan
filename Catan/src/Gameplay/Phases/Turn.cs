@@ -151,6 +151,9 @@ public class TurnMain : ITurnPhase
 
         actions = actions.Concat(GetDevCardActions(gameState));
 
+        // Bank trades
+        actions = actions.Concat(GetBankTrades(gameState));
+
         // Endturn is always valid
         return actions.Append(new EndTurn(){OwnerID = currentPlayer}).ToList();
     }
@@ -332,6 +335,54 @@ public class TurnMain : ITurnPhase
 
         // All possibilites checked, cannot build here
         return false;
+    }
+
+    public static List<IAction> GetBankTrades(GameState gameState)
+    {
+        List<IAction> actions = new();
+
+        int playerID = gameState.GetCurrentPlayerID();
+        Resources.Collection playerHand = gameState.GetCurrentPlayer().Hand;
+
+        // Trading with bank impossible
+        if (playerHand.Count() < Rules.PORT_RATIO)
+            return actions;
+        
+        // Iterate all resources for selling
+        for (Resources.Type sellType = Resources.Type.Brick; sellType < Resources.Type.Wool + 1; sellType++)
+        {
+            // TODO: Update for port trades
+            int ratio = Rules.BANK_RATIO;
+
+            // Not enought to trade, skip
+            if (playerHand[sellType] < ratio)
+                continue;
+            
+            Resources.Collection giving = new();
+            giving[sellType] = ratio;
+
+            // Iterate resources for buying 
+            for (Resources.Type buyType = Resources.Type.Brick; buyType < Resources.Type.Wool + 1; buyType++)
+            {
+                // Skip same type and un-available resources
+                if (buyType == sellType || gameState.Bank[buyType] < 1)
+                    continue;
+                
+                Resources.Collection receiving = new();
+                receiving[buyType] = 1;
+
+                IAction trade = new Trade(){
+                    OwnerID = playerID,
+                    TargetID = -1,
+                    Giving = giving,
+                    Receiving = receiving
+                };
+
+                actions.Add(trade);
+            }
+        }
+
+        return actions;
     }
 
     public const string NAME = "TurnMain";
