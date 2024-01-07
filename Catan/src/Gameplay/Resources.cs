@@ -1,10 +1,12 @@
-using System.Reflection.Metadata;
+using System;
+using System.Collections.Generic;
+
 using ImGuiNET;
 using Microsoft.Xna.Framework;
 
 namespace Catan;
 
-public class Resources
+public static class Resources
 {
     /// <summary>
     /// Different types of resources
@@ -193,6 +195,48 @@ public class Resources
         /// </summary>
         /// <value>Brick, Grain, Lumber, Ore, Wool</value>
         private readonly int[] m_Resources = {0, 0, 0, 0, 0};
+    }
+
+    /// <summary>
+    /// Recursively finds all discard combinations with a given hand
+    /// </summary>
+    /// <param name="hand">hand for owning player</param>
+    /// <param name="current">current resource collection being discarded</param>
+    /// <param name="targetSum">Cards remaining to be discarded</param>
+    /// <param name="index">index for current resource</param>
+    /// <returns></returns>
+    public static IEnumerable<Collection> RecurseOptions(Collection hand, Collection current, int targetSum, Type index = Type.Brick)
+    {
+        for (; index < Type.Wool + 1; index++)
+        {
+            if (hand[index] == 0)
+                continue;
+            
+            int diff = Math.Min(targetSum, hand[index]);
+            current[index] += diff;
+
+            // Possible combination found
+            if (diff == targetSum)
+            {
+                yield return current.Clone();
+
+                current[index] -= 1;
+                diff--;
+            }
+
+            // Shouldn't cause issues without check, but avoids un-necessary function calls
+            if (index != Type.Wool)
+                while(diff > 0)
+                {
+                    // Inefficient?
+                    // Each recursion creates a new iterator
+                    foreach(var found in RecurseOptions(hand, current.Clone(), targetSum - diff, index + 1))
+                        yield return found;
+
+                    diff--;
+                    current[index] -= 1;
+                }
+        }
     }
 
     /// <summary>

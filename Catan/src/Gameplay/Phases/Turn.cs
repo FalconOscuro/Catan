@@ -28,7 +28,7 @@ public abstract class ITurnPhase : IGamePhase
         List<IAction> actions = new();
         Player player = gameState.GetCurrentPlayer();
 
-        // Empty hand, also need to check if dev card already played & Differentiate same turn bought dev cards
+        // Empty hand / already played 1 dev card this turn
         if (player.HeldDevCards.Count == 0 || player.HasPlayedDevCard)
             return actions;
 
@@ -55,7 +55,17 @@ public abstract class ITurnPhase : IGamePhase
         }
 
         if (PlayableDevCards[DevCards.Type.YearOfPlenty])
-        {}
+        {
+            foreach (var receiving in Resources.RecurseOptions(gameState.Bank.Clone(), new(), 2))
+            {
+                IAction action = new YearOfPlenty(){
+                    OwnerID = player.ID,
+                    Receiving = receiving
+                };
+
+                actions.Add(action);
+            }
+        }
 
         return actions;
     }
