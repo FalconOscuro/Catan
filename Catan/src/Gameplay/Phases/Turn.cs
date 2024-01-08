@@ -182,7 +182,7 @@ public class TurnMain : ITurnPhase
     /// Add all valid settlement actions for the current player to the valid action list
     /// </summary>
     /// <param name="pregame"></param>
-    public static List<IAction> GetValidSettlementActions(GameState gameState, bool pregame = false)
+    public static List<IAction> GetValidSettlementActions(GameState gameState, bool pregame = false, bool distribute = false)
     {
         List<IAction> actions = new();
         Player player = gameState.GetCurrentPlayer();
@@ -238,7 +238,9 @@ public class TurnMain : ITurnPhase
                 continue;
             
             actions.Add(new BuildSettlementAction(player.ID, nodePos){
-                TriggerStateChange = pregame
+                TriggerStateChange = pregame,
+                DistributeResources = distribute,
+                Free = pregame
             });
         }
 

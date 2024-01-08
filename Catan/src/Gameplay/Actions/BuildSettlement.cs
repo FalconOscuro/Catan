@@ -63,8 +63,6 @@ public class BuildSettlementAction : IAction
         
         corner.OwnerID = OwnerID;
 
-        if (DistributeResources)
-
         if (!Free)
         {
             IAction trade = new Trade(){

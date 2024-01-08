@@ -59,6 +59,7 @@ public class BuildRoadAction : IAction
             throw new Exception();
         
         path.OwnerID = OwnerID;
+        gameState.UpdateLongestRoad(Position, OwnerID);
 
         if (Free)
             return gameState;
@@ -69,7 +70,6 @@ public class BuildRoadAction : IAction
             Giving = Rules.ROAD_COST
         };
 
-        // Need to re-check longest road
         return trade.Execute(gameState);
     }
 }

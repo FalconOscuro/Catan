@@ -45,7 +45,7 @@ public class PreGameSettlement : IPreGamePhase
 
     public List<IAction> GetValidActions(GameState gameState)
     {
-        List<IAction> actions = TurnMain.GetValidSettlementActions(gameState, true);
+        List<IAction> actions = TurnMain.GetValidSettlementActions(gameState, true, m_IsPregame2);
 
         return actions;
     }

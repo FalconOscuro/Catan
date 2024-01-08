@@ -75,6 +75,9 @@ internal static class Rules
     public const int BANK_RATIO = 4;
     public const int PORT_RATIO = 3;
 
+    public const int MIN_LARGEST_ARMY = 2;
+    public const int MIN_LONGEST_ROAD = 4;
+
     public static Color GetPlayerIDColour(int playerID)
     {
         return playerID switch

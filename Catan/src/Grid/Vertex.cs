@@ -210,5 +210,21 @@ public class Vertex
         {
             return Position.ToString() + $" V:{Side}";
         }
+    
+        public static bool operator==(Key a, Key b)
+        {
+            a = a.Align();
+            b = b.Align();
+
+            return a.Position == b.Position && a.Side == b.Side;
+        }
+
+        public static bool operator!=(Key a, Key b)
+        {
+            a = a.Align();
+            b = b.Align();
+
+            return a.Position != b.Position || a.Side != b.Side;
+        }
     }
 }

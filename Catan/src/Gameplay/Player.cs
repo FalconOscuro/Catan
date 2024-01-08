@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using System.Reflection.Metadata;
 using Catan.Behaviour;
+using Grid.Hexagonal;
 using ImGuiNET;
 
 namespace Catan;
@@ -25,6 +26,7 @@ public class Player
     public int KnightsPlayed = 0;
     public bool LargestArmy = false;
 
+    public List<Edge.Key> LongestRoadPath = new();
     public bool LongestRoad = false;
 
     // TEMP DEBUG, REMOVE!!!!
@@ -60,7 +62,8 @@ public class Player
         ImGui.Text(string.Format("VP: {0}", GetTotalVP()));
         ImGui.Text($"Knights Played: {KnightsPlayed}");
         ImGui.Text($"Largest Army: {LargestArmy}");
-        ImGui.Text($"Longest Road");
+        ImGui.Text($"Longest Road Length: {LongestRoadPath.Count}");
+        ImGui.Text($"Longest Road: {LongestRoad}");
 
         if(ImGui.TreeNode("Hand"))
         {

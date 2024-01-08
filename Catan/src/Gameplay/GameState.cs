@@ -44,6 +44,8 @@ public class GameState
 
     public int LargestArmyOwnerID { get; private set; }
 
+    public int LongestRoadOwnerID { get; private set; }
+
     /// <summary>
     /// Offset from <see cref="CurrentTurnIndex"/>, used for out of turn actions.
     /// </summary>
@@ -90,6 +92,7 @@ public class GameState
             Players[i] = new(i);
         
         LargestArmyOwnerID = -1;
+        LongestRoadOwnerID = -1;
     }
 
     /// <summary>
@@ -97,6 +100,7 @@ public class GameState
     /// </summary>
     /// <remarks>
     /// Useful for simulation.
+    /// WARNING: INCOMPLETE
     /// </remarks>
     public GameState Clone()
     {
@@ -203,7 +207,7 @@ public class GameState
             return;
         
         bool unOwned = LargestArmyOwnerID == -1;
-        int largestArmy = unOwned ? 2 : Players[LargestArmyOwnerID].KnightsPlayed;
+        int largestArmy = unOwned ? Rules.MIN_LARGEST_ARMY : Players[LargestArmyOwnerID].KnightsPlayed;
 
         if (Players[playerID].KnightsPlayed > largestArmy)
         {
@@ -226,6 +230,89 @@ public class GameState
     public Player GetCurrentPlayer()
     {
         return Players[GetCurrentPlayerID()];
+    }
+
+    private void ChangeLongestRoadHolder(int playerID)
+    {
+        if (LongestRoadOwnerID != -1)
+            Players[LongestRoadOwnerID].LongestRoad = false;
+        
+        LongestRoadOwnerID = playerID;
+
+        if (playerID != -1)
+            Players[playerID].LongestRoad = true;
+    }
+
+    public void UpdateLongestRoad(Edge.Key start, int playerID)
+    {
+        if (!Board.TryGetEdge(start, out Path edge))
+            return;
+        
+        else if (edge.OwnerID != playerID)
+            return;
+
+        Player player = Players[playerID];
+
+        Vertex.Key[] nodes = start.GetEndpoints();
+        IEnumerable<Edge.Key> longest = new Edge.Key[]{start};
+
+        foreach (Vertex.Key nodePos in nodes)
+            longest = RecurseFindLongestRoute(Board, nodePos, playerID, longest);
+
+        int currentLength = player.LongestRoadPath.Count;
+        int newLength = longest.Count();
+
+        if (newLength > currentLength)
+        {
+            player.LongestRoadPath = longest.ToList();
+
+            if (LongestRoadOwnerID == -1)
+            {
+                if (newLength <= Rules.MIN_LONGEST_ROAD)
+                    return;
+
+                bool contested = false;
+
+                for (int i = 0; i < Rules.NUM_PLAYERS; i++)
+                    contested |= Players[i].LongestRoadPath.Count >= newLength && i != playerID;
+
+                if (!contested)
+                    ChangeLongestRoadHolder(playerID);
+            }
+
+            else if (newLength > Players[LongestRoadOwnerID].LongestRoadPath.Count)
+                ChangeLongestRoadHolder(playerID);
+        }
+    }
+
+    private static IEnumerable<Edge.Key> RecurseFindLongestRoute(HexGrid board, Vertex.Key currentNode, int playerID, IEnumerable<Edge.Key> route)
+    {
+        if (!board.TryGetVertex(currentNode, out Node node))
+            return route;
+
+        else if (node.OwnerID != playerID && node.OwnerID != -1)
+            return route;
+
+        IEnumerable<Edge.Key> longest = route;
+
+        Edge.Key[] edges = currentNode.GetProtrudingEdges();
+        foreach (Edge.Key edgePos in edges)
+        {
+            if (!board.TryGetEdge(edgePos, out Path edge) || route.Contains(edgePos))
+                continue;
+
+            else if (edge.OwnerID != playerID)
+                continue;
+            
+            Vertex.Key[] nodes = edgePos.GetEndpoints();
+            Vertex.Key nextNode = nodes[0] == currentNode ? nodes[1] : nodes[0];
+
+            IEnumerable<Edge.Key> newRoute = RecurseFindLongestRoute(board, nextNode, playerID, route.Append(edgePos));
+            if (newRoute.Count() > longest.Count())
+                longest = newRoute;
+        }
+
+        return longest;
     }
 
     // Potential different phases of the game
