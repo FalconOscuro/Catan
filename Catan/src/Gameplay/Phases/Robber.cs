@@ -35,6 +35,11 @@ public class Robber : IGamePhase
         gameState.PhaseManager.ChangePhase(TurnMain.NAME, gameState);
     }
 
+    public IGamePhase Clone()
+    {
+        return (IGamePhase)MemberwiseClone();
+    }
+
     public static IEnumerable<(Axial, int)> GetAllRobberMoves(GameState gameState, int playerID)
     {
         List<Axial> tiles = gameState.Board.GetAllHexes();
@@ -125,6 +130,11 @@ public class Discard : IGamePhase
         
         gameState.CurrentPlayerOffset = 0;
         gameState.PhaseManager.ChangePhase(Robber.NAME, gameState);
+    }
+
+    public IGamePhase Clone()
+    {
+        return (IGamePhase)MemberwiseClone();
     }
 
     public const string NAME = "Discard";

@@ -62,6 +62,7 @@ public class BuildSettlementAction : IAction
             throw new Exception();
         
         corner.OwnerID = OwnerID;
+        gameState.CheckRoadBreak(Position, OwnerID);
 
         if (!Free)
         {

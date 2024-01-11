@@ -41,6 +41,17 @@ public class Player
         ID = id;
     }
 
+    public Player Clone()
+    {
+        Player clone = (Player)MemberwiseClone();
+        // Clone dmm????
+
+        clone.LongestRoadPath = new(LongestRoadPath);
+        clone.Hand = Hand.Clone();
+
+        return clone;
+    }
+
     // NOTE: Other players should not be able to see hidden VP from Dev cards!
     public int GetTotalVP()
     {

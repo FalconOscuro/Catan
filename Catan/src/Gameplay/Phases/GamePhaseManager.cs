@@ -80,4 +80,16 @@ public class GamePhaseManager
     {
         return m_Phases[CurrentPhase].GetValidActions(gameState);
     }
+
+    public GamePhaseManager Clone()
+    {
+        GamePhaseManager clone = new(){
+            CurrentPhase = CurrentPhase
+        };
+
+        foreach ((string name, IGamePhase gamePhase) in m_Phases)
+            clone.m_Phases[name] = gamePhase.Clone();
+        
+        return clone;
+    }
 }

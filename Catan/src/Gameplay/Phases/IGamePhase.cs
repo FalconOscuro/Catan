@@ -37,4 +37,6 @@ public interface IGamePhase
     /// Can be used to updated <see cref="GamePhaseManager.CurrentPhase"/> based on last action.
     /// </remarks>
     void Update(GameState gameState, Action.IAction lastAction);
+
+    IGamePhase Clone();
 }

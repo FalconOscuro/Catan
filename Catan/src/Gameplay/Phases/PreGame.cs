@@ -64,6 +64,11 @@ public class PreGameSettlement : IPreGamePhase
         gameState.PhaseManager.ChangePhase(PreGameRoad.NAME, gameState, settlement.Position, m_IsPregame2);
     }
 
+    public IGamePhase Clone()
+    {
+        return (IGamePhase)MemberwiseClone();
+    }
+
     public const string NAME = "PreGameSettlement";
 }
 
@@ -156,6 +161,11 @@ public class PreGameRoad : IPreGamePhase
             gameState.CurrentPlayerOffset--;
 
         gameState.PhaseManager.ChangePhase(PreGameSettlement.NAME, gameState, m_IsPregame2);
+    }
+
+    public IGamePhase Clone()
+    {
+        return (IGamePhase)MemberwiseClone();
     }
 
     public const string NAME = "PreGameRoad";

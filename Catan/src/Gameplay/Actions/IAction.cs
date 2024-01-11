@@ -54,6 +54,11 @@ public abstract class IAction
     /// </remarks>
     protected abstract GameState DoExecute(GameState gameState);
 
+    public virtual IAction Clone()
+    {
+        return (IAction)MemberwiseClone();
+    }
+
     private static int s_SelectedActionIndex = 0;
 
     /// <summary>

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
 using System.Numerics;
+using Catan.Action;
 using Grid.Hexagonal;
 using ImGuiNET;
 
@@ -81,9 +82,9 @@ public class GameState
     /// <summary>
     /// Log of all executed actions
     /// </summary>
-    public List<Action.IAction> PlayedActions = new();
+    public List<IAction> PlayedActions = new();
     
-    private List<Action.IAction> m_AllActions = new();
+    private List<IAction> m_AllActions = new();
 
     public GameState()
     {
@@ -109,10 +110,20 @@ public class GameState
             Board = Board.Clone(),
             Bank = Bank.Clone(),
             CurrentTurnIndex = CurrentTurnIndex,
+            CurrentPlayerOffset = CurrentPlayerOffset,
             RobberPos = RobberPos,
-            TileValueMap = TileValueMap
+            TileValueMap = new(TileValueMap),
+            m_AllActions =  new(m_AllActions),
+            PlayedActions = new(PlayedActions),
+            PhaseManager = PhaseManager.Clone(),
+            LongestRoadOwnerID = LongestRoadOwnerID,
+            LargestArmyOwnerID = LargestArmyOwnerID,
+            DevCardDeck = new(DevCardDeck),
+            PlayedDevCards = new(PlayedDevCards)
         };
-        Players.CopyTo(clone.Players, 0);
+
+        for (int i = 0; i < Rules.NUM_PLAYERS; i++)
+            clone.Players[i] = Players[i].Clone();
 
         return clone;
     }
@@ -243,6 +254,80 @@ public class GameState
             Players[playerID].LongestRoad = true;
     }
 
+    public void CheckRoadBreak(Vertex.Key nodePos, int playerID)
+    {
+        List<Edge.Key> edges = new();
+        int targetID = -1;
+        bool breakFound = false;
+
+        foreach (Edge.Key edgePos in nodePos.GetProtrudingEdges())
+        {
+            if (!Board.TryGetEdge(edgePos, out Path edge))
+                return;
+            
+            else if (edge.OwnerID == -1)
+                return;
+            
+            else if (edge.OwnerID == playerID)
+                continue;
+            
+            edges.Add(edgePos);
+
+            breakFound = targetID == edge.OwnerID;
+            targetID = edge.OwnerID;
+        }
+
+        // No break found
+        if (!breakFound)
+            return;
+
+        // Possible break, check if both edges included in longest road
+        foreach (Edge.Key edgePos in edges)
+            if (!Players[targetID].LongestRoadPath.Contains(edgePos))
+                return;
+        
+        // Find new longest road
+        int oldLen = Players[targetID].LongestRoadPath.Count;
+        Players[targetID].LongestRoadPath.Clear();
+
+        // Find new longest road
+        foreach (Edge.Key edgePos in Board.GetAllEdges())
+            UpdateLongestRoad(edgePos, targetID);
+        
+        // check if length changed and was longest road holder
+        int newLen = Players[targetID].LongestRoadPath.Count;
+        if (newLen >= oldLen || targetID != LongestRoadOwnerID) // newLen > oldLen should be impossible
+            return;
+        
+        // Find new holder
+        int holder = targetID;
+        int bestLen = Players[targetID].LongestRoadPath.Count;
+        bool contested = false;
+
+        for (int i = 0; i < Rules.NUM_PLAYERS; i++)
+        {
+            int current = Players[i].LongestRoadPath.Count;
+
+            if (current > bestLen)
+            {
+                holder = i;
+                contested = false;
+                bestLen = Players[holder].LongestRoadPath.Count;
+            }
+
+            else if (current == bestLen)
+                contested = true;
+        }
+
+        // Prioritizes previous holder
+        if ((!contested || holder == targetID) && bestLen > Rules.MIN_LONGEST_ROAD)
+            ChangeLongestRoadHolder(holder);
+        
+        // No viable players, goes unowned
+        else
+            ChangeLongestRoadHolder(-1);
+    }
+
     public void UpdateLongestRoad(Edge.Key start, int playerID)
     {
         if (!Board.TryGetEdge(start, out Path edge))
@@ -315,14 +400,6 @@ public class GameState
         return longest;
     }
 
-    // Potential different phases of the game
-    public enum Phase{
-        TURN_START,
-        TURN_MAIN,
-        DISCARD,
-        ROBBER
-    }
-
     public void ImDraw()
     {
         string phaseMsg;
@@ -387,7 +464,16 @@ public class GameState
                     ImGui.Text("None");
                 
                 else
-                    ImGui.TextColored(Rules.GetPlayerIDColour(LargestArmyOwnerID).ToVector4().ToNumerics(), $"Player {LargestArmyOwnerID}");
+                    ImGui.TextColored(Rules.GetPlayerIDColour(LargestArmyOwnerID).ToVector4().ToNumerics(), $"Player {LargestArmyOwnerID} ({Players[LargestArmyOwnerID].KnightsPlayed})");
+
+                ImGui.Text("Longest Road Owner:");
+                ImGui.SameLine();
+
+                if (LongestRoadOwnerID == -1)
+                    ImGui.Text("None");
+                
+                else
+                    ImGui.TextColored(Rules.GetPlayerIDColour(LongestRoadOwnerID).ToVector4().ToNumerics(), $"Player {LongestRoadOwnerID} ({Players[LongestRoadOwnerID].LongestRoadPath.Count})");
 
                 ImGui.TreePop();
             }

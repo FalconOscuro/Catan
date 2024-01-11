@@ -23,6 +23,14 @@ public abstract class ITurnPhase : IGamePhase
 
     public abstract List<IAction> GetValidActions(GameState gameState);
 
+    public virtual IGamePhase Clone()
+    {
+        ITurnPhase clone = (ITurnPhase)MemberwiseClone();
+        clone.PlayableDevCards = new(PlayableDevCards);
+        
+        return clone;
+    }
+
     protected List<IAction> GetDevCardActions(GameState gameState)
     {
         List<IAction> actions = new();
@@ -42,6 +50,7 @@ public abstract class ITurnPhase : IGamePhase
                 });
         }
 
+        // TODO
         if (PlayableDevCards[DevCards.Type.RoadBuilding])
         {}
 
@@ -280,6 +289,7 @@ public class TurnMain : ITurnPhase
     {
         List<IAction> actions = new();
         Player player = gameState.GetCurrentPlayer();
+        int playerID = gameState.GetCurrentPlayerID();
 
         // Check for remaining roads
         if (player.Roads == 0)
@@ -288,16 +298,22 @@ public class TurnMain : ITurnPhase
         // Check if player can afford, ignored with free flag
         else if (!(Rules.ROAD_COST <= player.Hand || free))
             return actions;
-        
-        List<Edge.Key> edges = gameState.Board.GetAllEdges();
+
+        foreach (Edge.Key edgePos in GetValidRoadLocations(gameState.Board, playerID))
+            actions.Add(new BuildRoadAction(playerID, edgePos, free));
+
+        return actions;
+    }
+
+    public static IEnumerable<Edge.Key> GetValidRoadLocations(HexGrid board, int playerID)
+    {
+        List<Edge.Key> edges = board.GetAllEdges();
 
         foreach (Edge.Key edgePos in edges)
         {
-            if (CheckRoadPos(gameState.Board, edgePos, player.ID))
-                actions.Add(new BuildRoadAction(player.ID, edgePos));
+            if (CheckRoadPos(board, edgePos, playerID))
+                yield return edgePos;
         }
-
-        return actions;
     }
 
     /// <summary>
