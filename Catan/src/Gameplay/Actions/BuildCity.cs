@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using Grid.Hexagonal;
 
 namespace Catan.Action;
@@ -35,6 +36,19 @@ public class BuildCityAction : IAction
             "Position: {1}",
             OwnerID, Position.ToString()
         );
+    }
+
+    public override bool Equals([NotNullWhen(true)] object obj)
+    {
+        if (obj is not BuildCityAction action)
+            return false;
+        
+        return base.Equals(action) && action.Position == Position;
+    }
+
+    public override int GetHashCode()
+    {
+        return base.GetHashCode();
     }
 
     protected override GameState DoExecute(GameState gameState)

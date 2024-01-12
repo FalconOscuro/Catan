@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Grid.Hexagonal;
 
 namespace Catan.Action;
@@ -21,6 +22,19 @@ public class RobberAction : IAction
             "Pos: {2}",
             OwnerID, TargetID, TargetPos.ToString()
         );
+    }
+
+    public override bool Equals([NotNullWhen(true)] object obj)
+    {
+        if (obj is not RobberAction action)
+            return false;
+
+        return base.Equals(obj) && action.TargetPos == TargetPos && action.TargetID == TargetID;
+    }
+
+    public override int GetHashCode()
+    {
+        return base.GetHashCode();
     }
 
     protected override GameState DoExecute(GameState gameState)
@@ -54,6 +68,19 @@ public class Steal : IAction
     public override string ToString()
     {
         return $"{OwnerID} steals from {TargetID}";
+    }
+
+    public override bool Equals([NotNullWhen(true)] object obj)
+    {
+        if (obj is not Steal action)
+            return false;
+
+        return base.Equals(obj) && action.TargetID == TargetID && action.Stolen == Stolen;
+    }
+
+    public override int GetHashCode()
+    {
+        return base.GetHashCode();
     }
 
     public override string GetDescription()

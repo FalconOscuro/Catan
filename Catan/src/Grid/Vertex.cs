@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.Xna.Framework;
 
 using Utility;
@@ -206,11 +207,26 @@ public class Vertex
             return tiles;
         }
 
+        public override readonly bool Equals([NotNullWhen(true)] object obj)
+        {
+            Key? key = obj as Key?;
+
+            if (!key.HasValue)
+                return false;
+            
+            return key == this;
+        }
+
         public override string ToString()
         {
             return Position.ToString() + $" V:{Side}";
         }
     
+        public override readonly int GetHashCode()
+        {
+            return base.GetHashCode();
+        }
+
         public static bool operator==(Key a, Key b)
         {
             a = a.Align();

@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace Catan.Action;
 
 public class Monopoly : IAction
@@ -16,6 +18,19 @@ public class Monopoly : IAction
             "Resource: {1}",
             OwnerID, TargetResource
         );
+    }
+
+    public override bool Equals([NotNullWhen(true)] object obj)
+    {
+        if (obj is not Monopoly action)
+            return false;
+
+        return base.Equals(obj) && action.TargetResource == TargetResource;
+    }
+
+    public override int GetHashCode()
+    {
+        return base.GetHashCode();
     }
 
     protected override GameState DoExecute(GameState gameState)

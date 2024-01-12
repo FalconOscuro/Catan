@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using Grid.Hexagonal;
 
 namespace Catan.Action;
@@ -39,6 +40,19 @@ public class RollDiceAction : IAction
             "Robber: {3}",
             OwnerID, Rolled, RolledSum, TriggerRobber
         );
+    }
+
+    public override bool Equals([NotNullWhen(true)] object obj)
+    {
+        if (obj is not RollDiceAction action)
+            return false;
+
+        return base.Equals(obj) && action.RolledSum == RolledSum;
+    }
+
+    public override int GetHashCode()
+    {
+        return base.GetHashCode();
     }
 
     /// <summary>

@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using Grid.Hexagonal;
 
 namespace Catan.Action;
@@ -47,6 +48,19 @@ public class BuildSettlementAction : IAction
             "Free: {2}",
             OwnerID, Position.ToString(), Free
         );
+    }
+
+    public override bool Equals([NotNullWhen(true)] object obj)
+    {
+        if (obj is not BuildSettlementAction action)
+            return false;
+
+        return base.Equals(obj) && action.Position == Position;
+    }
+
+    public override int GetHashCode()
+    {
+        return base.GetHashCode();
     }
 
     /// <summary>

@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace Catan.Action;
 
 public class BuyDevCardAction : IAction
@@ -10,6 +12,16 @@ public class BuyDevCardAction : IAction
     public override string GetDescription()
     {
         return ToString();
+    }
+
+    public override bool Equals([NotNullWhen(true)] object obj)
+    {
+        return base.Equals(obj) && obj is BuyDevCardAction;
+    }
+
+    public override int GetHashCode()
+    {
+        return base.GetHashCode();
     }
 
     protected override GameState DoExecute(GameState gameState)

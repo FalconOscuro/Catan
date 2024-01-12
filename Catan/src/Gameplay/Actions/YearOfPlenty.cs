@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace Catan.Action;
 
 public class YearOfPlenty : Trade
@@ -19,6 +21,16 @@ public class YearOfPlenty : Trade
             "Recieved:\n{1}",
             OwnerID, Receiving.ToString()
         );
+    }
+
+    public override bool Equals([NotNullWhen(true)] object obj)
+    {
+        return base.Equals(obj) && obj is YearOfPlenty;
+    }
+
+    public override int GetHashCode()
+    {
+        return base.GetHashCode();
     }
 
     protected override GameState DoExecute(GameState gameState)

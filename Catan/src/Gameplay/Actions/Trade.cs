@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace Catan.Action;
 
 /// <summary>
@@ -30,18 +32,16 @@ public class Trade : IAction
     public Trade()
     {}
 
-    /// <summary>
-    /// Is this trade possible
-    /// </summary>
-    /// <remarks>
-    /// Deprecated?
-    /// </remarks>
-    public bool CanExecute(GameState gameState)
+    public override IAction Clone()
     {
-        bool canOwnerTrade = gameState.Players[OwnerID].Hand >= Giving;
-        bool canTargetTrade = (TargetID == -1 ? gameState.Bank : gameState.Players[TargetID].Hand) >= Receiving;
+        Trade clone = new(){
+            OwnerID = OwnerID,
+            TargetID = TargetID,
+            Giving = Giving.Clone(),
+            Receiving = Receiving.Clone()
+        };
 
-        return canOwnerTrade && canTargetTrade;
+        return clone;
     }
 
     public override string ToString()
@@ -60,6 +60,19 @@ public class Trade : IAction
             OwnerID, Giving.ToString(),
             TargetID, Receiving.ToString()
         );
+    }
+
+    public override bool Equals([NotNullWhen(true)] object obj)
+    {
+        if (obj is not Trade action)
+            return false;
+
+        return base.Equals(obj) && action.TargetID == TargetID && action.Giving.Equals(Giving) && action.Receiving.Equals(Receiving);
+    }
+
+    public override int GetHashCode()
+    {
+        return base.GetHashCode();
     }
 
     /// <summary>

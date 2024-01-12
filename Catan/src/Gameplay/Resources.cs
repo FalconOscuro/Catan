@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-
+using System.Diagnostics.CodeAnalysis;
 using ImGuiNET;
 using Microsoft.Xna.Framework;
 
@@ -58,6 +58,23 @@ public static class Resources
         public override readonly string ToString()
         {
             return $"[B:{Brick}, G:{Grain}, L:{Lumber}, O:{Ore}, W:{Wool}]";
+        }
+
+        public override readonly bool Equals([NotNullWhen(true)] object obj)
+        {
+            if (obj is not Collection collection)
+                return false;
+            
+            bool equal = true;
+            for (Type type = Type.Brick; type < Type.Wool + 1; type ++)
+                equal &= collection[type] == this[type];
+            
+            return equal;
+        }
+
+        public override readonly int GetHashCode()
+        {
+            return base.GetHashCode();
         }
 
         /// <summary>

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using ImGuiNET;
 
@@ -45,6 +46,19 @@ public abstract class IAction
     public override abstract string ToString();
 
     public abstract string GetDescription();
+
+    public override bool Equals([NotNullWhen(true)] object obj)
+    {
+        if (obj is not IAction action)
+            return false;
+
+        return action.OwnerID == OwnerID;
+    }
+
+    public override int GetHashCode()
+    {
+        return base.GetHashCode();
+    }
 
     /// <summary>
     /// Command specified by implementation

@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace Catan.Action;
 
 /// <summary>
@@ -22,6 +24,16 @@ public class EndTurn : IAction
     public override string GetDescription()
     {
         return ToString();
+    }
+
+    public override bool Equals([NotNullWhen(true)] object obj)
+    {
+        return base.Equals(obj) && obj is EndTurn;
+    }
+
+    public override int GetHashCode()
+    {
+        return base.GetHashCode();
     }
 
     /// <summary>
