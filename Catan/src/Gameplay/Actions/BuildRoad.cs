@@ -59,7 +59,7 @@ public class BuildRoadAction : IAction
             throw new Exception();
         
         path.OwnerID = OwnerID;
-        gameState.UpdateLongestRoad(Position, OwnerID);
+        gameState.UpdateLongestRoad(OwnerID);
 
         if (Free)
             return gameState;

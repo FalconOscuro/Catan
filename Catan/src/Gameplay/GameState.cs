@@ -128,24 +128,21 @@ public class GameState
         return clone;
     }
 
-    /// <summary>
-    /// Execute update tick for current player, utilizing <see cref="DMM"/>.
-    /// </summary>
-    public void Update()
-    {
-        Players[GetCurrentPlayerID()].DMM.Update(this);
-    }
-
     public bool HasGameEnded()
     {
         return Players[CurrentTurnIndex].GetTotalVP() >= Rules.MAX_VICTORY_POINTS;
+    }
+
+    public List<IAction> GetValidActions()
+    {
+        return PhaseManager.GetValidActions(this);
     }
 
     /// <summary>
     /// Called on <see cref="IAction.Execute(GameState)"/>.
     /// </summary>
     /// <param name="action">Triggering action.</param>
-    public void UpdatePhase(Action.IAction action)
+    public void UpdatePhase(IAction action)
     {
         // Add action to played action list
         if (!action.IsSilent)
@@ -158,7 +155,6 @@ public class GameState
 
         // Update FSM & retrieve valid actions
         PhaseManager.Update(this, action);
-        Players[GetCurrentPlayerID()].DMM.Actions = PhaseManager.GetValidActions(this);
     }
 
     /// <summary>
@@ -291,8 +287,7 @@ public class GameState
         Players[targetID].LongestRoadPath.Clear();
 
         // Find new longest road
-        foreach (Edge.Key edgePos in Board.GetAllEdges())
-            UpdateLongestRoad(edgePos, targetID);
+        UpdateLongestRoad(targetID);
         
         // check if length changed and was longest road holder
         int newLen = Players[targetID].LongestRoadPath.Count;
@@ -328,21 +323,19 @@ public class GameState
             ChangeLongestRoadHolder(-1);
     }
 
-    public void UpdateLongestRoad(Edge.Key start, int playerID)
+    public void UpdateLongestRoad(int playerID)
     {
-        if (!Board.TryGetEdge(start, out Path edge))
-            return;
-        
-        else if (edge.OwnerID != playerID)
-            return;
-
         Player player = Players[playerID];
+        IEnumerable<Edge.Key> longest = player.LongestRoadPath;
 
-        Vertex.Key[] nodes = start.GetEndpoints();
-        IEnumerable<Edge.Key> longest = new Edge.Key[]{start};
+        foreach (Vertex.Key nodePos in Board.GetAllVertices())
+        {
+            IEnumerable<Edge.Key> current = RecurseFindLongestRoute(Board, nodePos, playerID, Array.Empty<Edge.Key>());
 
-        foreach (Vertex.Key nodePos in nodes)
-            longest = RecurseFindLongestRoute(Board, nodePos, playerID, longest);
+            if (current.Count() > longest.Count())
+                longest = current;
+        }
+
 
         int currentLength = player.LongestRoadPath.Count;
         int newLength = longest.Count();
@@ -375,7 +368,8 @@ public class GameState
         if (!board.TryGetVertex(currentNode, out Node node))
             return route;
 
-        else if (node.OwnerID != playerID && node.OwnerID != -1)
+        // Cannot path through enemy nodes, ignored if route is empty, as this node acts as starting point
+        else if (node.OwnerID != playerID && node.OwnerID != -1 && route.Any())
             return route;
 
         IEnumerable<Edge.Key> longest = route;

@@ -29,8 +29,7 @@ public class Player
     public List<Edge.Key> LongestRoadPath = new();
     public bool LongestRoad = false;
 
-    // TEMP DEBUG, REMOVE!!!!
-    public DMM DMM = new RandomDMM();
+    public DMM DMM;
 
     public int ID {get; private set;}
 
@@ -70,6 +69,7 @@ public class Player
     public void ImDraw()
     {
         ImGui.TextColored(Rules.GetPlayerIDColour(ID).ToVector4().ToNumerics(), "Colour");
+        ImGui.Text($"DMM: {DMM.GetType().ToString().Remove(0, 16)}");
         ImGui.Text(string.Format("VP: {0}", GetTotalVP()));
         ImGui.Text($"Knights Played: {KnightsPlayed}");
         ImGui.Text($"Largest Army: {LargestArmy}");
@@ -98,12 +98,6 @@ public class Player
             ImGui.Text(string.Format("Settlements: {0}", Settlements));
             ImGui.Text(string.Format("Roads: {0}", Roads));
             ImGui.Text(string.Format("Cities: {0}", Cities));
-            ImGui.TreePop();
-        }
-
-        if (ImGui.TreeNode("Valid Actions"))
-        {
-            Action.IAction.ImDrawActList(DMM.Actions, $"Player {ID} Actions");
             ImGui.TreePop();
         }
     }

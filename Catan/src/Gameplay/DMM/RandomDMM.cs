@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using Catan.Action;
 
 namespace Catan.Behaviour;
 
@@ -14,8 +16,8 @@ public class RandomDMM : DMM
         m_Random = new();
     }
 
-    public override void Update(GameState gameState)
+    public override int GetNextAction(GameState gameState, List<IAction> actions)
     {
-        Actions[m_Random.Next(0, Actions.Count)].Execute(gameState);
+        return m_Random.Next(0, actions.Count);
     }
 }

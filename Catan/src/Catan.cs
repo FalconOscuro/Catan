@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Reflection.Metadata;
+using Catan.Behaviour;
 using Grid.Hexagonal;
 using ImGuiNET;
 using Microsoft.Xna.Framework;
@@ -60,7 +61,18 @@ public class Catan : Microsoft.Xna.Framework.Game
 
         s_Font = Content.Load<SpriteFont>("Default");
 
-        m_Game = Game.NewDefaultMapGame();
+        InitGame();
+    }
+
+    private void InitGame()
+    {
+        DMM[] dMMs = new DMM[]{
+            new RandomDMM(),
+            new RandomDMM(),
+            new RandomDMM(),
+            new RandomDMM()
+        };
+        m_Game = Game.NewDefaultMapGame(dMMs);
 
         // Position grid
         Vector2 screenSize = GraphicsDevice.Viewport.GetSizeVec();
@@ -153,6 +165,10 @@ public class Catan : Microsoft.Xna.Framework.Game
         ImGui.End();
 
         ImGui.Begin("Game");
+
+        if (ImGui.Button("Reset"))
+            InitGame();
+
         m_Game.ImDraw();
         ImGui.End();
 

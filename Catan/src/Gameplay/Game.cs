@@ -7,6 +7,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Collections;
 using Utility;
+using Catan.Action;
+using Catan.Behaviour;
 
 namespace Catan;
 using Type = Resources.Type;
@@ -21,6 +23,8 @@ public class Game
 {
     public GameState GameState;
 
+    private List<IAction> m_ValidActions = new();
+
     private Game()
     {}
 
@@ -29,8 +33,19 @@ public class Game
     /// </summary>
     public void Update()
     {
-        if (!GameState.HasGameEnded())
-            GameState.Update();
+        if (GameState.HasGameEnded())
+            return;
+        
+        m_ValidActions = GameState.GetValidActions();
+
+        // deep clone act list
+        List<IAction> clonedActions = new(m_ValidActions.Count);
+        foreach (IAction action in m_ValidActions)
+            clonedActions.Add(action.Clone());
+
+        int chosenActIndex = GameState.GetCurrentPlayer().DMM.GetNextAction(GameState.Clone(), clonedActions);
+
+        m_ValidActions[chosenActIndex].Execute(GameState);
     }
 
     /// <summary>
@@ -54,14 +69,14 @@ public class Game
     /// <summary>
     /// Create new game using default map
     /// </summary>
-    public static Game NewDefaultMapGame() {
-        return NewGame(Rules.DEFAULT_RESOURCE_SPREAD, Rules.DEFAULT_VALUE_SPREAD);
+    public static Game NewDefaultMapGame(DMM[] dMMs) {
+        return NewGame(dMMs, Rules.DEFAULT_RESOURCE_SPREAD, Rules.DEFAULT_VALUE_SPREAD);
     }
 
     /// <summary>
     /// Create new game specifying resource and value layout
     /// </summary>
-    public static Game NewGame(Type[] resourceMap, int[] valueMap, Random random = null)
+    public static Game NewGame(DMM[] dMMs, Type[] resourceMap, int[] valueMap, Random random = null)
     {
         random ??= new();
 
@@ -142,8 +157,12 @@ public class Game
 
         gameState.DevCardDeck = new (devCardDeck);
 
-        // Should be a part of gamestate
-        gameState.Players[gameState.GetCurrentPlayerID()].DMM.Actions = gameState.PhaseManager.GetValidActions(gameState);
+        // Shuffle DMMs to shuffle turn order, then assign to players
+        random.Shuffle(dMMs);
+
+        // Num players should be determined here not in rules
+        for (int i = 0; i < Rules.NUM_PLAYERS; i++)
+            gameState.Players[i].DMM = dMMs[i];
 
         return new Game(){
             GameState = gameState
