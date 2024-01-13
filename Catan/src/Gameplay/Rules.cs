@@ -9,7 +9,7 @@ internal static class Rules
         Brick = 1,
         Grain = 1,
         Lumber = 1,
-        Ore = 1
+        Wool = 1
     };
 
     public static readonly Resources.Collection ROAD_COST = new(){
