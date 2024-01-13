@@ -8,6 +8,8 @@ namespace Catan.Behaviour;
 /// </summary>
 public abstract class DMM
 {
+    public int OwnerID;
+
     /// <summary>
     /// Update function called during owning Players turn
     /// </summary>

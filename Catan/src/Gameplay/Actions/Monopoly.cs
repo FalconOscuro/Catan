@@ -52,7 +52,8 @@ public class Monopoly : IAction
             IAction trade = new Trade(){
                 OwnerID = OwnerID,
                 TargetID = i,
-                Receiving = receiving
+                Receiving = receiving,
+                IsHidden = true
             };
 
             gameState = trade.Execute(gameState);

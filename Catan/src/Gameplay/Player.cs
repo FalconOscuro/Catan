@@ -46,6 +46,7 @@ public class Player
         // Clone dmm????
 
         clone.LongestRoadPath = new(LongestRoadPath);
+        clone.HeldDevCards = new(HeldDevCards);
         clone.Hand = Hand.Clone();
 
         return clone;

@@ -81,7 +81,8 @@ public class BuildRoadAction : IAction
         IAction trade = new Trade(){
             OwnerID = OwnerID,
             TargetID = -1,
-            Giving = Rules.ROAD_COST
+            Giving = Rules.ROAD_COST,
+            IsHidden = true
         };
 
         return trade.Execute(gameState);

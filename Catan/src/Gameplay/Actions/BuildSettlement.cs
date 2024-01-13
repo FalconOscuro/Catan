@@ -81,9 +81,10 @@ public class BuildSettlementAction : IAction
         if (!Free)
         {
             IAction trade = new Trade(){
-            OwnerID = OwnerID,
-            TargetID = -1,
-            Giving = Rules.SETTLEMENT_COST
+                OwnerID = OwnerID,
+                TargetID = -1,
+                Giving = Rules.SETTLEMENT_COST,
+                IsHidden = true
             };
 
             gameState = trade.Execute(gameState);
@@ -101,7 +102,8 @@ public class BuildSettlementAction : IAction
             IAction trade = new Trade(){
                 OwnerID = OwnerID,
                 TargetID = -1,
-                Receiving = receiving
+                Receiving = receiving,
+                IsHidden = true
             };
 
             gameState = trade.Execute(gameState);

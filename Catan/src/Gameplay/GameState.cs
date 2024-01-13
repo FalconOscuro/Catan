@@ -128,9 +128,9 @@ public class GameState
         return clone;
     }
 
-    public bool HasGameEnded()
+    public int GetWinner()
     {
-        return Players[CurrentTurnIndex].GetTotalVP() >= Rules.MAX_VICTORY_POINTS;
+        return Players[CurrentTurnIndex].GetTotalVP() >= Rules.MAX_VICTORY_POINTS ? CurrentTurnIndex : -1;
     }
 
     public List<IAction> GetValidActions()
@@ -397,7 +397,7 @@ public class GameState
     public void ImDraw()
     {
         string phaseMsg;
-        if (!HasGameEnded())
+        if (GetWinner() == -1)
             phaseMsg = string.Format("Turn: {0} - {1}", GetCurrentPlayerID(), PhaseManager.CurrentPhase);
         
         else

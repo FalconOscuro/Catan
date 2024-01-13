@@ -70,7 +70,7 @@ public class Catan : Microsoft.Xna.Framework.Game
             new RandomDMM(),
             new RandomDMM(),
             new RandomDMM(),
-            new RandomDMM()
+            new MCTS()
         };
         m_Game = Game.NewDefaultMapGame(dMMs);
 

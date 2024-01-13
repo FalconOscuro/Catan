@@ -33,7 +33,8 @@ public class BuyDevCardAction : IAction
         IAction trade = new Trade(){
             OwnerID = OwnerID,
             TargetID = -1,
-            Giving = Rules.DEVELOPMENT_CARD_COST
+            Giving = Rules.DEVELOPMENT_CARD_COST,
+            IsHidden = true
         };
 
         return trade.Execute(gameState);

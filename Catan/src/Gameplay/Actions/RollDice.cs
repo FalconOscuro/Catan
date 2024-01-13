@@ -47,12 +47,12 @@ public class RollDiceAction : IAction
         if (obj is not RollDiceAction action)
             return false;
 
-        return base.Equals(obj) && action.RolledSum == RolledSum;
+        return base.Equals(obj) && (action.RolledSum == RolledSum || RolledSum == 0 || action.RolledSum == 0);
     }
 
     public override int GetHashCode()
     {
-        return base.GetHashCode();
+        return ToString().GetHashCode();
     }
 
     /// <summary>
@@ -60,8 +60,12 @@ public class RollDiceAction : IAction
     /// </summary>
     protected override GameState DoExecute(GameState gameState)
     {
-        Rolled = gameState.RollDice();
         int rollSum = RolledSum;
+        if (rollSum == 0)
+        {
+            Rolled = gameState.RollDice();
+            rollSum = RolledSum;
+        }
         
         // On robber no resources distributed
         if (TriggerRobber)
@@ -150,7 +154,8 @@ public class RollDiceAction : IAction
                 IAction trade = new Trade(){
                     OwnerID = i,
                     TargetID = -1,
-                    Receiving = playerTrades[i]
+                    Receiving = playerTrades[i],
+                    IsHidden = true
                 };
 
                 gameState = trade.Execute(gameState);

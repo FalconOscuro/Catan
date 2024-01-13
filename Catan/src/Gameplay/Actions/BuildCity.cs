@@ -66,7 +66,8 @@ public class BuildCityAction : IAction
         IAction trade = new Trade(){
             OwnerID = OwnerID,
             TargetID = -1,
-            Giving = Rules.CITY_COST
+            Giving = Rules.CITY_COST,
+            IsHidden = true
         };
 
         return trade.Execute(gameState);

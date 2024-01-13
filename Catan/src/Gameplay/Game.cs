@@ -9,6 +9,7 @@ using System.Collections;
 using Utility;
 using Catan.Action;
 using Catan.Behaviour;
+using System.Threading.Tasks;
 
 namespace Catan;
 using Type = Resources.Type;
@@ -25,6 +26,9 @@ public class Game
 
     private List<IAction> m_ValidActions = new();
 
+    private Task<int> m_Task = null;
+    private AsyncGameStateUpdate m_Delegate = null;
+
     private Game()
     {}
 
@@ -33,7 +37,18 @@ public class Game
     /// </summary>
     public void Update()
     {
-        if (GameState.HasGameEnded())
+        if (m_Task != null)
+        {
+            if (!m_Task.IsCompleted)
+                return;
+            
+            int chosenAction = m_Task.Result;
+            m_ValidActions[chosenAction].Execute(GameState);
+
+            m_Task = null;
+        }
+
+        if (GameState.GetWinner() != -1)
             return;
         
         m_ValidActions = GameState.GetValidActions();
@@ -43,9 +58,8 @@ public class Game
         foreach (IAction action in m_ValidActions)
             clonedActions.Add(action.Clone());
 
-        int chosenActIndex = GameState.GetCurrentPlayer().DMM.GetNextAction(GameState.Clone(), clonedActions);
-
-        m_ValidActions[chosenActIndex].Execute(GameState);
+        //m_Delegate = new AsyncGameStateUpdate(GameState.GetCurrentPlayer().DMM.GetNextAction);
+        m_Task = Task<int>.Factory.StartNew(() => {return GameState.GetCurrentPlayer().DMM.GetNextAction(GameState.Clone(), clonedActions);});
     }
 
     /// <summary>
@@ -162,7 +176,10 @@ public class Game
 
         // Num players should be determined here not in rules
         for (int i = 0; i < Rules.NUM_PLAYERS; i++)
+        {
+            dMMs[i].OwnerID = i;
             gameState.Players[i].DMM = dMMs[i];
+        }
 
         return new Game(){
             GameState = gameState
@@ -177,4 +194,6 @@ public class Game
         
         return deck.Concat(newCards);
     }
+
+    private delegate int AsyncGameStateUpdate(GameState gameState, List<IAction> actions);
 }

@@ -57,7 +57,7 @@ public abstract class IAction
 
     public override int GetHashCode()
     {
-        return base.GetHashCode();
+        return GetDescription().GetHashCode();
     }
 
     /// <summary>
@@ -105,5 +105,15 @@ public abstract class IAction
             string text = actions.Count > s_SelectedActionIndex ? actions[s_SelectedActionIndex].GetDescription() : "";
             ImGui.InputTextMultiline("##"+str_id, ref text, 1024, size, ImGuiInputTextFlags.ReadOnly);
         }
+    }
+
+    public static bool operator==(IAction a, IAction b)
+    {
+        return a.Equals(b);
+    }
+
+    public static bool operator!=(IAction a, IAction b)
+    {
+        return !a.Equals(b);
     }
 }
