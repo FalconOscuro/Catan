@@ -22,7 +22,9 @@ public class MCTS : DMM
         m_RootNode ??= new Node(gameState, actions);
         m_RootNode.Parent = null;
 
-        for (int i = 0; i < m_MaxIterationCount; i++)
+        DateTime end = DateTime.Now.AddSeconds(m_MaxThinkTime);
+
+        do
         {
             Node selected = m_RootNode.Select();
 
@@ -33,6 +35,7 @@ public class MCTS : DMM
                 child.BackPropogate(reward);
             }
         }
+        while (end.CompareTo(DateTime.Now) > 0);
 
         Node best = m_RootNode.Children.Values.First();
 
@@ -47,16 +50,16 @@ public class MCTS : DMM
     {
         GameState gameState = node.GameState.Clone();
         //float cumulativeReward = 0f;
-        int depth = 0;
+        int depth = 1;
 
-        while (gameState.GetWinner() == -1)
+        while (gameState.GetWinner() == -1 && depth < m_MaxSimulationDepth)
         {
             ChooseAction(gameState).Execute(gameState);
             depth++;
         }
 
         // TODO: Use better reward function
-        return (gameState.GetWinner() == OwnerID ? 1f : -0.25f) + (float)gameState.Players[OwnerID].GetTotalVP() / depth;
+        return (gameState.GetWinner() == OwnerID ? 10f : 0f) + (float)gameState.Players[OwnerID].GetTotalVP() / depth;
     }
 
     private static IAction ChooseAction(GameState gameState)
@@ -68,7 +71,8 @@ public class MCTS : DMM
 
     private Node m_RootNode;
 
-    private const int m_MaxIterationCount = 10000;
+    private const double m_MaxThinkTime = 120d;
+    private const int m_MaxSimulationDepth = 400;
 
     private int m_ActionContinueIndex;
 }
