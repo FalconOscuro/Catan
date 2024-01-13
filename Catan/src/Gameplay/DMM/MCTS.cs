@@ -30,7 +30,7 @@ public class MCTS : DMM
             {
                 Node child = selected.Expand();
                 float reward = Simulate(child);
-                selected.BackPropogate(reward);
+                child.BackPropogate(reward);
             }
         }
 
@@ -68,14 +68,14 @@ public class MCTS : DMM
 
     private Node m_RootNode;
 
-    private const int m_MaxIterationCount = 2000;
+    private const int m_MaxIterationCount = 10000;
 
     private int m_ActionContinueIndex;
 }
 
 class Node
 {
-    public int Visits = 1;
+    public int Visits = 0;
     public float Probability = 1f;
     public float TotalReward;
     public float Reward { get { return Probability * TotalReward / Visits; }}
@@ -230,6 +230,6 @@ class Node
 
     public float UCB(Node child)
     {
-        return Reward + MathF.Sqrt(MathF.Log((float)Visits / child.Visits));
+        return child.Reward + MathF.Sqrt(MathF.Log((float)Visits / child.Visits));
     }
 }
