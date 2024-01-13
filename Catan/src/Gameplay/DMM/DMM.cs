@@ -18,4 +18,6 @@ public abstract class DMM
     /// potentially change to take copy of gamestate and return chosen action?
     /// </remarks>
     public abstract int GetNextAction(GameState gameState, List<IAction> actions);
+
+    public abstract void ImDraw();
 }

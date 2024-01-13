@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Catan.Action;
+using ImGuiNET;
 
 namespace Catan.Behaviour;
 
@@ -22,7 +23,8 @@ public class MCTS : DMM
         m_RootNode ??= new Node(gameState, actions);
         m_RootNode.Parent = null;
 
-        DateTime end = DateTime.Now.AddSeconds(m_MaxThinkTime);
+        m_End = DateTime.Now.AddSeconds(MaxThinkTime);
+        m_Thinking = true;
 
         do
         {
@@ -35,8 +37,9 @@ public class MCTS : DMM
                 child.BackPropogate(reward);
             }
         }
-        while (end.CompareTo(DateTime.Now) > 0);
+        while (m_End.CompareTo(DateTime.Now) > 0);
 
+        m_Thinking = false;
         Node best = m_RootNode.Children.Values.First();
 
         foreach (Node child in m_RootNode.Children.Values.Skip(1))
@@ -44,6 +47,22 @@ public class MCTS : DMM
                 best = child;
 
         return actions.IndexOf(best.Action);
+    }
+
+    public override void ImDraw()
+    {
+        ImGui.Text($"Max think time: {MaxThinkTime}s");
+
+        Node root = m_RootNode;
+        if (root != null)
+        {
+            ImGui.Text($"Simulation count: {root.Visits}");
+        }
+
+        if (m_Thinking)
+        {
+            ImGui.Text($"Time Remaining: {m_End.Subtract(DateTime.Now).TotalSeconds}s");
+        }
     }
 
     private float Simulate(Node node)
@@ -59,7 +78,7 @@ public class MCTS : DMM
         }
 
         // TODO: Use better reward function
-        return (gameState.GetWinner() == OwnerID ? 10f : 0f) + (float)gameState.Players[OwnerID].GetTotalVP() / depth;
+        return (gameState.GetWinner() == OwnerID ? 100f : 0f) + (float)gameState.Players[OwnerID].GetTotalVP() / depth;
     }
 
     private static IAction ChooseAction(GameState gameState)
@@ -71,7 +90,10 @@ public class MCTS : DMM
 
     private Node m_RootNode;
 
-    private const double m_MaxThinkTime = 120d;
+    private DateTime m_End;
+    private bool m_Thinking = false;
+
+    public double MaxThinkTime = 30d;
     private const int m_MaxSimulationDepth = 400;
 
     private int m_ActionContinueIndex;
@@ -234,6 +256,6 @@ class Node
 
     public float UCB(Node child)
     {
-        return child.Reward + MathF.Sqrt(MathF.Log((float)Visits / child.Visits));
+        return child.Reward + (0.8f * MathF.Sqrt(MathF.Log((float)Visits / child.Visits)));
     }
 }

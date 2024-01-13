@@ -20,4 +20,8 @@ public class RandomDMM : DMM
     {
         return m_Random.Next(0, actions.Count);
     }
+
+    public override void ImDraw()
+    {
+    }
 }

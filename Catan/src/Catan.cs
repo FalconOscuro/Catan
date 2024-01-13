@@ -69,7 +69,9 @@ public class Catan : Microsoft.Xna.Framework.Game
         DMM[] dMMs = new DMM[]{
             new RandomDMM(),
             new RandomDMM(),
-            new RandomDMM(),
+            new MCTS(){
+                MaxThinkTime = 5
+            },
             new MCTS()
         };
         m_Game = Game.NewDefaultMapGame(dMMs);

@@ -70,12 +70,17 @@ public class Player
     public void ImDraw()
     {
         ImGui.TextColored(Rules.GetPlayerIDColour(ID).ToVector4().ToNumerics(), "Colour");
-        ImGui.Text($"DMM: {DMM.GetType().ToString().Remove(0, 16)}");
         ImGui.Text(string.Format("VP: {0}", GetTotalVP()));
         ImGui.Text($"Knights Played: {KnightsPlayed}");
         ImGui.Text($"Largest Army: {LargestArmy}");
         ImGui.Text($"Longest Road Length: {LongestRoadPath.Count}");
         ImGui.Text($"Longest Road: {LongestRoad}");
+
+        if (ImGui.TreeNode($"{DMM.GetType().ToString().Remove(0, 16)}"))
+        {
+            DMM.ImDraw();
+            ImGui.TreePop();
+        }
 
         if(ImGui.TreeNode("Hand"))
         {
