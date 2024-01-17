@@ -3,3 +3,5 @@ obj/
 *.ini
 
 .vscode/
+latex/
+html/

@@ -43,6 +43,13 @@ public class Game
                 return;
             
             int chosenAction = m_Task.Result;
+
+            if (chosenAction < 0 || chosenAction >= m_ValidActions.Count)
+            {
+                Console.WriteLine($"Recieved invalid action {chosenAction} from {GameState.GetCurrentPlayerID()}");
+                chosenAction = 0;
+            }
+
             m_ValidActions[chosenAction].Execute(GameState);
 
             m_Task = null;
@@ -59,7 +66,7 @@ public class Game
             clonedActions.Add(action.Clone());
 
         //m_Delegate = new AsyncGameStateUpdate(GameState.GetCurrentPlayer().DMM.GetNextAction);
-        m_Task = Task<int>.Factory.StartNew(() => {return GameState.GetCurrentPlayer().DMM.GetNextAction(GameState.Clone(), clonedActions);});
+        m_Task = Task<int>.Factory.StartNew(() => {return GameState.GetCurrentPlayer().DMM.ChooseAction(GameState.Clone(), clonedActions);});
     }
 
     /// <summary>
@@ -83,14 +90,14 @@ public class Game
     /// <summary>
     /// Create new game using default map
     /// </summary>
-    public static Game NewDefaultMapGame(DMM[] dMMs) {
+    public static Game NewDefaultMapGame(Controller[] dMMs) {
         return NewGame(dMMs, Rules.DEFAULT_RESOURCE_SPREAD, Rules.DEFAULT_VALUE_SPREAD);
     }
 
     /// <summary>
     /// Create new game specifying resource and value layout
     /// </summary>
-    public static Game NewGame(DMM[] dMMs, Type[] resourceMap, int[] valueMap, Random random = null)
+    public static Game NewGame(Controller[] dMMs, Type[] resourceMap, int[] valueMap, Random random = null)
     {
         random ??= new();
 

@@ -66,11 +66,11 @@ public class Catan : Microsoft.Xna.Framework.Game
 
     private void InitGame()
     {
-        DMM[] dMMs = new DMM[]{
-            new RandomDMM(),
-            new RandomDMM(),
+        Controller[] dMMs = new Controller[]{
+            new RandomController(),
+            new RandomController(),
             new MCTS(){
-                MaxThinkTime = 5
+                MaxIterationCount = 500
             },
             new MCTS()
         };

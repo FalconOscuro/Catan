@@ -6,7 +6,7 @@ namespace Catan.Behaviour;
 /// <summary>
 /// A decision making module responsible for controlling a <see cref="Player"/>.
 /// </summary>
-public abstract class DMM
+public abstract class Controller
 {
     public int OwnerID;
 
@@ -17,7 +17,7 @@ public abstract class DMM
     /// Should pick a valid action from <see cref="Actions"/>,
     /// potentially change to take copy of gamestate and return chosen action?
     /// </remarks>
-    public abstract int GetNextAction(GameState gameState, List<IAction> actions);
+    public abstract int ChooseAction(GameState gameState, List<IAction> actions);
 
     public abstract void ImDraw();
 }

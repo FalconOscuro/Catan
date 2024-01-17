@@ -29,7 +29,7 @@ public class Player
     public List<Edge.Key> LongestRoadPath = new();
     public bool LongestRoad = false;
 
-    public DMM DMM;
+    public Controller DMM;
 
     public int ID {get; private set;}
 
@@ -48,6 +48,7 @@ public class Player
         clone.LongestRoadPath = new(LongestRoadPath);
         clone.HeldDevCards = new(HeldDevCards);
         clone.Hand = Hand.Clone();
+        clone.DMM = null;
 
         return clone;
     }
