@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Catan.Action;
@@ -52,7 +53,10 @@ public abstract class ITurnPhase : IGamePhase
 
         // TODO
         if (PlayableDevCards[DevCards.Type.RoadBuilding])
-        {}
+        {
+            foreach (IAction action in GetRoadBuildingActions(gameState))
+                actions.Add(action);
+        }
 
         if (PlayableDevCards[DevCards.Type.Monopoly])
         {
@@ -77,6 +81,60 @@ public abstract class ITurnPhase : IGamePhase
         }
 
         return actions;
+    }
+
+    public static IEnumerable<IAction> GetRoadBuildingActions(GameState gameState)
+    {
+        if (gameState.GetCurrentPlayer().Roads < 2)
+            yield break;
+        
+        int playerID = gameState.GetCurrentPlayerID();
+        IEnumerable<Edge.Key> roadLocations = TurnMain.GetValidRoadLocations(gameState.Board, playerID);
+
+        for (int i = 0; i < roadLocations.Count(); i++)
+        {
+            Edge.Key current = roadLocations.ElementAt(i);
+
+            // Combine with all other road locations
+            for (int j = i + 1; j < roadLocations.Count(); j++)
+                yield return new RoadBuilding(){
+                    OwnerID = playerID,
+                    Road1Pos = current,
+                    Road2Pos = roadLocations.ElementAt(j)
+                };
+            
+            // Test extentions from this road
+
+            foreach (Vertex.Key nodePos in current.GetEndpoints())
+            {
+                if (!gameState.Board.TryGetVertex(nodePos, out Node node))
+                    continue;
+                
+                // Any owned nodes can be ignored
+                else if (node.OwnerID != -1)
+                    continue;
+
+                foreach (Edge.Key edgePos in nodePos.GetProtrudingEdges())
+                {
+                    if (current == edgePos)
+                        continue;
+                    
+                    else if (!gameState.Board.TryGetEdge(edgePos, out Path path))
+                        continue;
+                    
+
+                    else if (path.OwnerID != -1)
+                        continue;
+                    
+                    else if (!roadLocations.Contains(edgePos))
+                        yield return new RoadBuilding(){
+                            OwnerID = playerID,
+                            Road1Pos = current,
+                            Road2Pos = edgePos
+                        };
+                }
+            }
+        }
     }
 }
 

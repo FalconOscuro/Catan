@@ -24,7 +24,7 @@ public class MCTS : Controller
         m_ActionContinueIndex = playedActions.Count;
 
         // Ensure root node is set and remove references to any prior nodes
-        m_RootNode ??= new TreeNode(gameState, actions, ChooseAction);
+        m_RootNode ??= new TreeNode(gameState, actions);
         m_RootNode.Parent = null;
 
         // Avoid performing lengthy simulation if only one action is possible,
@@ -60,7 +60,12 @@ public class MCTS : Controller
                 best = child;
 
         // Slow search, could be improved?
-        return actions.IndexOf(best.Action);
+        int actionIndex = actions.IndexOf(best.Action);
+
+        if (actionIndex == -1)
+            Console.WriteLine($"Failed to find action: {best.Action}\n{best.Action.GetDescription()}");
+        
+        return actionIndex;
     }
 
     public override void ImDraw()
@@ -87,7 +92,6 @@ public class MCTS : Controller
     private float Simulate(TreeNode node)
     {
         GameState gameState = node.GameState.Clone();
-        float reward = 0f;
         int depth = 1;
         Random random = new();
 
@@ -96,12 +100,11 @@ public class MCTS : Controller
             List<IAction> actions = gameState.GetValidActions();
             actions[random.Next(actions.Count)].Execute(gameState);
 
-            reward += (float)gameState.Players[OwnerID].GetTotalVP() / depth;
             depth++;
         }
 
         // TODO: Use better reward function
-        return (gameState.GetWinner() == OwnerID ? 100f : 0f) + reward;
+        return gameState.Players[OwnerID].GetTotalVP();
     }
 
     public virtual (IAction action, float heuristic) ChooseAction(List<IAction> actions, GameState gameState)
@@ -245,16 +248,12 @@ class TreeNode
     public bool Expanded { get { return Children.Values.Count == ValidActions.Count; }}
     public bool Terminal { get { return GameState.GetWinner() != -1; }}
 
-    private readonly Func<List<IAction>, GameState, (IAction action, float heuristic)> m_ActionSelector;
-
-    public TreeNode(GameState gameState, List<IAction> validActions, Func<List<IAction>, GameState, (IAction action, float heuristic)> actionSelector)
+    public TreeNode(GameState gameState, List<IAction> validActions)
     {
         GameState = gameState.Clone();
         SetValidActions(validActions);
         Parent = null;
         Action = null;
-
-        m_ActionSelector = actionSelector;
     }
 
     public TreeNode(GameState gameState, IAction action, TreeNode parent)
@@ -262,6 +261,7 @@ class TreeNode
         Action = action.Clone();
         GameState = action.Execute(gameState.Clone());
         SetValidActions(GameState.GetValidActions());
+        SetStartingReward(action);
 
         if (action is RollDiceAction rollDice)
         {
@@ -284,10 +284,9 @@ class TreeNode
         }
 
         Parent = parent;
-        m_ActionSelector = parent.m_ActionSelector;
     }
 
-    protected void SetValidActions(List<IAction> actions)
+    private void SetValidActions(List<IAction> actions)
     {
         // TIDY ME
         foreach (IAction action in actions)
@@ -333,6 +332,15 @@ class TreeNode
         }
     }
 
+    private void SetStartingReward(IAction action)
+    {
+        if (action is BuildSettlementAction)
+            TotalReward = 200;
+        
+        else if (action is BuildCityAction)
+            TotalReward = 100;
+    }
+
     public virtual TreeNode Select()
     {
         if (!Expanded || Terminal)
@@ -346,21 +354,19 @@ class TreeNode
         if (Terminal)
             return this;
         
-        List<IAction> unexplored = new();
+        IAction unexplored = null;
         foreach (IAction action in ValidActions)
             if (!Children.ContainsKey(action))
-                unexplored.Add(action);
-        
-        if (unexplored.Count == 0)
+            {
+                unexplored = action;
+                break;
+            }
+
+        if (unexplored is null)
             return this;
-        
-        (IAction action, float heuristic) chosen = m_ActionSelector(unexplored, GameState);
 
-        TreeNode node = new (GameState, chosen.action, this){
-            TotalReward = chosen.heuristic
-        };
-
-        Children[chosen.action] = node;
+        TreeNode node = new (GameState, unexplored, this);
+        Children[unexplored] = node;
         return node;
     }
 
@@ -374,11 +380,11 @@ class TreeNode
     public TreeNode GetBestChild()
     {
         TreeNode bestChild = Children.Values.First();
-        float bestUCB = UCB(bestChild);
+        float bestUCB = UCB1(bestChild);
 
         foreach (TreeNode child in Children.Values.Skip(1))
         {
-            float uCB = UCB(child);
+            float uCB = UCB1(child);
 
             if (uCB > bestUCB)
             {
@@ -390,8 +396,8 @@ class TreeNode
         return bestChild;
     }
 
-    public float UCB(TreeNode child)
+    public float UCB1(TreeNode child)
     {
-        return child.Reward + (0.8f * MathF.Sqrt(MathF.Log((float)Visits / child.Visits)));
+        return child.Reward + (0.5f * MathF.Sqrt(MathF.Log((float)Visits / child.Visits)));
     }
 }

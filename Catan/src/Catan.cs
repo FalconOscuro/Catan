@@ -89,6 +89,13 @@ public class Catan : Microsoft.Xna.Framework.Game
         if (m_Step || !m_Paused)
         {
             m_Game.Update();
+
+            if (m_Game.GameState.GetWinner() != -1)
+            {
+                Console.WriteLine($"{m_Game.GameState.GetCurrentPlayer().DMM.GetType()} won game, resetting.");
+                InitGame();
+            }
+
             m_Step = false;
         }
 

@@ -1,11 +1,10 @@
 using System;
-using ImGuiNET;
 
 using Grid.Hexagonal;
 using Utility.Graphics;
 using System.Collections.Generic;
 using System.Linq;
-using System.Collections;
+
 using Utility;
 using Catan.Action;
 using Catan.Behaviour;
@@ -27,7 +26,6 @@ public class Game
     private List<IAction> m_ValidActions = new();
 
     private Task<int> m_Task = null;
-    private AsyncGameStateUpdate m_Delegate = null;
 
     private Game()
     {}
@@ -45,10 +43,7 @@ public class Game
             int chosenAction = m_Task.Result;
 
             if (chosenAction < 0 || chosenAction >= m_ValidActions.Count)
-            {
-                Console.WriteLine($"Recieved invalid action {chosenAction} from {GameState.GetCurrentPlayerID()}");
                 chosenAction = 0;
-            }
 
             m_ValidActions[chosenAction].Execute(GameState);
 
